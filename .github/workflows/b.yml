@@ -1,0 +1,140 @@
+name: Build NeMo-Relay Wheel (Android NDK & Bindgen)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-nemo-relay:
+    name: Build nemo-relay 0.7.3
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Setup Rust & Android Target
+        run: |
+          rustup target add aarch64-linux-android
+
+      - name: Configure Android NDK & Toolchain Paths
+        run: |
+          # Cari lokasi NDK di GitHub Actions runner
+          NDK_PATH=$(ls -d /usr/local/lib/android/sdk/ndk/* 2>/dev/null | sort -V | tail -n 1)
+          TOOLCHAIN_PATH="$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64"
+          SYSROOT_PATH="$TOOLCHAIN_PATH/sysroot"
+
+          echo "ANDROID_NDK_HOME=$NDK_PATH" >> $GITHUB_ENV
+          echo "ANDROID_NDK_ROOT=$NDK_PATH" >> $GITHUB_ENV
+          echo "TOOLCHAIN=$TOOLCHAIN_PATH" >> $GITHUB_ENV
+          echo "SYSROOT=$SYSROOT_PATH" >> $GITHUB_ENV
+          echo "NDK Toolchain: $TOOLCHAIN_PATH"
+
+      - name: Install Build Dependencies & Tools
+        run: |
+          sudo apt-get update && sudo apt-get install -y patchelf cmake ninja-build libclang-dev clang
+          pip install maturin build typing_extensions wheel
+
+      - name: Download & Extract Source Code (v0.7.3)
+        run: |
+          if git clone --depth 1 --branch v0.7.3 https://github.com/NVIDIA/NeMo-Relay.git src_dir 2>/dev/null || \
+             git clone --depth 1 --branch 0.7.3 https://github.com/NVIDIA/NeMo-Relay.git src_dir 2>/dev/null; then
+            echo "Berhasil clone NeMo-Relay dari GitHub"
+          else
+            echo "Fallback mengunduh via pip sdist..."
+            mkdir -p src_dir
+            pip download --no-binary :all: --no-deps "nemo-relay==0.7.3"
+            archive=$(ls | grep -E '\.(tar\.gz|zip)$' | head -n 1)
+            if [[ "$archive" == *.zip ]]; then
+              unzip -q "$archive" -d temp_extract
+              mv temp_extract/*/* src_dir/ 2>/dev/null || mv temp_extract/* src_dir/
+              rm -rf temp_extract
+            else
+              tar -xzf "$archive" -C src_dir --strip-components=1
+            fi
+            rm "$archive"
+          fi
+
+      - name: Generate PyO3 Cross Config
+        run: |
+          cat <<EOF > "$GITHUB_WORKSPACE/pyo3-config.txt"
+          implementation=CPython
+          version=3.14
+          shared=true
+          abi3=false
+          suppress_build_script_link_lines=true
+          EOF
+          echo "PYO3_CONFIG_FILE=$GITHUB_WORKSPACE/pyo3-config.txt" >> $GITHUB_ENV
+
+      - name: Build Wheel using Android NDK & Bindgen Clang Args
+        uses: PyO3/maturin-action@v1
+        env:
+          # 1. Compiler C/C++ & Linker Android NDK
+          CC_aarch64_linux_android: "${{ env.TOOLCHAIN }}/bin/aarch64-linux-android24-clang"
+          CXX_aarch64_linux_android: "${{ env.TOOLCHAIN }}/bin/aarch64-linux-android24-clang++"
+          AR_aarch64_linux_android: "${{ env.TOOLCHAIN }}/bin/llvm-ar"
+          CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER: "${{ env.TOOLCHAIN }}/bin/aarch64-linux-android24-clang"
+          
+          # 2. Konfigurasi CMake untuk AWS-LC
+          CMAKE_TOOLCHAIN_FILE: "${{ env.ANDROID_NDK_HOME }}/build/cmake/android.toolchain.cmake"
+          CMAKE_TOOLCHAIN_FILE_aarch64_linux_android: "${{ env.ANDROID_NDK_HOME }}/build/cmake/android.toolchain.cmake"
+          ANDROID_ABI: "arm64-v8a"
+          ANDROID_PLATFORM: "24"
+
+          # 3. SOLUSI UTAMA: Beritahu bindgen lokasi header stdlib.h dan linux/random.h
+          BINDGEN_EXTRA_CLANG_ARGS_aarch64_linux_android: "--sysroot=${{ env.SYSROOT }} -I${{ env.SYSROOT }}/usr/include/aarch64-linux-android -I${{ env.SYSROOT }}/usr/include"
+          BINDGEN_EXTRA_CLANG_ARGS: "--sysroot=${{ env.SYSROOT }} -I${{ env.SYSROOT }}/usr/include/aarch64-linux-android -I${{ env.SYSROOT }}/usr/include"
+
+          # 4. PyO3 Flags
+          PYO3_BUILD_EXTENSION_MODULE: "1"
+          RUSTFLAGS: "-C link-arg=-Wl,--unresolved-symbols=ignore-all -C link-arg=-Wl,-z,undefs"
+        with:
+          working-directory: src_dir
+          target: aarch64-linux-android
+          manylinux: off
+          command: build
+          args: --release --out ../raw_wheels -i python3.14
+
+      - name: Auto-Patch Wheel for Termux (Suffix & patchelf DT_NEEDED)
+        run: |
+          mkdir -p final_wheels
+          cd raw_wheels
+          for whl in *.whl; do
+            echo "Patching wheel: $whl"
+            mkdir -p temp_whl
+            python -m wheel unpack "$whl" -d temp_whl
+            
+            pkg_dir=$(find temp_whl -mindepth 1 -maxdepth 1 -type d | head -n 1)
+            
+            # 1. Pastikan nama file binary berekstensi *linux-android.so
+            find "$pkg_dir" -name "*aarch64-android-android.so" | while read -r so_file; do
+              new_so="${so_file//android-android/linux-android}"
+              mv "$so_file" "$new_so"
+              echo "Renamed: $so_file -> $new_so"
+            done
+            
+            # 2. Sisipkan DT_NEEDED libpython3.14.so ke binary .so
+            find "$pkg_dir" -name "*.so" -exec patchelf --add-needed libpython3.14.so {} \;
+            
+            # 3. Repack ulang wheel
+            python -m wheel pack "$pkg_dir" -d ../final_wheels
+            rm -rf temp_whl
+          done
+
+      - name: Fix Wheel Tag Name
+        run: |
+          cd final_wheels
+          for f in *.whl; do
+            if [[ "$f" == *"linux_aarch64"* ]]; then
+              newname=$(echo "$f" | sed 's/linux_aarch64/android_aarch64/g')
+              mv "$f" "$newname"
+              echo "Renamed: $f -> $newname"
+            fi
+          done
+
+      - name: Upload Wheel Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: termux-wheel-nemo-relay
+          path: final_wheels/*.whl

@@ -1,0 +1,31 @@
+name: 🧹 Nuke Caches & Artifacts
+
+# Mengizinkan workflow ini dijalankan secara manual (sekali klik)
+on: workflow_dispatch 
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write # Diperlukan izin untuk menghapus data action
+    
+    steps:
+      - name: 🗑️ Hapus Semua Cache
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Menghapus semua cache (Gradle, Emulator, dll)..."
+          gh extension install actions/gh-actions-cache
+          gh actions-cache delete --all --confirm || true
+          echo "Cache berhasil dibersihkan!"
+
+      - name: 🗑️ Hapus Semua Artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Mencari dan menghapus semua artifact yang pernah di-upload..."
+          # Mengambil semua ID artifact dan menghapusnya satu per satu
+          gh api repos/${{ github.repository }}/actions/artifacts \
+            --paginate -q '.artifacts[].id' | \
+          xargs -I{} gh api -X DELETE repos/${{ github.repository }}/actions/artifacts/{} || true
+          echo "Semua artifact berhasil dibersihkan!"

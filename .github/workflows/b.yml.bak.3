@@ -1,0 +1,78 @@
+name: Build rpds-py Wheel (Termux)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-rpds-py:
+    name: Build rpds-py
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Setup Zig (Linker untuk Termux/Android)
+        uses: goto-bus-stop/setup-zig@v2
+
+      - name: Install Build Dependencies
+        run: |
+          pip install maturin build typing_extensions
+
+      - name: Download & Extract Source Code
+        run: |
+          mkdir -p src_dir
+          # Mengunduh source code rpds-py >= 0.25.0
+          pip download --no-binary :all: --no-deps "rpds-py>=0.25.0"
+          
+          archive=$(ls | grep -E '\.(tar\.gz|zip)$' | head -n 1)
+          if [[ "$archive" == *.zip ]]; then
+            unzip -q "$archive" -d temp_extract
+            mv temp_extract/*/* src_dir/ 2>/dev/null || mv temp_extract/* src_dir/
+            rm -rf temp_extract
+          else
+            tar -xzf "$archive" -C src_dir --strip-components=1
+          fi
+          rm "$archive"
+
+      - name: Generate PyO3 Cross Config
+        run: |
+          cat <<EOF > "$GITHUB_WORKSPACE/pyo3-config.txt"
+          implementation=CPython
+          version=3.14
+          shared=true
+          abi3=false
+          suppress_build_script_link_lines=true
+          EOF
+          echo "PYO3_CONFIG_FILE=$GITHUB_WORKSPACE/pyo3-config.txt" >> $GITHUB_ENV
+
+      - name: Build Wheel using Maturin Action
+        uses: PyO3/maturin-action@v1
+        env:
+          PYO3_BUILD_EXTENSION_MODULE: "1"
+          RUSTFLAGS: "-C link-arg=-Wl,--unresolved-symbols=ignore-all -C link-arg=-Wl,-z,undefs"
+        with:
+          working-directory: src_dir
+          target: aarch64-linux-android
+          manylinux: off
+          command: build
+          args: --release --zig --out ../final_wheels -i python3.14
+
+      - name: Fix Wheel Tag for Termux Android
+        run: |
+          cd final_wheels
+          for f in *.whl; do
+            if [[ "$f" == *"linux_aarch64"* ]]; then
+              newname=$(echo "$f" | sed 's/linux_aarch64/android_aarch64/g')
+              mv "$f" "$newname"
+              echo "Renamed: $f -> $newname"
+            fi
+          done
+
+      - name: Upload Wheel Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: termux-wheel-rpds-py
+          path: final_wheels/*.whl

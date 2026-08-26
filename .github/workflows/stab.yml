@@ -1,0 +1,53 @@
+name: Compose Stability & Lint Analysis
+
+on:
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: ./coba2
+
+jobs:
+  analyze-stability:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v6
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v5
+      with:
+        distribution: 'temurin'
+        java-version: '21'
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v5
+      with:
+        gradle-version: wrapper
+        cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+        add-job-summary: on-failure
+        cache-encryption-key: ${{ secrets.GRADLE_CACHE_ENCRYPTION_KEY }}
+
+    - name: Grant Execute Permission for Gradle
+      run: chmod +x ./gradlew
+
+    # LANGKAH BARU: Menjalankan Android Lint dengan aturan Slack yang sudah dipasang
+    # Opsi --continue memastikan CI tetap menjalankan task berikutnya walaupun langkah ini menemukan eror
+    - name: Run Slack Compose Lint Checks
+      run: ./gradlew lintDebug --continue --no-daemon
+
+    # Validasi kestabilan Compose menggunakan plugin Skydoves Anda sebelumnya
+    - name: Run Compose Stability Check
+      run: ./gradlew stabilityDump --no-daemon
+
+    # Mengunggah seluruh dokumen laporan (Hasil Lint & Stabilitas Skydoves)
+    - name: Upload Analysis Reports
+      if: always() # Tetap unggah laporan meskipun langkah sebelumnya gagal/sukses
+      uses: actions/upload-artifact@v4
+      with:
+        name: compose-analysis-reports
+        path: |
+          coba2/app/stability/*.stability
+          coba2/app/build/reports/lint-results-*.*
+        retention-days: 1

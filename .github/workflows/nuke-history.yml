@@ -1,0 +1,29 @@
+name: 🧹 Nuke Workflow History
+
+on: workflow_dispatch
+
+jobs:
+  del_runs:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: 🗑️ Hapus Semua Riwayat Workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Mencari semua riwayat workflow runs..."
+          
+          # Mengambil semua ID riwayat workflow, KECUALI yang sedang berjalan saat ini
+          RUN_IDS=$(gh api repos/${{ github.repository }}/actions/runs --paginate -q ".workflow_runs[] | select(.id != ${{ github.run_id }}) | .id")
+          
+          if [ -z "$RUN_IDS" ]; then
+            echo "Tidak ada riwayat workflow yang perlu dihapus."
+          else
+            echo "Menghapus riwayat workflow..."
+            for run_id in $RUN_IDS; do
+              echo "Menghapus Run ID: $run_id"
+              gh api -X DELETE repos/${{ github.repository }}/actions/runs/$run_id --silent || true
+            done
+            echo "Semua riwayat berhasil dibersihkan!"
+          fi

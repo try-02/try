@@ -1,0 +1,111 @@
+name: Android CI Tests
+
+on:
+  workflow_dispatch:
+
+# Membatalkan tes lama yang masih berjalan jika ada push kode baru (menghemat kuota)
+concurrency:
+  group: ci-test-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: ./coba2
+
+jobs:
+  test:
+    name: Run Unit & UI Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      # Setup Gradle dengan caching otomatis & Enkripsi
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: Enhanced
+          gradle-version: wrapper
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          add-job-summary: on-failure
+          cache-encryption-key: ${{ secrets.GRADLE_CACHE_ENCRYPTION_KEY }}
+
+      # 1. Memberikan izin eksekusi Gradle
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      # 2. Menjalankan Unit Test
+      - name: Run Pure Unit Tests
+        run: ./gradlew :app:testDebugUnitTest --stacktrace
+
+      - name: Upload Test Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-report
+          path: coba2/app/build/reports/tests/testDebugUnitTest/
+          retention-days: 1
+
+  instrumented-tests:
+    name: Run Migration Tests (Emulator)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      # Setup Gradle
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: Enhanced
+          gradle-version: wrapper
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          add-job-summary: on-failure
+          cache-encryption-key: ${{ secrets.GRADLE_CACHE_ENCRYPTION_KEY }}
+
+      # 1. Memberikan izin eksekusi Gradle (Diubah dari ./coba2/gradlew karena working-directory sudah ./coba2)
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      # 2. Mengaktifkan akselerasi perangkat keras di mesin Ubuntu
+      - name: Enable KVM permissions
+        run: sudo chown $USER /dev/kvm
+
+      # 3. Menjalankan Android Instrumented Test
+      - name: Run Android Instrumented Tests
+        uses: ReactiveCircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: aosp_atd 
+          arch: x86_64
+          force-avd-creation: false
+          disable-animations: true
+          working-directory: ./coba2
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+          script: ./gradlew :app:connectedDebugAndroidTest --rerun-tasks --stacktrace
+
+      - name: Upload instrumentation test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: instrumentation-test-reports
+          path: |
+            coba2/**/build/reports/androidTests/
+            coba2**/build/outputs/androidTest-results/
+            coba2/app/build/reports/androidTests/connected/debug/index.html
+          if-no-files-found: ignore
+          retention-days: 1

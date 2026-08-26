@@ -1,0 +1,55 @@
+name: Compose Health Check
+
+on:
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: ./coba3
+
+jobs:
+  compose-doctor-check:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        # Melakukan checkout dari root terluar agar folder coba3 ikut terbawa
+        sparse-checkout: |
+          coba3
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v5
+      with:
+        distribution: 'temurin'
+        java-version: '21'
+
+    # Setup Gradle dengan caching otomatis & Enkripsi untuk Configuration Cache 9.6.1
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v6
+      with:
+        cache-provider: Enhanced
+        gradle-version: wrapper
+        cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+        add-job-summary: on-failure
+        # KRUSIAL UNTUK 9.6.1: Kunci enkripsi wajib ada agar Configuration Cache tersimpan di GitHub Actions
+        cache-encryption-key: ${{ secrets.GRADLE_CACHE_ENCRYPTION_KEY }}
+
+    - name: Grant Execute Permission for Gradle
+      run: chmod +x gradlew
+
+    # Menjalankan perintah analisis Compose Doctor di dalam folder coba3
+    - name: Run Compose Doctor
+      run: ./gradlew composeDoctor
+
+    # Mengunggah hasil laporan agar bisa Anda unduh jika dibutuhkan
+    - name: Upload Reports Artifact
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: compose-doctor-report
+        path: |
+          coba3/app/build/reports/compose-doctor/*.*
+          coba3/app/build/reports/detekt/*.*
+        retention-days: 1

@@ -1,0 +1,76 @@
+name: Android Release Build 2
+
+on:
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: ./coba2
+
+jobs:
+  build:
+    name: Build Release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          # Perbaikan: Hapus 'cache: gradle' di sini agar tidak konflik dengan action resmi Gradle
+
+      # Setup Gradle dengan caching otomatis & Enkripsi untuk Configuration Cache 9.6.1
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: Enhanced
+          gradle-version: wrapper
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          add-job-summary: on-failure
+          # KRUSIAL UNTUK 9.6.1: Kunci enkripsi wajib ada agar Configuration Cache tersimpan di GitHub Actions
+          cache-encryption-key: ${{ secrets.GRADLE_CACHE_ENCRYPTION_KEY }}
+
+      # Build Release APK dengan Optimasi Maksimal AGP + Gradle 9.6.1
+      - name: Build APK (Optimized)
+        run: |
+          echo "🏗️ Building release APK with advanced R8 shrinking..."
+          chmod +x ./gradlew
+
+          # Menambahkan flag menonaktifkan task uji coba (test) saat rilis untuk hemat waktu
+          ./gradlew clean assembleRelease \
+            --non-interactive \
+            --stacktrace \
+            --console=plain
+        env:
+          ANDROID_BUILD_NUMBER: ${{ github.run_number }}
+          NO_COLOR: "1"
+          GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+          ORG_GRADLE_PROJECT_android_native_build_output_ignore_errors: true
+
+      # Sign APK dengan action resmi
+      - name: Sign APK
+        uses: r0adkll/sign-android-release@v1
+        id: sign_app
+        env:
+          BUILD_TOOLS_VERSION: "34.0.0"
+        with:
+          releaseDirectory: coba2/app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.KEYSTORE_BASE64 }}
+          alias: ${{ secrets.KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+
+      # Upload signed APK
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pos-offline-release-signed-apk
+          path: |
+            ${{steps.sign_app.outputs.signedReleaseFile}}
+            coba2/app/**/*.json
+          retention-days: 1
+          if-no-files-found: error
