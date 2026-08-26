@@ -2,7 +2,7 @@ package com.sentral.org.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialExpressiveTheme
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
@@ -151,8 +151,10 @@ private val PosTypography = BaseTypography.copy(
 )
 
 /**
- * Tema aplikasi POS di atas MaterialExpressiveTheme:
- * motion ekspresif bawaan (springy) + skema warna/typography/shapes brand.
+ * Tema aplikasi POS. Skema warna/typography/shapes mengikuti design
+ * system M3 Expressive (palet & bentuk ekspresif), dibungkus MaterialTheme
+ * standar — MaterialExpressiveTheme masih internal di versi material3 ini.
+ * Motion springy expressive menyusul saat library sudah stabil publik.
  * Mengikuti dark mode sistem secara otomatis.
  */
 @Composable
@@ -160,7 +162,7 @@ fun PosTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {
-    MaterialExpressiveTheme(
+    MaterialTheme(
         colorScheme = if (darkTheme) DarkColors else LightColors,
         typography = PosTypography,
         shapes = PosShapes,

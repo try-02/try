@@ -12,6 +12,7 @@ import com.sentral.org.data.repository.CartRepository
 import com.sentral.org.data.repository.ProdukRepository
 import com.sentral.org.data.repository.ProfilTokoRepository
 import com.sentral.org.data.dao.PersediaanDao
+import com.sentral.org.data.entity.ProfilTokoEntity
 import com.sentral.org.data.service.CartService
 import com.sentral.org.data.service.CheckoutService
 import com.sentral.org.data.session.SesiKasirProvider
@@ -37,6 +38,7 @@ class KasirViewModel(
     private val checkoutService: CheckoutService,
     private val produkRepo: ProdukRepository,
     private val cartRepo: CartRepository,
+    private val persediaanDao: PersediaanDao,
     private val profilRepo: ProfilTokoRepository,
     private val sesi: SesiKasirProvider,
 ) : ViewModel() {
@@ -171,7 +173,7 @@ fun batalkanKeranjang() {
             val cartId = uiState.value.keranjangAktifId ?: return@launch
             cartService.hapusBaris(cartId, produkId, System.currentTimeMillis()).fold(
                 onSuccess = {
-                    _event.send(KasirEvent.Pesan.HapusBaris(nama = baris.nama) { delta ->
+                    _event.send(KasirEvent.HapusBaris(nama = baris.nama) { delta ->
                         ubah(produkId, delta)
                     })
                 },
