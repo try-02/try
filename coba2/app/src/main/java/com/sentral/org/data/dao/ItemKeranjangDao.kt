@@ -48,7 +48,7 @@ interface ItemKeranjangDao {
     suspend fun deleteById(id: Long): Int
 
     @Query("DELETE FROM item_keranjang WHERE keranjang_id = :cartId AND produk_id = :productId")
-    suspend fun deleteByProduct(cartId: Long, productId: Long): Int
+    suspend fun deleteByProduct(cartId: Long, productId: Long)
 
     @Query("DELETE FROM item_keranjang WHERE keranjang_id = :cartId")
     suspend fun deleteByCart(cartId: Long): Int

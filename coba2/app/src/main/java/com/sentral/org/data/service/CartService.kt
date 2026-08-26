@@ -57,7 +57,6 @@ class CartService(
             write.run {
                 pastikanAktif(cartId)
                 items.deleteByProduct(cartId, productId)
-                Unit
             }
         }
 
