@@ -44,13 +44,6 @@ android {
         }
     }
 
-    // Perbaikan 3: Menggunakan Java Toolchain (Sinkron dengan target kompilasi Kotlin & Java)
-    java {
-        toolchain {
-            languageVersion.set(JavaLanguageVersion.of(21))
-        }
-    }
-
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
@@ -95,6 +88,13 @@ android {
                 "META-INF/services/org.codehaus.stax2.validation.XMLValidationSchemaFactory.W3C"
             )
         }
+    }
+}
+
+// Perbaikan 3: Menggunakan Java Toolchain (Sinkron dengan target kompilasi Kotlin & Java)
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(21))
     }
 }
 
