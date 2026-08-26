@@ -29,5 +29,9 @@ sealed interface KasirEvent {
     data class Pesan(val teks: String, val jenis: Jenis) : KasirEvent {
         enum class Jenis { INFO, SUKSES, GALAT }
     }
+
+    /** Baris keranjang dihapus (swipe) — bawa aksi UNDO ke snackbar. */
+    data class HapusBaris(val nama: String, val undo: (Long) -> Unit) : KasirEvent
+
     data class CheckoutBerhasil(val nomorTransaksi: String, val kembalian: Long) : KasirEvent
 }

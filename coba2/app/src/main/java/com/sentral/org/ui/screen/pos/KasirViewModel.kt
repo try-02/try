@@ -6,9 +6,12 @@ import com.sentral.org.data.model.CheckoutRequest
 import com.sentral.org.data.model.MetodePembayaran
 import com.sentral.org.data.model.MoneyMath
 import com.sentral.org.data.model.PaymentRequest
+import com.sentral.org.data.model.QUANTITY_SCALE
 import com.sentral.org.data.model.quantityOf
 import com.sentral.org.data.repository.CartRepository
 import com.sentral.org.data.repository.ProdukRepository
+import com.sentral.org.data.repository.ProfilTokoRepository
+import com.sentral.org.data.dao.PersediaanDao
 import com.sentral.org.data.service.CartService
 import com.sentral.org.data.service.CheckoutService
 import com.sentral.org.data.session.SesiKasirProvider
@@ -34,6 +37,7 @@ class KasirViewModel(
     private val checkoutService: CheckoutService,
     private val produkRepo: ProdukRepository,
     private val cartRepo: CartRepository,
+    private val profilRepo: ProfilTokoRepository,
     private val sesi: SesiKasirProvider,
 ) : ViewModel() {
 
@@ -41,6 +45,15 @@ class KasirViewModel(
     private val sedangProses = MutableStateFlow(false)
     private val _event = Channel<KasirEvent>(Channel.BUFFERED)
     val event = _event.receiveAsFlow()
+
+    /** Profil toko utk header (nama toko). Tidak ikut combine utama agar hemat rekomposisi. */
+    val profilToko: StateFlow<ProfilTokoEntity?> = profilRepo.observe()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /** Stok live per produk (scaled -> unit) utk indikator stok rendah di kartu. */
+    val stokPerProduk: StateFlow<Map<Long, Long>> = persediaanDao.observeAll()
+        .map { daftar -> daftar.associate { it.produkId to it.jumlah / QUANTITY_SCALE } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     val uiState: StateFlow<KasirUiState> = combine(
         produkRepo.observeAktif(),
@@ -145,6 +158,25 @@ fun batalkanKeranjang() {
             val cartId = uiState.value.keranjangAktifId ?: return@launch
             cartService.hapusBaris(cartId, produkId, System.currentTimeMillis())
                 .onFailure { kirim(it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT) }
+        }
+    }
+
+    /**
+     * Hapus baris dengan konfirmasi lembut: pesan sukses + tombol UNDO.
+     * Dipakai SwipeToDismiss di keranjang — swipe tanpa dialog, masih bisa dibatalkan.
+     */
+    fun batalkanBarisDenganUndo(produkId: Long) {
+        val baris = uiState.value.baris.firstOrNull { it.produkId == produkId } ?: return
+        viewModelScope.launch {
+            val cartId = uiState.value.keranjangAktifId ?: return@launch
+            cartService.hapusBaris(cartId, produkId, System.currentTimeMillis()).fold(
+                onSuccess = {
+                    _event.send(KasirEvent.Pesan.HapusBaris(nama = baris.nama) { delta ->
+                        ubah(produkId, delta)
+                    })
+                },
+                onFailure = { kirim(it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT) },
+            )
         }
     }
 

@@ -2,79 +2,167 @@ package com.sentral.org.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.Shapes
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
-// ---------- Palet warna: indigo modern dengan aksen amber ----------
+// ============================================================
+// DESIGN SYSTEM — Material 3 Expressive
+// Palet brand tetap (dynamicColor sengaja tidak dipakai agar
+// tampilan kasir stabil & konsisten sepanjang jam operasional).
+// Referensi nuansa: Toast / Square / Shopify POS.
+// ============================================================
 
-// Light
-private val IndigoPrimary = Color(0xFF4F46E5)
-private val IndigoOnPrimary = Color(0xFFFFFFFF)
-private val IndigoPrimaryContainer = Color(0xFFE0E7FF)
-private val IndigoOnPrimaryContainer = Color(0xFF1E1B4B)
-private val SecondaryTeal = Color(0xFF0D9488)
-private val AmberAccent = Color(0xFFF59E0B)
+// ---------- Light ----------
+private val Indigo600 = Color(0xFF4F46E5)        // Primary — aksi utama
+private val OnIndigo = Color(0xFFFFFFFF)
+private val Indigo100 = Color(0xFFE0E7FF)        // primaryContainer
+private val Indigo900 = Color(0xFF1E1B4B)        // onPrimaryContainer
+private val Teal600 = Color(0xFF0D9488)          // Secondary — sukses/QRIS
+private val OnTeal = Color(0xFFFFFFFF)
+private val Teal100 = Color(0xFFCCFBF1)          // secondaryContainer (chip aksen)
+private val Teal900 = Color(0xFF134E4A)
+private val Amber500 = Color(0xFFF59E0B)         // Tertiary — promo/poin
+private val Amber100 = Color(0xFFFEF3C7)
+private val Amber900 = Color(0xFF78350F)
+private val RedVivid = Color(0xFFD32F2F)         // Error void/batal (spek brand)
+private val RedContainer = Color(0xFFFCE8E6)
+private val OnRedContainer = Color(0xFF601410)
+
 private val LightBackground = Color(0xFFF4F5FB)
-private val LightSurface = Color(0xFFFFFFFF)
+private val LightSurface = Color(0xFFFBFBFB)     // Spek: surface netral terang
 private val LightSurfaceVariant = Color(0xFFEAECF5)
+private val LightOnSurface = Color(0xFF171A2B)
+private val LightOnSurfaceVariant = Color(0xFF5A6072)
+private val LightOutline = Color(0xFF7C8195)
+private val LightOutlineVariant = Color(0xFFDFE2EE)
 
-// Dark
-private val DarkPrimary = Color(0xFFA5B4FC)
-private val DarkOnPrimary = Color(0xFF1E1B4B)
-private val DarkPrimaryContainer = Color(0xFF3730A3)
-private val DarkOnPrimaryContainer = Color(0xFFE0E7FF)
+// ---------- Dark ----------
+private val Indigo300 = Color(0xFFA5B4FC)
+private val OnIndigo300 = Color(0xFF1E1B4B)
+private val Indigo700 = Color(0xFF3730A3)
+private val OnIndigo700 = Color(0xFFE0E7FF)
+private val Teal300 = Color(0xFF5EEAD4)
+private val Teal700 = Color(0xFF0F766E)
+private val OnTeal700 = Color(0xFFCCFBF1)
+private val Amber300 = Color(0xFFFBBF24)
+private val Red400 = Color(0xFFF87171)
+private val RedContainerDark = Color(0xFF7F1D1D)
+private val OnRedContainerDark = Color(0xFFFECACA)
+
 private val DarkBackground = Color(0xFF101122)
-private val DarkSurface = Color(0xFF181A2E)
+private val DarkSurface = Color(0xFF1C1C1E)      // Spek: surface gelap iOS-esque
 private val DarkSurfaceVariant = Color(0xFF232644)
+private val DarkOnSurface = Color(0xFFE4E6F5)
+private val DarkOnSurfaceVariant = Color(0xFFA9ADC2)
+private val DarkOutline = Color(0xFF8B90A6)
+private val DarkOutlineVariant = Color(0xFF34385A)
 
 private val LightColors = lightColorScheme(
-    primary = IndigoPrimary,
-    onPrimary = IndigoOnPrimary,
-    primaryContainer = IndigoPrimaryContainer,
-    onPrimaryContainer = IndigoOnPrimaryContainer,
-    secondary = SecondaryTeal,
-    tertiary = AmberAccent,
+    primary = Indigo600,
+    onPrimary = OnIndigo,
+    primaryContainer = Indigo100,
+    onPrimaryContainer = Indigo900,
+    secondary = Teal600,
+    onSecondary = OnTeal,
+    secondaryContainer = Teal100,
+    onSecondaryContainer = Teal900,
+    tertiary = Amber500,
+    onTertiary = Color(0xFFFFFFFF),
+    tertiaryContainer = Amber100,
+    onTertiaryContainer = Amber900,
+    error = RedVivid,
+    onError = Color(0xFFFFFFFF),
+    errorContainer = RedContainer,
+    onErrorContainer = OnRedContainer,
     background = LightBackground,
+    onBackground = LightOnSurface,
     surface = LightSurface,
+    onSurface = LightOnSurface,
     surfaceVariant = LightSurfaceVariant,
-    error = Color(0xFFDC2626),
+    onSurfaceVariant = LightOnSurfaceVariant,
+    outline = LightOutline,
+    outlineVariant = LightOutlineVariant,
 )
 
 private val DarkColors = darkColorScheme(
-    primary = DarkPrimary,
-    onPrimary = DarkOnPrimary,
-    primaryContainer = DarkPrimaryContainer,
-    onPrimaryContainer = DarkOnPrimaryContainer,
-    secondary = Color(0xFF5EEAD4),
-    tertiary = Color(0xFFFBBF24),
+    primary = Indigo300,
+    onPrimary = OnIndigo300,
+    primaryContainer = Indigo700,
+    onPrimaryContainer = OnIndigo700,
+    secondary = Teal300,
+    onSecondary = Color(0xFF0B3B36),
+    secondaryContainer = Teal700,
+    onSecondaryContainer = OnTeal700,
+    tertiary = Amber300,
+    onTertiary = Color(0xFF3F2A04),
+    tertiaryContainer = Color(0xFF6B4A09),
+    onTertiaryContainer = Color(0xFFFDE9B8),
+    error = Red400,
+    onError = Color(0xFF450A0A),
+    errorContainer = RedContainerDark,
+    onErrorContainer = OnRedContainerDark,
     background = DarkBackground,
+    onBackground = DarkOnSurface,
     surface = DarkSurface,
+    onSurface = DarkOnSurface,
     surfaceVariant = DarkSurfaceVariant,
-    error = Color(0xFFF87171),
+    onSurfaceVariant = DarkOnSurfaceVariant,
+    outline = DarkOutline,
+    outlineVariant = DarkOutlineVariant,
 )
 
-// Bentuk sudut lebih halus untuk kesan modern
+/**
+ * Bentuk M3 Expressive (spek desain):
+ * - Kartu produk & tombol aksi : large  = 20.dp
+ * - Sheet/dialog               : extraLarge = 28.dp
+ * - Elemen kecil               : 10–16.dp bertingkat
+ */
 private val PosShapes = Shapes(
-    extraSmall = RoundedCornerShape(8.dp),
-    small = RoundedCornerShape(10.dp),
-    medium = RoundedCornerShape(14.dp),
+    extraSmall = RoundedCornerShape(10.dp),
+    small = RoundedCornerShape(12.dp),
+    medium = RoundedCornerShape(16.dp),
     large = RoundedCornerShape(20.dp),
     extraLarge = RoundedCornerShape(28.dp),
 )
 
-/** Tema aplikasi POS. Mengikuti dark mode sistem secara otomatis. */
+/** Type scale sans-serif modern (Inter-like via system sans-serif). */
+private val BaseTypography = Typography()
+
+private val PosTypography = BaseTypography.copy(
+    displaySmall = BaseTypography.displaySmall.copy(fontWeight = FontWeight.Bold),
+    headlineMedium = BaseTypography.headlineMedium.copy(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Bold,
+    ),
+    headlineSmall = BaseTypography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+    titleLarge = BaseTypography.titleLarge.copy(fontWeight = FontWeight.Bold),
+    titleMedium = BaseTypography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+    titleSmall = BaseTypography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+    labelLarge = BaseTypography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+    labelMedium = BaseTypography.labelMedium.copy(fontWeight = FontWeight.Medium),
+)
+
+/**
+ * Tema aplikasi POS di atas MaterialExpressiveTheme:
+ * motion ekspresif bawaan (springy) + skema warna/typography/shapes brand.
+ * Mengikuti dark mode sistem secara otomatis.
+ */
 @Composable
 fun PosTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {
-    MaterialTheme(
+    MaterialExpressiveTheme(
         colorScheme = if (darkTheme) DarkColors else LightColors,
+        typography = PosTypography,
         shapes = PosShapes,
         content = content,
     )
