@@ -1,11 +1,11 @@
-name: Build Scrapling Suite (Android aarch64 Python 3.14)
+name: Build Scrapling & Dependencies Wheels for Termux (Python 3.14 / aarch64)
 
 on:
   workflow_dispatch:
 
 jobs:
-  build-wheels:
-    name: Build msgspec, orjson & Playwright for Termux
+  build-scrapling-wheels:
+    name: Build Scrapling Suite Wheels (aarch64 / Python 3.14)
     runs-on: ubuntu-latest
 
     steps:
@@ -28,13 +28,25 @@ jobs:
           echo "ANDROID_NDK_ROOT=$NDK_PATH" >> $GITHUB_ENV
           echo "TOOLCHAIN=$TOOLCHAIN_PATH" >> $GITHUB_ENV
           echo "SYSROOT=$SYSROOT_PATH" >> $GITHUB_ENV
+          echo "NDK Toolchain: $TOOLCHAIN_PATH"
 
-      - name: Install Build Tools
+      - name: Install Build Dependencies & Tools
         run: |
           sudo apt-get update && sudo apt-get install -y patchelf cmake ninja-build libclang-dev clang
-          pip install maturin build wheel setuptools
+          pip install maturin build typing_extensions wheel setuptools
 
-      - name: Cross-Compile orjson (Rust / PyO3)
+      - name: Generate PyO3 Cross Config
+        run: |
+          cat <<EOF > "$GITHUB_WORKSPACE/pyo3-config.txt"
+          implementation=CPython
+          version=3.14
+          shared=true
+          abi3=false
+          suppress_build_script_link_lines=true
+          EOF
+          echo "PYO3_CONFIG_FILE=$GITHUB_WORKSPACE/pyo3-config.txt" >> $GITHUB_ENV
+
+      - name: Cross-Compile Binary Dependencies (orjson & msgspec)
         env:
           CC_aarch64_linux_android: "${{ env.TOOLCHAIN }}/bin/aarch64-linux-android24-clang"
           CXX_aarch64_linux_android: "${{ env.TOOLCHAIN }}/bin/aarch64-linux-android24-clang++"
@@ -44,43 +56,35 @@ jobs:
           RUSTFLAGS: "-C link-arg=-Wl,--unresolved-symbols=ignore-all -C link-arg=-Wl,-z,undefs"
         run: |
           mkdir -p raw_wheels
-          cat <<EOF > "$GITHUB_WORKSPACE/pyo3-config.txt"
-          implementation=CPython
-          version=3.14
-          shared=true
-          abi3=false
-          suppress_build_script_link_lines=true
-          EOF
-          export PYO3_CONFIG_FILE="$GITHUB_WORKSPACE/pyo3-config.txt"
           
+          # 1. Build orjson wheel
+          echo "Building orjson..."
           pip download --no-binary :all: --no-deps orjson
           tar -xzf orjson-*.tar.gz
           cd orjson-*/
           maturin build --release --target aarch64-linux-android --manylinux off --out ../raw_wheels -i python3.14
           cd ..
-
-      - name: Cross-Compile msgspec (C Extension / NDK Clang)
-        run: |
+          
+          # 2. Build msgspec wheel
+          echo "Building msgspec..."
           pip download --no-binary :all: --no-deps msgspec
           tar -xzf msgspec-*.tar.gz
           cd msgspec-*/
-          
           CC="${{ env.TOOLCHAIN }}/bin/aarch64-linux-android24-clang" \
-          LDSHARED="${{ env.TOOLCHAIN }}/bin/aarch64-linux-android24-clang -shared" \
           CFLAGS="--sysroot=${{ env.SYSROOT }} -I${{ env.SYSROOT }}/usr/include/aarch64-linux-android -I${{ env.SYSROOT }}/usr/include" \
-          LDFLAGS="-L${{ env.SYSROOT }}/usr/lib/aarch64-linux-android/24" \
-          python setup.py bdist_wheel --dist-dir ../raw_wheels
+          python -m build --wheel --outdir ../raw_wheels
           cd ..
 
-      - name: Download Scrapling, Playwright & Pure Python Dependencies
+      - name: Collect Scrapling & Pure Python Dependencies
         run: |
           mkdir -p final_wheels
           
-          # Unduh pure-python wheels
+          # Unduh wheel murni (pure-python) untuk Scrapling dan semua dependensinya
           pip download --no-deps \
             scrapling \
             browserforge \
             apify-fingerprint-datapoints \
+            patchright \
             protego \
             cssselect \
             w3lib \
@@ -89,38 +93,46 @@ jobs:
             mcp \
             anyio \
             click \
-            playwright \
-            patchright \
             -d final_wheels
 
-      - name: Patch Binary Wheels with patchelf & Repack
+      - name: Patch Binary Wheels for Termux (patchelf DT_NEEDED)
         run: |
           cd raw_wheels
           for whl in *.whl; do
             echo "Patching wheel: $whl"
             mkdir -p temp_whl
             python -m wheel unpack "$whl" -d temp_whl
+            
             pkg_dir=$(find temp_whl -mindepth 1 -maxdepth 1 -type d | head -n 1)
             
-            # Solder libpython3.14.so
-            find "$pkg_dir" -name "*.so" -exec patchelf --add-needed libpython3.14.so {} \; 2>/dev/null || true
+            # Sesuaikan ekstensi file .so jika diperlukan
+            find "$pkg_dir" -name "*aarch64-android-android.so" | while read -r so_file; do
+              new_so="${so_file//android-android/linux-android}"
+              mv "$so_file" "$new_so"
+              echo "Renamed: $so_file -> $new_so"
+            done
             
+            # Sisipkan DT_NEEDED libpython3.14.so
+            find "$pkg_dir" -name "*.so" -exec patchelf --add-needed libpython3.14.so {} \;
+            
+            # Repack ke final_wheels
             python -m wheel pack "$pkg_dir" -d ../final_wheels
             rm -rf temp_whl
           done
 
-      - name: Fix Wheel Platform Tags
+      - name: Fix Wheel Architecture Tags
         run: |
           cd final_wheels
           for f in *.whl; do
-            if [[ "$f" == *"linux_x86_64"* ]] || [[ "$f" == *"linux_aarch64"* ]]; then
-              newname=$(echo "$f" | sed 's/linux_x86_64/android_aarch64/g' | sed 's/linux_aarch64/android_aarch64/g')
+            if [[ "$f" == *"linux_aarch64"* ]]; then
+              newname=$(echo "$f" | sed 's/linux_aarch64/android_aarch64/g')
               mv "$f" "$newname"
+              echo "Renamed: $f -> $newname"
             fi
           done
 
-      - name: Upload Artifact
+      - name: Upload Wheel Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: termux-scrapling-full-py314
+          name: termux-wheels-scrapling-py314
           path: final_wheels/*.whl
