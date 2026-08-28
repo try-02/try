@@ -1,35 +1,113 @@
-name: Build browser-use 0.13.8 Wheel (--no-deps)
+name: Build Patched Primp for Termux Android
 
 on:
   workflow_dispatch:
+    inputs:
+      primp_version:
+        description: 'Primp git tag/branch (default: main)'
+        required: false
+        default: 'main'
+  push:
+    tags:
+      - 'v*'
 
 jobs:
-  build-browser-use:
-    name: Build browser-use 0.13.8 Wheel
+  build-wheels:
+    name: Build Android Wheel (${{ matrix.target }})
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target:
+          - aarch64-linux-android
+          - armv7-linux-androideabi
 
     steps:
-      - name: Setup Python 3.14
+      - name: Checkout Workflow Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.14'
+          python-version: '3.11'
 
-      - name: Install Build Tools
+      - name: Install Maturin
         run: |
-          pip install --upgrade pip build wheel setuptools hatchling
+          pip install --upgrade pip maturin
 
-      - name: Build & Download browser-use 0.13.8 Wheel (--no-deps)
+      - name: Set up Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Set up Android NDK
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r26d
+          add-to-path: true
+
+      - name: Clone Upstream Primp
         run: |
-          mkdir -p final_wheels
-          
-          echo "Building wheel for browser-use==0.13.8 (--no-deps)..."
-          pip wheel --no-deps "browser-use==0.13.8" --wheel-dir final_wheels
-          
-          # Tampilkan file wheel yang berhasil dibuat
-          ls -la final_wheels/
+          git clone https://github.com/deedy5/primp.git primp-src
+          cd primp-src
+          if [ "${{ github.event.inputs.primp_version }}" != "main" ] && [ -n "${{ github.event.inputs.primp_version }}" ]; then
+            git checkout ${{ github.event.inputs.primp_version }} || true
+          fi
 
-      - name: Upload Wheel Artifact
+      - name: Vendor & Patch Crates (Bypass ndk-context / Android JNI)
+        run: |
+          cd primp-src
+          mkdir -p .cargo
+          cargo vendor > .cargo/config.toml
+
+          echo "===> Mem-patch crate rustls-platform-verifier & ndk-context..."
+          # Mengubah pengecekan target Android menjadi disable agar fallback ke standar Unix/Linux certs
+          find vendor/ -type d \( -name "rustls-platform-verifier*" -o -name "ndk-context*" \) | while read -r dir; do
+            find "$dir" -type f \( -name "*.rs" -o -name "Cargo.toml" \) -exec sed -i \
+              -e 's/target_os = "android"/target_os = "disabled_android"/g' \
+              -e 's/"android"/"disabled_android"/g' {} +
+          done
+          echo "Patching selesai."
+
+      - name: Compile Wheel with Maturin
+        run: |
+          export ANDROID_NDK_HOME=$ANDROID_NDK_ROOT
+          TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
+          export PATH=$TOOLCHAIN/bin:$PATH
+
+          if [ "${{ matrix.target }}" = "aarch64-linux-android" ]; then
+            export CC_aarch64_linux_android=$TOOLCHAIN/bin/aarch64-linux-android24-clang
+            export CXX_aarch64_linux_android=$TOOLCHAIN/bin/aarch64-linux-android24-clang++
+            export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$TOOLCHAIN/bin/aarch64-linux-android24-clang
+            export CARGO_TARGET_AARCH64_LINUX_ANDROID_AR=$TOOLCHAIN/bin/llvm-ar
+          elif [ "${{ matrix.target }}" = "armv7-linux-androideabi" ]; then
+            export CC_armv7_linux_androideabi=$TOOLCHAIN/bin/armv7a-linux-androideabi24-clang
+            export CXX_armv7_linux_androideabi=$TOOLCHAIN/bin/armv7a-linux-androideabi24-clang++
+            export CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER=$TOOLCHAIN/bin/armv7a-linux-androideabi24-clang
+            export CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_AR=$TOOLCHAIN/bin/llvm-ar
+          fi
+
+          mkdir -p dist
+          cd primp-src/crates/primp-python
+          maturin build --release --target ${{ matrix.target }} --out ../../../dist --strip
+
+          cd ../../../dist
+          ls -la
+
+          # Duplikasi platform tag linux_* jika pip di Termux membutuhkan tag Linux biasa
+          for f in *android*.whl; do
+            if [ -f "$f" ]; then
+              cp "$f" "$(echo "$f" | sed 's/android/linux/g')"
+            fi
+          done
+
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: termux-browser-use-0.13.8
-          path: final_wheels/*.whl
+          name: primp-termux-${{ matrix.target }}
+          path: dist/*.whl
+
+      - name: Create Release on Tag
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.whl

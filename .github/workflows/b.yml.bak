@@ -1,11 +1,11 @@
-name: Build Scrapling Suite (Android aarch64 Python 3.14)
+name: Build browser-use 0.13.8 Wheel (--no-deps)
 
 on:
   workflow_dispatch:
 
 jobs:
-  build-wheels:
-    name: Build msgspec, orjson & Playwright for Termux
+  build-browser-use:
+    name: Build browser-use 0.13.8 Wheel
     runs-on: ubuntu-latest
 
     steps:
@@ -14,113 +14,22 @@ jobs:
         with:
           python-version: '3.14'
 
-      - name: Setup Rust & Android Target
-        run: |
-          rustup target add aarch64-linux-android
-
-      - name: Configure Android NDK & Toolchain Paths
-        run: |
-          NDK_PATH=$(ls -d /usr/local/lib/android/sdk/ndk/* 2>/dev/null | sort -V | tail -n 1)
-          TOOLCHAIN_PATH="$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64"
-          SYSROOT_PATH="$TOOLCHAIN_PATH/sysroot"
-
-          echo "ANDROID_NDK_HOME=$NDK_PATH" >> $GITHUB_ENV
-          echo "ANDROID_NDK_ROOT=$NDK_PATH" >> $GITHUB_ENV
-          echo "TOOLCHAIN=$TOOLCHAIN_PATH" >> $GITHUB_ENV
-          echo "SYSROOT=$SYSROOT_PATH" >> $GITHUB_ENV
-
       - name: Install Build Tools
         run: |
-          sudo apt-get update && sudo apt-get install -y patchelf cmake ninja-build libclang-dev clang
-          pip install maturin build wheel setuptools
+          pip install --upgrade pip build wheel setuptools hatchling
 
-      - name: Cross-Compile orjson (Rust / PyO3)
-        env:
-          CC_aarch64_linux_android: "${{ env.TOOLCHAIN }}/bin/aarch64-linux-android24-clang"
-          CXX_aarch64_linux_android: "${{ env.TOOLCHAIN }}/bin/aarch64-linux-android24-clang++"
-          AR_aarch64_linux_android: "${{ env.TOOLCHAIN }}/bin/llvm-ar"
-          CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER: "${{ env.TOOLCHAIN }}/bin/aarch64-linux-android24-clang"
-          PYO3_BUILD_EXTENSION_MODULE: "1"
-          RUSTFLAGS: "-C link-arg=-Wl,--unresolved-symbols=ignore-all -C link-arg=-Wl,-z,undefs"
-        run: |
-          mkdir -p raw_wheels
-          cat <<EOF > "$GITHUB_WORKSPACE/pyo3-config.txt"
-          implementation=CPython
-          version=3.14
-          shared=true
-          abi3=false
-          suppress_build_script_link_lines=true
-          EOF
-          export PYO3_CONFIG_FILE="$GITHUB_WORKSPACE/pyo3-config.txt"
-          
-          pip download --no-binary :all: --no-deps orjson
-          tar -xzf orjson-*.tar.gz
-          cd orjson-*/
-          maturin build --release --target aarch64-linux-android --manylinux off --out ../raw_wheels -i python3.14
-          cd ..
-
-      - name: Cross-Compile msgspec (C Extension / NDK Clang)
-        run: |
-          pip download --no-binary :all: --no-deps msgspec
-          tar -xzf msgspec-*.tar.gz
-          cd msgspec-*/
-          
-          CC="${{ env.TOOLCHAIN }}/bin/aarch64-linux-android24-clang" \
-          LDSHARED="${{ env.TOOLCHAIN }}/bin/aarch64-linux-android24-clang -shared" \
-          CFLAGS="--sysroot=${{ env.SYSROOT }} -I${{ env.SYSROOT }}/usr/include/aarch64-linux-android -I${{ env.SYSROOT }}/usr/include" \
-          LDFLAGS="-L${{ env.SYSROOT }}/usr/lib/aarch64-linux-android/24" \
-          python setup.py bdist_wheel --dist-dir ../raw_wheels
-          cd ..
-
-      - name: Download Scrapling, Playwright & Pure Python Dependencies
+      - name: Build & Download browser-use 0.13.8 Wheel (--no-deps)
         run: |
           mkdir -p final_wheels
           
-          # Unduh pure-python wheels
-          pip download --no-deps \
-            scrapling \
-            browserforge \
-            apify-fingerprint-datapoints \
-            protego \
-            cssselect \
-            w3lib \
-            tld \
-            markdownify \
-            mcp \
-            anyio \
-            click \
-            playwright \
-            patchright \
-            -d final_wheels
+          echo "Building wheel for browser-use==0.13.8 (--no-deps)..."
+          pip wheel --no-deps "browser-use==0.13.8" --wheel-dir final_wheels
+          
+          # Tampilkan file wheel yang berhasil dibuat
+          ls -la final_wheels/
 
-      - name: Patch Binary Wheels with patchelf & Repack
-        run: |
-          cd raw_wheels
-          for whl in *.whl; do
-            echo "Patching wheel: $whl"
-            mkdir -p temp_whl
-            python -m wheel unpack "$whl" -d temp_whl
-            pkg_dir=$(find temp_whl -mindepth 1 -maxdepth 1 -type d | head -n 1)
-            
-            # Solder libpython3.14.so
-            find "$pkg_dir" -name "*.so" -exec patchelf --add-needed libpython3.14.so {} \; 2>/dev/null || true
-            
-            python -m wheel pack "$pkg_dir" -d ../final_wheels
-            rm -rf temp_whl
-          done
-
-      - name: Fix Wheel Platform Tags
-        run: |
-          cd final_wheels
-          for f in *.whl; do
-            if [[ "$f" == *"linux_x86_64"* ]] || [[ "$f" == *"linux_aarch64"* ]]; then
-              newname=$(echo "$f" | sed 's/linux_x86_64/android_aarch64/g' | sed 's/linux_aarch64/android_aarch64/g')
-              mv "$f" "$newname"
-            fi
-          done
-
-      - name: Upload Artifact
+      - name: Upload Wheel Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: termux-scrapling-full-py314
+          name: termux-browser-use-0.13.8
           path: final_wheels/*.whl
