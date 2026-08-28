@@ -440,16 +440,50 @@ jobs:
 
           echo "$TREE_OUTPUT"
 
-          if echo "$TREE_OUTPUT" | grep -q "ndk-context"; then
+          # Cargo memakai exit code != 0 apabila package
+          # yang diminta tidak ditemukan.
+          #
+          # Kasus yang kita harapkan:
+          #
+          # error: package ID specification `ndk-context`
+          # did not match any packages
+          #
+          # Jangan mencari string "ndk-context" secara buta,
+          # karena string tersebut juga terdapat pada pesan error.
+
+          if echo "$TREE_OUTPUT" | grep -Fq \
+              'package ID specification `ndk-context` did not match any packages'; then
+
             echo
             echo "=========================================="
-            echo "FATAL: ndk-context MASIH ADA"
+            echo "OK: ndk-context TIDAK ada di dependency tree."
             echo "=========================================="
+
+            exit 0
+          fi
+
+          # Kalau cargo tree berhasil dan menghasilkan output,
+          # berarti package memang ditemukan.
+          if [ "$TREE_STATUS" -eq 0 ]; then
+
+            echo
+            echo "=========================================="
+            echo "FATAL: ndk-context ditemukan."
+            echo "=========================================="
+
+            echo "$TREE_OUTPUT"
+
             exit 1
           fi
 
+          # Untuk error lain yang tidak kita kenal,
+          # jangan dianggap aman.
           echo
-          echo "OK: ndk-context tidak ditemukan untuk target Android."
+          echo "=========================================="
+          echo "FATAL: cargo tree gagal dengan error tak terduga."
+          echo "=========================================="
+
+          exit 1
 
 
       # ==========================================================
