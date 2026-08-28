@@ -54,7 +54,7 @@ jobs:
             git checkout ${{ github.event.inputs.primp_version }} || true
           fi
 
-      - name: Vendor & Patch Crates (Bypass ndk-context / Android JNI)
+      - name: Vendor & Patch Crates (Bypass ndk-context & Gunakan Unix Verifier)
         run: |
           cd primp-src
           mkdir -p .cargo
@@ -63,45 +63,47 @@ jobs:
           python3 -c '
           import os, glob, json
 
-          print("===> 1. Memaksa rustls-platform-verifier menggunakan verifier Unix (others.rs)...")
-          for rpv_mod in glob.glob("vendor/rustls-platform-verifier*/src/verification/mod.rs"):
-              print(f"Patching {rpv_mod}")
-              with open(rpv_mod, "w", encoding="utf-8") as f:
-                  f.write("mod others;\npub use others::*;\n")
-
-          for rpv_lib in glob.glob("vendor/rustls-platform-verifier*/src/lib.rs"):
-              print(f"Patching {rpv_lib}")
-              with open(rpv_lib, "r", encoding="utf-8", errors="ignore") as f:
-                  c = f.read()
-              c = c.replace("pub mod android;", "// pub mod android;")
-              with open(rpv_lib, "w", encoding="utf-8") as f:
-                  f.write(c)
-
-          print("===> 2. Menetralkan ndk-context agar tidak panic...")
-          for ndk_lib in glob.glob("vendor/ndk-context*/src/lib.rs"):
-              print(f"Patching {ndk_lib}")
-              with open(ndk_lib, "r", encoding="utf-8", errors="ignore") as f:
-                  c = f.read()
-              c = c.replace(
-                  "ANDROID_CONTEXT.expect(\"android context was not initialized\")",
-                  "ANDROID_CONTEXT.unwrap_or(AndroidContext { vm: std::ptr::null_mut(), context: std::ptr::null_mut() })"
-              )
-              with open(ndk_lib, "w", encoding="utf-8") as f:
-                  f.write(c)
-
-          print("===> 3. Mem-patch target_os android di seluruh workspace crates...")
-          for root, dirs, files in os.walk("."):
-              for file in files:
-                  if file.endswith(".rs") or file.endswith(".toml"):
-                      filepath = os.path.join(root, file)
-                      with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
-                          c = f.read()
-                      if "target_os = \"android\"" in c:
+          print("===> 1. Mem-patch HANYA vendor/rustls-platform-verifier*...")
+          for rpv_dir in glob.glob("vendor/rustls-platform-verifier*"):
+              print(f"Patching {rpv_dir}")
+              for root, dirs, files in os.walk(rpv_dir):
+                  for file in files:
+                      if file.endswith((".rs", ".toml")):
+                          filepath = os.path.join(root, file)
+                          with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
+                              c = f.read()
                           new_c = c.replace("target_os = \"android\"", "target_os = \"disabled_android\"")
-                          with open(filepath, "w", encoding="utf-8") as f:
-                              f.write(new_c)
+                          new_c = new_c.replace("\"android\"", "\"disabled_android\"")
+                          new_c = new_c.replace("ANDROID", "DISABLED_ANDROID")
+                          if new_c != c:
+                              with open(filepath, "w", encoding="utf-8") as f:
+                                  f.write(new_c)
 
-          print("===> 4. Mereset validasi checksum Cargo...")
+              # Paksa verification/mod.rs menggunakan verifier Unix (others.rs)
+              mod_path = os.path.join(rpv_dir, "src", "verification", "mod.rs")
+              if os.path.exists(mod_path):
+                  print(f"Mengubah {mod_path} menjadi mod others")
+                  with open(mod_path, "w", encoding="utf-8") as f:
+                      f.write("mod others;\npub use others::*;\n")
+
+          print("===> 2. Mem-patch HANYA vendor/ndk-context* (Hilangkan Panic)...")
+          for ndk_dir in glob.glob("vendor/ndk-context*"):
+              print(f"Patching {ndk_dir}")
+              for root, dirs, files in os.walk(ndk_dir):
+                  for file in files:
+                      if file.endswith(".rs"):
+                          filepath = os.path.join(root, file)
+                          with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
+                              c = f.read()
+                          if "expect(\"android context was not initialized\")" in c:
+                              c = c.replace(
+                                  "ANDROID_CONTEXT.expect(\"android context was not initialized\")",
+                                  "ANDROID_CONTEXT.unwrap_or(AndroidContext { vm: std::ptr::null_mut(), context: std::ptr::null_mut() })"
+                              )
+                          with open(filepath, "w", encoding="utf-8") as f:
+                              f.write(c)
+
+          print("===> 3. Mereset validasi checksum Cargo...")
           for root, dirs, files in os.walk("vendor"):
               if ".cargo-checksum.json" in files:
                   filepath = os.path.join(root, ".cargo-checksum.json")
@@ -114,7 +116,7 @@ jobs:
                   except Exception as e:
                       print(f"Error resetting {filepath}: {e}")
 
-          print("Patching selesai!")
+          print("Patching terarah berhasil selesai!")
           '
 
       - name: Compile Wheel with Maturin
