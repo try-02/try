@@ -402,7 +402,6 @@ jobs:
 
           cargo metadata \
             --format-version 1 \
-            --target "${{ matrix.target }}" \
             --no-deps \
             > /tmp/primp-metadata.json
 
@@ -423,6 +422,7 @@ jobs:
           echo
           echo "=========================================="
           echo "cargo tree -i ndk-context"
+          echo "Target: ${{ matrix.target }}"
           echo "=========================================="
 
           set +e
@@ -441,21 +441,15 @@ jobs:
           echo "$TREE_OUTPUT"
 
           if echo "$TREE_OUTPUT" | grep -q "ndk-context"; then
-              echo
-              echo "=========================================="
-              echo "FATAL: ndk-context masih ada"
-              echo "=========================================="
-              exit 1
-          fi
-
-          if [ "$TREE_STATUS" -eq 0 ]; then
-              echo
-              echo "FATAL: cargo tree menemukan ndk-context."
-              exit 1
+            echo
+            echo "=========================================="
+            echo "FATAL: ndk-context MASIH ADA"
+            echo "=========================================="
+            exit 1
           fi
 
           echo
-          echo "OK: ndk-context tidak ditemukan."
+          echo "OK: ndk-context tidak ditemukan untuk target Android."
 
 
       # ==========================================================
@@ -500,36 +494,67 @@ jobs:
       # 14. CHECK RUSTLS AND ANDROID VERIFIER
       # ==========================================================
 
-      - name: Audit Android verifier dependencies
+      - name: Audit dependency features
         shell: bash
         run: |
           set -euxo pipefail
 
           cd primp-src
 
+          echo
+          echo "=========================================="
+          echo "Dependency feature tree"
+          echo "Target: ${{ matrix.target }}"
+          echo "=========================================="
+
           cargo tree \
             --target "${{ matrix.target }}" \
-            > /tmp/primp-tree.txt
+            -e features \
+            > /tmp/primp-features.txt
 
-          echo "=========================================="
-          echo "Relevant dependencies"
-          echo "=========================================="
-
-          grep -Ei \
-            'rustls|webpki|native-tls|openssl|ndk' \
-            /tmp/primp-tree.txt || true
-
-          if grep -Eiq \
-              'rustls-platform-verifier-android|ndk-context' \
-              /tmp/primp-tree.txt; then
-
-              echo
-              echo "FATAL: Android-specific verifier dependency masih ada."
-              exit 1
-          fi
+          cat /tmp/primp-features.txt
 
           echo
-          echo "OK: Tidak ada Android verifier / ndk-context."
+          echo "=========================================="
+          echo "Checking Hickory"
+          echo "=========================================="
+
+          if grep -Eiq \
+              'hickory-dns|hickory-resolver|hickory-proto' \
+              /tmp/primp-features.txt; then
+
+            echo
+            echo "FATAL: Hickory DNS masih berada di dependency tree."
+
+            grep -Ei \
+              'hickory-dns|hickory-resolver|hickory-proto' \
+              /tmp/primp-features.txt || true
+
+            exit 1
+          fi
+
+          echo "OK: Hickory DNS tidak ditemukan."
+
+          echo
+          echo "=========================================="
+          echo "Checking Android Context dependencies"
+          echo "=========================================="
+
+          if grep -Eiq \
+              'ndk-context|android_logger|android_system_properties' \
+              /tmp/primp-features.txt; then
+
+            echo
+            echo "FATAL: dependency Android yang tidak diinginkan ditemukan."
+
+            grep -Ei \
+              'ndk-context|android_logger|android_system_properties' \
+              /tmp/primp-features.txt || true
+
+            exit 1
+          fi
+
+          echo "OK: dependency Android Context tidak ditemukan."
 
 
       # ==========================================================
