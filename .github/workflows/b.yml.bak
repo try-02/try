@@ -7,6 +7,7 @@ on:
         description: "Primp tag/branch/commit"
         required: false
         default: "v2.0.0"
+
   push:
     tags:
       - "v*"
@@ -16,7 +17,7 @@ permissions:
 
 jobs:
   build-wheels:
-    name: Build Termux wheel (${{ matrix.target }})
+    name: Build Termux Wheel (${{ matrix.target }})
     runs-on: ubuntu-latest
 
     strategy:
@@ -32,29 +33,61 @@ jobs:
       PYTHONUNBUFFERED: "1"
 
     steps:
+
+      # ==========================================================
+      # 1. CHECKOUT
+      # ==========================================================
+
       - name: Checkout workflow repository
         uses: actions/checkout@v4
+
+
+      # ==========================================================
+      # 2. PYTHON
+      # ==========================================================
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
+
+      # ==========================================================
+      # 3. BUILD TOOLS
+      # ==========================================================
+
       - name: Install build tools
         run: |
-          python -m pip install --upgrade pip setuptools wheel
-          python -m pip install maturin
+          set -euxo pipefail
+
+          python -m pip install --upgrade pip
+          python -m pip install maturin wheel
+
+
+      # ==========================================================
+      # 4. RUST
+      # ==========================================================
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
 
+
+      # ==========================================================
+      # 5. ANDROID NDK
+      # ==========================================================
+
       - name: Set up Android NDK
         uses: nttld/setup-ndk@v1
         with:
           ndk-version: r26d
           add-to-path: true
+
+
+      # ==========================================================
+      # 6. CLONE PRIMP
+      # ==========================================================
 
       - name: Clone Primp
         shell: bash
@@ -66,164 +99,244 @@ jobs:
           REF="${PRIMP_REF:-v2.0.0}"
 
           git clone https://github.com/deedy5/primp.git primp-src
+
           cd primp-src
 
           git checkout "$REF"
 
-          echo "=== Primp revision ==="
+          echo "=========================================="
+          echo "Primp revision"
+          echo "=========================================="
+
           git rev-parse HEAD
           git describe --tags --always || true
 
-      - name: Inspect original dependency features
+
+      # ==========================================================
+      # 7. INSPECT MANIFEST
+      # ==========================================================
+
+      - name: Inspect Primp manifest
         shell: bash
         run: |
           set -euxo pipefail
+
           cd primp-src
 
-          echo "=== primp-python Cargo.toml ==="
-          sed -n '1,240p' crates/primp-python/Cargo.toml
+          echo "=========================================="
+          echo "crates/primp-python/Cargo.toml"
+          echo "=========================================="
 
-          echo "=== workspace Cargo.toml ==="
-          sed -n '1,260p' Cargo.toml
+          cat crates/primp-python/Cargo.toml
+
+
+      # ==========================================================
+      # 8. VENDOR
+      # ==========================================================
 
       - name: Vendor crates
         shell: bash
         run: |
           set -euxo pipefail
+
           cd primp-src
 
           mkdir -p .cargo
 
           cargo vendor > .cargo/config.toml
 
-          echo "=== Vendor selesai ==="
+          echo
+          echo "=========================================="
+          echo "Vendor selesai"
+          echo "=========================================="
+
           test -d vendor
           test -f .cargo/config.toml
 
-      - name: Patch for Termux
+          echo
+          echo "Jumlah crate vendor:"
+          find vendor -mindepth 1 -maxdepth 1 -type d | wc -l
+
+
+      # ==========================================================
+      # 9. PATCH PRIMP PYTHON
+      # ==========================================================
+
+      - name: Disable Hickory DNS for Termux
         shell: bash
         run: |
           set -euxo pipefail
+
           cd primp-src
 
           python3 <<'PY'
-          import json
-          import os
           from pathlib import Path
 
-          ROOT = Path(".")
+          path = Path("crates/primp-python/Cargo.toml")
 
-          def read(path: Path) -> str:
-              return path.read_text(encoding="utf-8")
-
-          def write(path: Path, text: str) -> None:
-              path.write_text(text, encoding="utf-8")
-
-          print("====================================================")
-          print("1. Disable primp-python hickory-dns feature")
-          print("====================================================")
-
-          candidates = [
-              ROOT / "crates/primp-python/Cargo.toml",
-              ROOT / "Cargo.toml",
-          ]
-
-          found_python_manifest = False
-
-          for path in candidates:
-              if not path.exists():
-                  continue
-
-              text = read(path)
-
-              if path.name == "Cargo.toml" and "crates/primp-python" in str(path):
-                  found_python_manifest = True
-
-              original = text
-
-              # Remove a literal feature entry:
-              #   "hickory-dns",
-              # or:
-              #   "hickory-dns"
-              text = text.replace('    "hickory-dns",\n', "")
-              text = text.replace('    "hickory-dns"\n', "")
-
-              if "hickory-dns" in original and text != original:
-                  print(f"Patched feature list: {path}")
-
-              write(path, text)
-
-          if not found_python_manifest and not (ROOT / "crates/primp-python/Cargo.toml").exists():
-              raise SystemExit("ERROR: crates/primp-python/Cargo.toml tidak ditemukan")
-
-          print()
-          print("====================================================")
-          print("2. Patch rustls-platform-verifier untuk Termux")
-          print("====================================================")
-
-          verifier_dirs = sorted(
-              p for p in (ROOT / "vendor").glob("rustls-platform-verifier-*")
-              if p.is_dir() and "android" not in p.name
-          )
-
-          if not verifier_dirs:
+          if not path.exists():
               raise SystemExit(
-                  "ERROR: vendor/rustls-platform-verifier-* tidak ditemukan"
+                  "ERROR: crates/primp-python/Cargo.toml tidak ditemukan"
               )
 
-          for verifier in verifier_dirs:
-              print(f"Processing: {verifier}")
+          text = path.read_text(encoding="utf-8")
 
-              cargo_toml = verifier / "Cargo.toml"
+          print("==========================================")
+          print("Patching primp-python")
+          print("==========================================")
+
+          # Hanya hapus feature hickory-dns dari feature list.
+          lines = text.splitlines()
+
+          output = []
+          removed = False
+
+          for line in lines:
+              if '"hickory-dns"' in line:
+                  print("REMOVE:", line.strip())
+                  removed = True
+                  continue
+
+              output.append(line)
+
+          new_text = "\n".join(output) + "\n"
+
+          path.write_text(new_text, encoding="utf-8")
+
+          if removed:
+              print("OK: hickory-dns dinonaktifkan.")
+          else:
+              print(
+                  "INFO: hickory-dns tidak ditemukan pada manifest. "
+                  "Tidak ada perubahan."
+              )
+          PY
+
+          echo
+          echo "=========================================="
+          echo "Manifest setelah patch"
+          echo "=========================================="
+
+          cat crates/primp-python/Cargo.toml
+
+
+      # ==========================================================
+      # 10. PATCH RUSTLS PLATFORM VERIFIER
+      # ==========================================================
+
+      - name: Patch rustls-platform-verifier for Termux
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          cd primp-src
+
+          python3 <<'PY'
+          from pathlib import Path
+          import json
+
+          vendor = Path("vendor")
+
+          candidates = sorted(
+              p for p in vendor.glob("rustls-platform-verifier-*")
+              if p.is_dir()
+          )
+
+          print("==========================================")
+          print("rustls-platform-verifier detection")
+          print("==========================================")
+
+          if not candidates:
+              print(
+                  "INFO: rustls-platform-verifier tidak ditemukan di vendor."
+              )
+              print(
+                  "INFO: Tidak ada patch verifier yang diperlukan."
+              )
+              raise SystemExit(0)
+
+          for crate in candidates:
+              print()
+              print("Patching:", crate)
+
+              cargo_toml = crate / "Cargo.toml"
 
               if cargo_toml.exists():
-                  text = read(cargo_toml)
+                  text = cargo_toml.read_text(encoding="utf-8")
 
-                  # Disable Android-specific conditionals.
                   text = text.replace(
                       'target_os = "android"',
                       'target_os = "disabled_android"',
                   )
+
                   text = text.replace(
                       'not(target_os = "android")',
                       'not(target_os = "disabled_android")',
                   )
 
-                  write(cargo_toml, text)
+                  cargo_toml.write_text(
+                      text,
+                      encoding="utf-8"
+                  )
 
-              verification_dir = verifier / "src" / "verification"
-              others = verification_dir / "others.rs"
-              android = verification_dir / "android.rs"
-              mod_rs = verification_dir / "mod.rs"
-              lib_rs = verifier / "src" / "lib.rs"
+              verification = crate / "src" / "verification"
+
+              others = verification / "others.rs"
+              android = verification / "android.rs"
+              mod_rs = verification / "mod.rs"
+
+              # --------------------------------------------------
+              # Unix verifier
+              # --------------------------------------------------
 
               if others.exists():
-                  others_text = read(others)
+                  others_text = others.read_text(
+                      encoding="utf-8"
+                  )
 
                   others_text = others_text.replace(
                       'target_os = "android"',
                       'target_os = "disabled_android"',
                   )
+
                   others_text = others_text.replace(
                       'not(target_os = "android")',
                       'not(target_os = "disabled_android")',
                   )
 
-                  write(others, others_text)
-
-                  # On Termux we want the Unix implementation.
-                  write(android, others_text)
-
-              # Force the generic verifier implementation.
-              if mod_rs.exists():
-                  write(
-                      mod_rs,
-                      "mod others;\n"
-                      "pub use others::*;\n"
+                  others.write_text(
+                      others_text,
+                      encoding="utf-8"
                   )
 
+                  # Gunakan implementasi Unix sebagai fallback.
+                  if android.exists():
+                      android.write_text(
+                          others_text,
+                          encoding="utf-8"
+                      )
+
+              # --------------------------------------------------
+              # verification/mod.rs
+              # --------------------------------------------------
+
+              if mod_rs.exists():
+                  mod_rs.write_text(
+                      "mod others;\n"
+                      "pub use others::*;\n",
+                      encoding="utf-8"
+                  )
+
+              # --------------------------------------------------
+              # lib.rs
+              # --------------------------------------------------
+
+              lib_rs = crate / "src" / "lib.rs"
+
               if lib_rs.exists():
-                  text = read(lib_rs)
+                  text = lib_rs.read_text(
+                      encoding="utf-8"
+                  )
 
                   text = text.replace(
                       'target_os = "android"',
@@ -235,164 +348,252 @@ jobs:
                       "// pub mod android;",
                   )
 
-                  write(lib_rs, text)
+                  lib_rs.write_text(
+                      text,
+                      encoding="utf-8"
+                  )
 
           print()
-          print("====================================================")
-          print("3. Reset vendor checksums after source patching")
-          print("====================================================")
+          print("rustls-platform-verifier patch selesai.")
+
+
+          # ======================================================
+          # Reset Cargo vendor checksums
+          # ======================================================
+
+          print()
+          print("==========================================")
+          print("Reset vendor checksums")
+          print("==========================================")
 
           count = 0
 
-          for checksum in (ROOT / "vendor").rglob(".cargo-checksum.json"):
-              try:
-                  data = json.loads(read(checksum))
-                  data["files"] = {}
-                  write(
-                      checksum,
-                      json.dumps(data, separators=(",", ":")),
-                  )
-                  count += 1
-              except Exception as exc:
-                  raise SystemExit(
-                      f"Gagal patch checksum {checksum}: {exc}"
-                  )
+          for checksum in vendor.rglob(".cargo-checksum.json"):
+              data = json.loads(
+                  checksum.read_text(encoding="utf-8")
+              )
 
-          print(f"Checksum patched: {count} files")
+              data["files"] = {}
 
-          print()
-          print("====================================================")
-          print("PATCH SELESAI")
-          print("====================================================")
+              checksum.write_text(
+                  json.dumps(
+                      data,
+                      separators=(",", ":")
+                  ),
+                  encoding="utf-8"
+              )
+
+              count += 1
+
+          print("Checksum patched:", count)
           PY
 
-      - name: Validate Cargo manifests after patch
+
+      # ==========================================================
+      # 11. CARGO METADATA
+      # ==========================================================
+
+      - name: Validate Cargo metadata
         shell: bash
         run: |
           set -euxo pipefail
+
           cd primp-src
 
           cargo metadata \
             --format-version 1 \
-            --no-deps \
             --target "${{ matrix.target }}" \
+            --no-deps \
             > /tmp/primp-metadata.json
 
           echo "Cargo metadata OK."
 
-      - name: Verify no Android Context dependency remains
+
+      # ==========================================================
+      # 12. CHECK NDK-CONTEXT
+      # ==========================================================
+
+      - name: Verify ndk-context is absent
         shell: bash
         run: |
           set -euxo pipefail
+
           cd primp-src
 
-          echo "===================================================="
+          echo
+          echo "=========================================="
           echo "cargo tree -i ndk-context"
-          echo "===================================================="
+          echo "=========================================="
 
           set +e
+
           TREE_OUTPUT="$(
             cargo tree \
               --target "${{ matrix.target }}" \
               -i ndk-context \
               2>&1
           )"
+
           TREE_STATUS=$?
+
           set -e
 
           echo "$TREE_OUTPUT"
 
           if echo "$TREE_OUTPUT" | grep -q "ndk-context"; then
-            echo
-            echo "ERROR: ndk-context masih masuk ke dependency tree."
-            echo
-            exit 1
+              echo
+              echo "=========================================="
+              echo "FATAL: ndk-context masih ada"
+              echo "=========================================="
+              exit 1
           fi
 
-          # Cargo returns non-zero when a package cannot be found as a dependency.
-          # That is exactly what we expect here.
-          if [ "$TREE_STATUS" -ne 0 ]; then
-            echo
-            echo "OK: ndk-context tidak menjadi dependency untuk target ${{ matrix.target }}."
-          else
-            echo
-            echo "ERROR: cargo tree menemukan ndk-context."
-            exit 1
+          if [ "$TREE_STATUS" -eq 0 ]; then
+              echo
+              echo "FATAL: cargo tree menemukan ndk-context."
+              exit 1
           fi
 
-      - name: Audit dependency features
+          echo
+          echo "OK: ndk-context tidak ditemukan."
+
+
+      # ==========================================================
+      # 13. CHECK HICKORY
+      # ==========================================================
+
+      - name: Verify Hickory DNS is absent
         shell: bash
         run: |
           set -euxo pipefail
+
           cd primp-src
 
-          echo "===================================================="
-          echo "Dependency audit"
-          echo "===================================================="
+          echo
+          echo "=========================================="
+          echo "Hickory dependency tree"
+          echo "=========================================="
+
+          set +e
 
           cargo tree \
             --target "${{ matrix.target }}" \
             -e features \
-            > /tmp/primp-feature-tree.txt
+            > /tmp/primp-features.txt 2>&1
 
-          if grep -Eiq 'hickory-dns|hickory-resolver' /tmp/primp-feature-tree.txt; then
-            echo "ERROR: Hickory DNS masih terdapat pada feature tree."
-            grep -Ei 'hickory-dns|hickory-resolver' /tmp/primp-feature-tree.txt || true
-            exit 1
+          set -e
+
+          if grep -Eiq \
+              'hickory-dns|hickory-resolver|hickory-proto'; then
+              echo
+              echo "FATAL: Hickory masih ditemukan."
+              grep -Ei \
+                'hickory-dns|hickory-resolver|hickory-proto' \
+                /tmp/primp-features.txt || true
+              exit 1
           fi
 
           echo "OK: Hickory DNS tidak aktif."
 
-          if grep -Eiq 'rustls-platform-verifier-android|ndk-context' \
-            /tmp/primp-feature-tree.txt; then
-            echo "ERROR: Android verifier / ndk-context masih ditemukan."
-            grep -Ei \
+
+      # ==========================================================
+      # 14. CHECK RUSTLS AND ANDROID VERIFIER
+      # ==========================================================
+
+      - name: Audit Android verifier dependencies
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          cd primp-src
+
+          cargo tree \
+            --target "${{ matrix.target }}" \
+            > /tmp/primp-tree.txt
+
+          echo "=========================================="
+          echo "Relevant dependencies"
+          echo "=========================================="
+
+          grep -Ei \
+            'rustls|webpki|native-tls|openssl|ndk' \
+            /tmp/primp-tree.txt || true
+
+          if grep -Eiq \
               'rustls-platform-verifier-android|ndk-context' \
-              /tmp/primp-feature-tree.txt || true
-            exit 1
+              /tmp/primp-tree.txt; then
+
+              echo
+              echo "FATAL: Android-specific verifier dependency masih ada."
+              exit 1
           fi
 
-          echo "OK: Android verifier dependency tidak ditemukan."
+          echo
+          echo "OK: Tidak ada Android verifier / ndk-context."
+
+
+      # ==========================================================
+      # 15. CONFIGURE ANDROID LINKER
+      # ==========================================================
 
       - name: Configure Android linker
         shell: bash
         run: |
           set -euxo pipefail
 
-          export TOOLCHAIN="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64"
+          TOOLCHAIN="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64"
+
+          echo "TOOLCHAIN=$TOOLCHAIN"
+          echo "ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT"
 
           case "${{ matrix.target }}" in
+
             aarch64-linux-android)
-              export CC_aarch64_linux_android="$TOOLCHAIN/bin/aarch64-linux-android${ANDROID_API_LEVEL}-clang"
-              export CXX_aarch64_linux_android="$TOOLCHAIN/bin/aarch64-linux-android${ANDROID_API_LEVEL}-clang++"
-              export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$TOOLCHAIN/bin/aarch64-linux-android${ANDROID_API_LEVEL}-clang"
+
+              echo \
+                "CC_aarch64_linux_android=$TOOLCHAIN/bin/aarch64-linux-android${ANDROID_API_LEVEL}-clang" \
+                >> "$GITHUB_ENV"
+
+              echo \
+                "CXX_aarch64_linux_android=$TOOLCHAIN/bin/aarch64-linux-android${ANDROID_API_LEVEL}-clang++" \
+                >> "$GITHUB_ENV"
+
+              echo \
+                "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$TOOLCHAIN/bin/aarch64-linux-android${ANDROID_API_LEVEL}-clang" \
+                >> "$GITHUB_ENV"
+
               ;;
+
             armv7-linux-androideabi)
-              export CC_armv7_linux_androideabi="$TOOLCHAIN/bin/armv7a-linux-androideabi${ANDROID_API_LEVEL}-clang"
-              export CXX_armv7_linux_androideabi="$TOOLCHAIN/bin/armv7a-linux-androideabi${ANDROID_API_LEVEL}-clang++"
-              export CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER="$TOOLCHAIN/bin/armv7a-linux-androideabi${ANDROID_API_LEVEL}-clang"
+
+              echo \
+                "CC_armv7_linux_androideabi=$TOOLCHAIN/bin/armv7a-linux-androideabi${ANDROID_API_LEVEL}-clang" \
+                >> "$GITHUB_ENV"
+
+              echo \
+                "CXX_armv7_linux_androideabi=$TOOLCHAIN/bin/armv7a-linux-androideabi${ANDROID_API_LEVEL}-clang++" \
+                >> "$GITHUB_ENV"
+
+              echo \
+                "CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER=$TOOLCHAIN/bin/armv7a-linux-androideabi${ANDROID_API_LEVEL}-clang" \
+                >> "$GITHUB_ENV"
+
               ;;
+
             *)
               echo "Unsupported target"
               exit 1
               ;;
+
           esac
 
           echo "PATH=$TOOLCHAIN/bin:$PATH" >> "$GITHUB_ENV"
           echo "ANDROID_NDK_HOME=$ANDROID_NDK_ROOT" >> "$GITHUB_ENV"
 
-          echo "CC_aarch64_linux_android=$CC_aarch64_linux_android" >> "$GITHUB_ENV" || true
-          echo "CXX_aarch64_linux_android=$CXX_aarch64_linux_android" >> "$GITHUB_ENV" || true
-          echo "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER" >> "$GITHUB_ENV" || true
 
-          echo "CC_armv7_linux_androideabi=$CC_armv7_linux_androideabi" >> "$GITHUB_ENV" || true
-          echo "CXX_armv7_linux_androideabi=$CXX_armv7_linux_androideabi" >> "$GITHUB_ENV" || true
-          echo "CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER=$CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER" >> "$GITHUB_ENV" || true
-
-          echo "=== Android environment ==="
-          echo "ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT"
-          echo "ANDROID_API_LEVEL=$ANDROID_API_LEVEL"
-          echo "TARGET=${{ matrix.target }}"
+      # ==========================================================
+      # 16. PYTHON LINKER STUB
+      # ==========================================================
 
       - name: Prepare Python linker stub
         shell: bash
@@ -400,32 +601,65 @@ jobs:
           set -euxo pipefail
 
           STUB_DIR="$RUNNER_TEMP/python-stubs"
+
           mkdir -p "$STUB_DIR"
 
+          TOOLCHAIN="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64"
+
           case "${{ matrix.target }}" in
+
             aarch64-linux-android)
-              "$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android${ANDROID_API_LEVEL}-clang" \
+
+              "$TOOLCHAIN/bin/aarch64-linux-android${ANDROID_API_LEVEL}-clang" \
                 -shared \
                 -o "$STUB_DIR/libpython3.so" \
                 -x c /dev/null
+
               ;;
+
             armv7-linux-androideabi)
-              "$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi${ANDROID_API_LEVEL}-clang" \
+
+              "$TOOLCHAIN/bin/armv7a-linux-androideabi${ANDROID_API_LEVEL}-clang" \
                 -shared \
                 -o "$STUB_DIR/libpython3.so" \
                 -x c /dev/null
+
               ;;
+
           esac
 
-          for v in 3.8 3.9 3.10 3.11 3.12 3.13 3.14; do
-            ln -sf libpython3.so "$STUB_DIR/libpython$v.so"
+          for v in \
+            3.8 \
+            3.9 \
+            3.10 \
+            3.11 \
+            3.12 \
+            3.13 \
+            3.14
+          do
+            ln -sf \
+              libpython3.so \
+              "$STUB_DIR/libpython$v.so"
           done
 
-          echo "PRIMP_PYTHON_STUB_DIR=$STUB_DIR" >> "$GITHUB_ENV"
-          echo "LIBRARY_PATH=$STUB_DIR:${LIBRARY_PATH:-}" >> "$GITHUB_ENV"
-          echo "RUSTFLAGS=-L $STUB_DIR" >> "$GITHUB_ENV"
+          echo \
+            "PRIMP_PYTHON_STUB_DIR=$STUB_DIR" \
+            >> "$GITHUB_ENV"
 
-      - name: Build wheel
+          echo \
+            "LIBRARY_PATH=$STUB_DIR:${LIBRARY_PATH:-}" \
+            >> "$GITHUB_ENV"
+
+          echo \
+            "RUSTFLAGS=-L $STUB_DIR" \
+            >> "$GITHUB_ENV"
+
+
+      # ==========================================================
+      # 17. BUILD
+      # ==========================================================
+
+      - name: Build Primp wheel
         shell: bash
         run: |
           set -euxo pipefail
@@ -442,101 +676,177 @@ jobs:
 
           cd ../../../
 
-          echo "===================================================="
-          echo "Built wheels"
-          echo "===================================================="
+          echo
+          echo "=========================================="
+          echo "Built wheel"
+          echo "=========================================="
 
           ls -lah dist
-          test -n "$(find dist -maxdepth 1 -name '*.whl' -print -quit)"
 
-      - name: Validate wheel structure
+          test -n "$(
+            find dist \
+              -maxdepth 1 \
+              -name '*.whl' \
+              -print \
+              -quit
+          )"
+
+
+      # ==========================================================
+      # 18. VALIDATE WHEEL
+      # ==========================================================
+
+      - name: Validate wheel
         shell: bash
         run: |
           set -euxo pipefail
 
-          python -m pip install --upgrade wheel
+          python -m wheel --version
 
-          for WHL in dist/*.whl; do
+          for WHL in dist/*.whl
+          do
+
             echo
-            echo "===================================================="
-            echo "Checking: $WHL"
-            echo "===================================================="
+            echo "=========================================="
+            echo "Validating:"
+            echo "$WHL"
+            echo "=========================================="
 
-            python -m wheel unpack "$WHL" -d /tmp/wheel-check
+            rm -rf /tmp/wheel-check
+            mkdir -p /tmp/wheel-check
 
-            UNPACKED="$(find /tmp/wheel-check -mindepth 1 -maxdepth 1 -type d | tail -n 1)"
+            python -m wheel unpack \
+              "$WHL" \
+              -d /tmp/wheel-check
+
+            UNPACKED="$(
+              find /tmp/wheel-check \
+                -mindepth 1 \
+                -maxdepth 1 \
+                -type d \
+                | head -n 1
+            )"
 
             test -n "$UNPACKED"
 
-            echo "Wheel metadata:"
-            sed -n '1,220p' "$UNPACKED"/*.dist-info/WHEEL
+            DIST_INFO="$(
+              find "$UNPACKED" \
+                -maxdepth 1 \
+                -type d \
+                -name '*.dist-info' \
+                | head -n 1
+            )"
+
+            test -n "$DIST_INFO"
 
             echo
-            echo "RECORD:"
-            test -f "$UNPACKED"/*.dist-info/RECORD
+            echo "WHEEL:"
+            cat "$DIST_INFO/WHEEL"
 
             echo
-            echo "Native files:"
-            find "$UNPACKED" -type f \
-              \( -name '*.so' -o -name '*.abi3.so' \) \
+            echo "Native libraries:"
+            find "$UNPACKED" \
+              -type f \
+              \( \
+                -name '*.so' \
+                -o -name '*.abi3.so' \
+              \) \
               -print
 
             test -n "$(
-              find "$UNPACKED" -type f \
-                \( -name '*.so' -o -name '*.abi3.so' \) \
-                -print -quit
+              find "$UNPACKED" \
+                -type f \
+                \( \
+                  -name '*.so' \
+                  -o -name '*.abi3.so' \
+                \) \
+                -print \
+                -quit
             )"
 
-            rm -rf /tmp/wheel-check/*
+            echo
+            echo "RECORD:"
+            test -f "$DIST_INFO/RECORD"
+
+            echo "Wheel structure OK."
+
           done
 
-      - name: Validate wheel filename and architecture
+
+      # ==========================================================
+      # 19. IMPORT SMOKE TEST
+      # ==========================================================
+
+      - name: Smoke test Python import
         shell: bash
         run: |
           set -euxo pipefail
 
-          case "${{ matrix.target }}" in
-            aarch64-linux-android)
-              EXPECTED="aarch64"
-              ;;
-            armv7-linux-androideabi)
-              EXPECTED="armv7"
-              ;;
-          esac
-
-          echo "Expected architecture marker: $EXPECTED"
-
-          for WHL in dist/*.whl; do
-            echo "Wheel: $(basename "$WHL")"
-
-            case "$WHL" in
-              *"$EXPECTED"*) ;;
-              *)
-                echo "WARNING: architecture marker tidak muncul pada filename wheel."
-                ;;
-            esac
-          done
-
-      - name: Run static import smoke test against built artifact
-        shell: bash
-        run: |
-          set -euxo pipefail
-
-          python -m pip install --force-reinstall dist/*.whl --no-deps
+          python -m pip install \
+            --force-reinstall \
+            --no-deps \
+            dist/*.whl
 
           python - <<'PY'
           import primp
 
+          print("==========================================")
           print("Primp import OK")
-          print("Version:", getattr(primp, "__version__", "unknown"))
+          print("==========================================")
+
+          print(
+              "Version:",
+              getattr(primp, "__version__", "unknown")
+          )
           PY
 
-      - name: Publish artifact
+
+      # ==========================================================
+      # 20. FINAL STATIC AUDIT
+      # ==========================================================
+
+      - name: Final artifact audit
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          echo
+          echo "=========================================="
+          echo "FINAL ARTIFACT"
+          echo "=========================================="
+
+          ls -lah dist
+
+          echo
+          echo "Target:"
+          echo "${{ matrix.target }}"
+
+          echo
+          echo "Wheel:"
+          for f in dist/*.whl
+          do
+            basename "$f"
+          done
+
+          echo
+          echo "Build finished successfully."
+
+
+      # ==========================================================
+      # 21. UPLOAD
+      # ==========================================================
+
+      - name: Upload wheel artifact
         uses: actions/upload-artifact@v4
         with:
           name: primp-termux-${{ matrix.target }}
           path: dist/*.whl
           if-no-files-found: error
+
+
+      # ==========================================================
+      # 22. RELEASE
+      # ==========================================================
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
