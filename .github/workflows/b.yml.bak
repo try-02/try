@@ -54,7 +54,7 @@ jobs:
             git checkout ${{ github.event.inputs.primp_version }} || true
           fi
 
-      - name: Vendor & Patch Crates (Bypass ndk-context & Gunakan Unix Verifier)
+      - name: Vendor & Patch Crates (Paksa Full Unix WebPKI Verifier)
         run: |
           cd primp-src
           mkdir -p .cargo
@@ -63,47 +63,55 @@ jobs:
           python3 -c '
           import os, glob, json
 
-          print("===> 1. Mem-patch HANYA vendor/rustls-platform-verifier*...")
+          print("===> 1. Mem-patch Cargo.toml & source code di rustls-platform-verifier...")
           for rpv_dir in glob.glob("vendor/rustls-platform-verifier*"):
-              print(f"Patching {rpv_dir}")
-              for root, dirs, files in os.walk(rpv_dir):
-                  for file in files:
-                      if file.endswith((".rs", ".toml")):
-                          filepath = os.path.join(root, file)
-                          with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
-                              c = f.read()
-                          new_c = c.replace("target_os = \"android\"", "target_os = \"disabled_android\"")
-                          new_c = new_c.replace("\"android\"", "\"disabled_android\"")
-                          new_c = new_c.replace("ANDROID", "DISABLED_ANDROID")
-                          if new_c != c:
-                              with open(filepath, "w", encoding="utf-8") as f:
-                                  f.write(new_c)
+              if "android" in rpv_dir:
+                  continue # Lewati crate rustls-platform-verifier-android
+              
+              print(f"Memproses {rpv_dir}")
+              cargo_toml = os.path.join(rpv_dir, "Cargo.toml")
+              if os.path.exists(cargo_toml):
+                  with open(cargo_toml, "r", encoding="utf-8") as f:
+                      c = f.read()
+                  # Ubah target dependency: Android memakai dependensi Unix (rustls-native-certs, openssl-probe)
+                  c = c.replace("not(target_os = \"android\")", "not(target_os = \"disabled_android\")")
+                  c = c.replace("target_os = \"android\"", "target_os = \"disabled_android\"")
+                  with open(cargo_toml, "w", encoding="utf-8") as f:
+                      f.write(c)
 
-              # Paksa verification/mod.rs menggunakan verifier Unix (others.rs)
-              mod_path = os.path.join(rpv_dir, "src", "verification", "mod.rs")
-              if os.path.exists(mod_path):
-                  print(f"Mengubah {mod_path} menjadi mod others")
-                  with open(mod_path, "w", encoding="utf-8") as f:
+              # Baca isi others.rs (implementasi verifier Unix)
+              others_file = os.path.join(rpv_dir, "src", "verification", "others.rs")
+              if os.path.exists(others_file):
+                  with open(others_file, "r", encoding="utf-8") as f:
+                      others_code = f.read()
+                  # Hilangkan batasan not(target_os = android) di dalam others.rs
+                  others_code = others_code.replace("not(target_os = \"android\")", "not(target_os = \"disabled_android\")")
+                  others_code = others_code.replace("target_os = \"android\"", "target_os = \"disabled_android\"")
+                  with open(others_file, "w", encoding="utf-8") as f:
+                      f.write(others_code)
+
+                  # Timpa android.rs langsung dengan isi others.rs
+                  android_file = os.path.join(rpv_dir, "src", "verification", "android.rs")
+                  with open(android_file, "w", encoding="utf-8") as f:
+                      f.write(others_code)
+
+              # Paksa verification/mod.rs mengekspor others
+              mod_file = os.path.join(rpv_dir, "src", "verification", "mod.rs")
+              if os.path.exists(mod_file):
+                  with open(mod_file, "w", encoding="utf-8") as f:
                       f.write("mod others;\npub use others::*;\n")
 
-          print("===> 2. Mem-patch HANYA vendor/ndk-context* (Hilangkan Panic)...")
-          for ndk_dir in glob.glob("vendor/ndk-context*"):
-              print(f"Patching {ndk_dir}")
-              for root, dirs, files in os.walk(ndk_dir):
-                  for file in files:
-                      if file.endswith(".rs"):
-                          filepath = os.path.join(root, file)
-                          with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
-                              c = f.read()
-                          if "expect(\"android context was not initialized\")" in c:
-                              c = c.replace(
-                                  "ANDROID_CONTEXT.expect(\"android context was not initialized\")",
-                                  "ANDROID_CONTEXT.unwrap_or(AndroidContext { java_vm: std::ptr::null_mut(), context_jobject: std::ptr::null_mut() })"
-                              )
-                          with open(filepath, "w", encoding="utf-8") as f:
-                              f.write(c)
+              # Nonaktifkan modul android di src/lib.rs
+              lib_file = os.path.join(rpv_dir, "src", "lib.rs")
+              if os.path.exists(lib_file):
+                  with open(lib_file, "r", encoding="utf-8") as f:
+                      lib_code = f.read()
+                  lib_code = lib_code.replace("pub mod android;", "// pub mod android;")
+                  lib_code = lib_code.replace("target_os = \"android\"", "target_os = \"disabled_android\"")
+                  with open(lib_file, "w", encoding="utf-8") as f:
+                      f.write(lib_code)
 
-          print("===> 3. Mereset validasi checksum Cargo...")
+          print("===> 2. Mereset validasi checksum Cargo...")
           for root, dirs, files in os.walk("vendor"):
               if ".cargo-checksum.json" in files:
                   filepath = os.path.join(root, ".cargo-checksum.json")
@@ -116,7 +124,7 @@ jobs:
                   except Exception as e:
                       print(f"Error resetting {filepath}: {e}")
 
-          print("Patching berhasil selesai!")
+          print("Patching Unix verifier selesai!")
           '
 
       - name: Compile Wheel with Maturin
