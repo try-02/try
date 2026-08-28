@@ -97,17 +97,30 @@ jobs:
           TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
           export PATH=$TOOLCHAIN/bin:$PATH
 
+          # Buat direktori stub libpython3.so untuk linker NDK
+          STUB_DIR=/tmp/python_stubs
+          mkdir -p "$STUB_DIR"
+
           if [ "${{ matrix.target }}" = "aarch64-linux-android" ]; then
             export CC_aarch64_linux_android=$TOOLCHAIN/bin/aarch64-linux-android24-clang
             export CXX_aarch64_linux_android=$TOOLCHAIN/bin/aarch64-linux-android24-clang++
             export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$TOOLCHAIN/bin/aarch64-linux-android24-clang
             export CARGO_TARGET_AARCH64_LINUX_ANDROID_AR=$TOOLCHAIN/bin/llvm-ar
+            $TOOLCHAIN/bin/aarch64-linux-android24-clang -shared -o "$STUB_DIR/libpython3.so" -x c /dev/null
           elif [ "${{ matrix.target }}" = "armv7-linux-androideabi" ]; then
             export CC_armv7_linux_androideabi=$TOOLCHAIN/bin/armv7a-linux-androideabi24-clang
             export CXX_armv7_linux_androideabi=$TOOLCHAIN/bin/armv7a-linux-androideabi24-clang++
             export CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER=$TOOLCHAIN/bin/armv7a-linux-androideabi24-clang
             export CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_AR=$TOOLCHAIN/bin/llvm-ar
+            $TOOLCHAIN/bin/armv7a-linux-androideabi24-clang -shared -o "$STUB_DIR/libpython3.so" -x c /dev/null
           fi
+
+          for v in 3.8 3.9 3.10 3.11 3.12 3.13 3.14; do
+            ln -sf libpython3.so "$STUB_DIR/libpython$v.so"
+          done
+
+          export LIBRARY_PATH="$STUB_DIR:$LIBRARY_PATH"
+          export RUSTFLAGS="-L $STUB_DIR"
 
           mkdir -p dist
           cd primp-src/crates/primp-python
