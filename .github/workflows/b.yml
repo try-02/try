@@ -60,13 +60,16 @@ jobs:
           cargo vendor > .cargo/config.toml
 
           echo "===> Mem-patch crate rustls-platform-verifier & ndk-context..."
-          # Mengubah pengecekan target Android menjadi disable agar fallback ke standar Unix/Linux certs
           find vendor/ -type d \( -name "rustls-platform-verifier*" -o -name "ndk-context*" \) | while read -r dir; do
             find "$dir" -type f \( -name "*.rs" -o -name "Cargo.toml" \) -exec sed -i \
               -e 's/target_os = "android"/target_os = "disabled_android"/g' \
               -e 's/"android"/"disabled_android"/g' {} +
           done
-          echo "Patching selesai."
+
+          echo "===> Menghapus validasi checksum Cargo..."
+          # Reset checksum file agar Cargo membiarkan file yang telah dimodifikasi
+          find vendor/ -name ".cargo-checksum.json" -exec sed -i 's/"files":{[^}]*}/"files":{}/' {} +
+          echo "Patching dan reset checksum berhasil."
 
       - name: Compile Wheel with Maturin
         run: |
