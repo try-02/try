@@ -98,7 +98,7 @@ jobs:
                           if "expect(\"android context was not initialized\")" in c:
                               c = c.replace(
                                   "ANDROID_CONTEXT.expect(\"android context was not initialized\")",
-                                  "ANDROID_CONTEXT.unwrap_or(AndroidContext { vm: std::ptr::null_mut(), context: std::ptr::null_mut() })"
+                                  "ANDROID_CONTEXT.unwrap_or(AndroidContext { java_vm: std::ptr::null_mut(), context_jobject: std::ptr::null_mut() })"
                               )
                           with open(filepath, "w", encoding="utf-8") as f:
                               f.write(c)
@@ -116,7 +116,7 @@ jobs:
                   except Exception as e:
                       print(f"Error resetting {filepath}: {e}")
 
-          print("Patching terarah berhasil selesai!")
+          print("Patching berhasil selesai!")
           '
 
       - name: Compile Wheel with Maturin
