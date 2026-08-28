@@ -59,17 +59,37 @@ jobs:
           mkdir -p .cargo
           cargo vendor > .cargo/config.toml
 
-          echo "===> Mem-patch crate rustls-platform-verifier & ndk-context..."
-          find vendor/ -type d \( -name "rustls-platform-verifier*" -o -name "ndk-context*" \) | while read -r dir; do
-            find "$dir" -type f \( -name "*.rs" -o -name "Cargo.toml" \) -exec sed -i \
-              -e 's/target_os = "android"/target_os = "disabled_android"/g' \
-              -e 's/"android"/"disabled_android"/g' {} +
-          done
+          python3 -c '
+          import os, json
 
-          echo "===> Menghapus validasi checksum Cargo..."
-          # Reset checksum file agar Cargo membiarkan file yang telah dimodifikasi
-          find vendor/ -name ".cargo-checksum.json" -exec sed -i 's/"files":{[^}]*}/"files":{}/' {} +
-          echo "Patching dan reset checksum berhasil."
+          print("===> Mem-patch crate rustls-platform-verifier & ndk-context...")
+          for root, dirs, files in os.walk("vendor"):
+              if any(k in root for k in ["rustls-platform-verifier", "ndk-context"]):
+                  for file in files:
+                      if file.endswith((".rs", ".toml")):
+                          filepath = os.path.join(root, file)
+                          with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
+                              content = f.read()
+                          new_content = content.replace("target_os = \"android\"", "target_os = \"disabled_android\"").replace("\"android\"", "\"disabled_android\"")
+                          if new_content != content:
+                              with open(filepath, "w", encoding="utf-8") as f:
+                                  f.write(new_content)
+
+          print("===> Menghapus validasi checksum Cargo...")
+          for root, dirs, files in os.walk("vendor"):
+              if ".cargo-checksum.json" in files:
+                  filepath = os.path.join(root, ".cargo-checksum.json")
+                  try:
+                      with open(filepath, "r", encoding="utf-8") as f:
+                          data = json.load(f)
+                      data["files"] = {}
+                      with open(filepath, "w", encoding="utf-8") as f:
+                          json.dump(data, f)
+                  except Exception as e:
+                      print(f"Error resetting {filepath}: {e}")
+
+          print("Patching & reset checksum selesai!")
+          '
 
       - name: Compile Wheel with Maturin
         run: |
