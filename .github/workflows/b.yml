@@ -16,7 +16,7 @@ jobs:
     name: Build Android Wheel (${{ matrix.target }})
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false # Jangan batalkan target lain jika salah satu gagal
+      fail-fast: false
       matrix:
         target:
           - aarch64-linux-android
@@ -61,22 +61,47 @@ jobs:
           cargo vendor > .cargo/config.toml
 
           python3 -c '
-          import os, json
+          import os, glob, json
 
-          print("===> Mem-patch crate rustls-platform-verifier & ndk-context...")
-          for root, dirs, files in os.walk("vendor"):
-              if any(k in root for k in ["rustls-platform-verifier", "ndk-context"]):
-                  for file in files:
-                      if file.endswith((".rs", ".toml")):
-                          filepath = os.path.join(root, file)
-                          with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
-                              content = f.read()
-                          new_content = content.replace("target_os = \"android\"", "target_os = \"disabled_android\"").replace("\"android\"", "\"disabled_android\"")
-                          if new_content != content:
-                              with open(filepath, "w", encoding="utf-8") as f:
-                                  f.write(new_content)
+          print("===> 1. Memaksa rustls-platform-verifier menggunakan verifier Unix (others.rs)...")
+          for rpv_mod in glob.glob("vendor/rustls-platform-verifier*/src/verification/mod.rs"):
+              print(f"Patching {rpv_mod}")
+              with open(rpv_mod, "w", encoding="utf-8") as f:
+                  f.write("mod others;\npub use others::*;\n")
 
-          print("===> Menghapus validasi checksum Cargo...")
+          for rpv_lib in glob.glob("vendor/rustls-platform-verifier*/src/lib.rs"):
+              print(f"Patching {rpv_lib}")
+              with open(rpv_lib, "r", encoding="utf-8", errors="ignore") as f:
+                  c = f.read()
+              c = c.replace("pub mod android;", "// pub mod android;")
+              with open(rpv_lib, "w", encoding="utf-8") as f:
+                  f.write(c)
+
+          print("===> 2. Menetralkan ndk-context agar tidak panic...")
+          for ndk_lib in glob.glob("vendor/ndk-context*/src/lib.rs"):
+              print(f"Patching {ndk_lib}")
+              with open(ndk_lib, "r", encoding="utf-8", errors="ignore") as f:
+                  c = f.read()
+              c = c.replace(
+                  "ANDROID_CONTEXT.expect(\"android context was not initialized\")",
+                  "ANDROID_CONTEXT.unwrap_or(AndroidContext { vm: std::ptr::null_mut(), context: std::ptr::null_mut() })"
+              )
+              with open(ndk_lib, "w", encoding="utf-8") as f:
+                  f.write(c)
+
+          print("===> 3. Mem-patch target_os android di seluruh workspace crates...")
+          for root, dirs, files in os.walk("."):
+              for file in files:
+                  if file.endswith(".rs") or file.endswith(".toml"):
+                      filepath = os.path.join(root, file)
+                      with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
+                          c = f.read()
+                      if "target_os = \"android\"" in c:
+                          new_c = c.replace("target_os = \"android\"", "target_os = \"disabled_android\"")
+                          with open(filepath, "w", encoding="utf-8") as f:
+                              f.write(new_c)
+
+          print("===> 4. Mereset validasi checksum Cargo...")
           for root, dirs, files in os.walk("vendor"):
               if ".cargo-checksum.json" in files:
                   filepath = os.path.join(root, ".cargo-checksum.json")
@@ -89,7 +114,7 @@ jobs:
                   except Exception as e:
                       print(f"Error resetting {filepath}: {e}")
 
-          print("Patching & reset checksum selesai!")
+          print("Patching selesai!")
           '
 
       - name: Compile Wheel with Maturin
@@ -99,7 +124,6 @@ jobs:
           TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
           export PATH=$TOOLCHAIN/bin:$PATH
 
-          # Buat direktori stub libpython3.so untuk linker NDK
           STUB_DIR=/tmp/python_stubs
           mkdir -p "$STUB_DIR"
 
@@ -132,7 +156,6 @@ jobs:
           echo "=== Hasil Build Wheel ==="
           ls -la
 
-          # Duplikasi platform tag linux_* agar langsung dikenali oleh pip di Termux
           for f in *.whl; do
             if [[ "$f" == *"arm64_v8a"* ]] || [[ "$f" == *"aarch64"* ]]; then
               new_name=$(echo "$f" | sed -E 's/android_[0-9]+_arm64_v8a/linux_aarch64/g' | sed 's/android_aarch64/linux_aarch64/g')
@@ -142,9 +165,6 @@ jobs:
               [ "$f" != "$new_name" ] && cp "$f" "$new_name"
             fi
           done
-
-          echo "=== Daftar Wheel Akhir ==="
-          ls -la
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4

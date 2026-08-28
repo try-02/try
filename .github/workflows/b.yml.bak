@@ -16,6 +16,7 @@ jobs:
     name: Build Android Wheel (${{ matrix.target }})
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false # Jangan batalkan target lain jika salah satu gagal
       matrix:
         target:
           - aarch64-linux-android
@@ -94,6 +95,7 @@ jobs:
       - name: Compile Wheel with Maturin
         run: |
           export ANDROID_NDK_HOME=$ANDROID_NDK_ROOT
+          export ANDROID_API_LEVEL=24
           TOOLCHAIN=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64
           export PATH=$TOOLCHAIN/bin:$PATH
 
@@ -127,14 +129,22 @@ jobs:
           maturin build --release --target ${{ matrix.target }} --out ../../../dist --strip
 
           cd ../../../dist
+          echo "=== Hasil Build Wheel ==="
           ls -la
 
-          # Duplikasi platform tag linux_* jika pip di Termux membutuhkan tag Linux biasa
-          for f in *android*.whl; do
-            if [ -f "$f" ]; then
-              cp "$f" "$(echo "$f" | sed 's/android/linux/g')"
+          # Duplikasi platform tag linux_* agar langsung dikenali oleh pip di Termux
+          for f in *.whl; do
+            if [[ "$f" == *"arm64_v8a"* ]] || [[ "$f" == *"aarch64"* ]]; then
+              new_name=$(echo "$f" | sed -E 's/android_[0-9]+_arm64_v8a/linux_aarch64/g' | sed 's/android_aarch64/linux_aarch64/g')
+              [ "$f" != "$new_name" ] && cp "$f" "$new_name"
+            elif [[ "$f" == *"armeabi_v7a"* ]] || [[ "$f" == *"armv7"* ]]; then
+              new_name=$(echo "$f" | sed -E 's/android_[0-9]+_armeabi_v7a/linux_armv7l/g' | sed 's/android_armv7/linux_armv7l/g')
+              [ "$f" != "$new_name" ] && cp "$f" "$new_name"
             fi
           done
+
+          echo "=== Daftar Wheel Akhir ==="
+          ls -la
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
