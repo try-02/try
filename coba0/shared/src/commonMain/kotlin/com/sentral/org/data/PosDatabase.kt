@@ -50,7 +50,8 @@ abstract class PosDatabase : RoomDatabase() {
 }
 
 // Room 3.0 + KMP: @ConstructedBy menghubungkan abstract database ke generated
-// constructor. Di module KMP, `expect object` ini WAJIB punya `actual` di setiap
-// target (androidMain, iosMain). KSP generate implementasinya; deklarasi actual
-// ada di PosDatabase.android.kt / PosDatabase.ios.kt.
+// constructor. `expect object` ini WAJIB di commonMain; Room/KSP yang generate
+// `actual` implementasinya (jangan buat `actual object` manual — itu yg bikin
+// error "@ConstructedBy definition must be an 'expect' declaration").
+@Suppress("KotlinNoActualForExpect")
 internal expect object PosDatabaseConstructor : RoomDatabaseConstructor<PosDatabase>
