@@ -119,4 +119,4 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 stability-analyzer = { id = "com.github.skydoves.compose.stability.analyzer", version = "0.13.0" }
 # KMP
 # kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlinMultiplatform" }
-android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
+android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "9.3.0-alpha03" }
