@@ -1,0 +1,32 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="#1976D2"> <!-- Warna biru material yang elegan -->
+    
+    <!-- Kerangka luar mesin kasir -->
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M17,1H7A2,2 0 0,0 5,3V21A2,2 0 0,0 7,23H17A2,2 0 0,0 19,21V3A2,2 0 0,0 17,1M7,19V17H17V19M17,15H7V5H17Z"/>
+    
+    <!-- Tombol atas kiri -->
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M9,7H11V9H9Z"/>
+        
+    <!-- Tombol atas kanan -->
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M13,7H15V9H13Z"/>
+        
+    <!-- Tombol bawah kiri -->
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M9,11H11V13H9Z"/>
+        
+    <!-- Tombol bawah kanan -->
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M13,11H15V13H13Z"/>
+</vector>
