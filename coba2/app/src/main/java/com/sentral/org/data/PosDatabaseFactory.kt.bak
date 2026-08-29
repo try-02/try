@@ -11,8 +11,7 @@ object PosDatabaseFactory {
         Room.databaseBuilder<PosDatabase>(context, "pos.db")
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
-            // WAL adalah default RoomDatabase.Builder di Room 3.0
-            // (RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING), jadi setJournalMode
-            // dihilangkan — redundant tapi tetap valid bila ingin eksplisit.
+            // Memisahkan jalur baca (UI) dan tulis (Kasir) agar Compose tidak freeze
+            .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
             .build()
 }

@@ -1,10 +1,8 @@
 package com.sentral.org.data
 
 import androidx.room3.ColumnTypeConverters
-import androidx.room3.ConstructedBy
 import androidx.room3.Database
 import androidx.room3.RoomDatabase
-import androidx.room3.RoomDatabaseConstructor
 import com.sentral.org.data.converter.DatabaseConverters
 import com.sentral.org.data.dao.*
 import com.sentral.org.data.entity.*
@@ -31,7 +29,6 @@ import com.sentral.org.data.entity.*
     exportSchema = true
 )
 @ColumnTypeConverters(DatabaseConverters::class)
-@ConstructedBy(PosDatabaseConstructor::class)
 abstract class PosDatabase : RoomDatabase() {
     abstract fun produkDao(): ProdukDao
     abstract fun persediaanDao(): PersediaanDao
@@ -48,11 +45,3 @@ abstract class PosDatabase : RoomDatabase() {
     abstract fun printerDao(): PrinterDao
     abstract fun profilTokoDao(): ProfilTokoDao
 }
-
-// Room 3.0: @ConstructedBy menghubungkan abstract database ke generated
-// constructor. Di module Android murni (bukan KMP), KSP generate `actual`
-// object ini secara otomatis; @Suppress menekan warning karena tidak ada
-// deklarasi `actual` manual. Bila migrasi ke KMP, pindahkan ke commonMain
-// dan buat `actual object` per platform.
-@Suppress("NO_ACTUAL_FOR_EXPECT")
-internal expect object PosDatabaseConstructor : RoomDatabaseConstructor<PosDatabase>
