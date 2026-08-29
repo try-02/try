@@ -103,6 +103,12 @@ dependencies {
     // Shared KMP module (Room3, Koin core, dsb ada di dalamnya)
     implementation(project(":shared"))
 
+  // Room 3 (app butuh Room.databaseBuilder + BundledSQLiteDriver + type RoomDatabase
+    // untuk akses DAO via get<PosDatabase>().xxxDao())
+    implementation(libs.room3.runtime)
+    implementation(libs.room3.paging)
+    implementation(libs.sqlite.bundled)
+
     // 1. AndroidX Core & Lifecycle
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

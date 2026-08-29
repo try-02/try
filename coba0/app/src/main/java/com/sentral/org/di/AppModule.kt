@@ -4,7 +4,7 @@ import com.sentral.org.data.seed.ProductSeeder
 import com.sentral.org.data.session.DevSessionBootstrap
 import com.sentral.org.data.DatabaseWarmup
 import com.sentral.org.data.PosDatabase
-import com.sentral.org.data.PosDatabaseFactory
+import com.sentral.org.data.createPosDatabase
 import com.sentral.org.data.repository.*
 import com.sentral.org.data.repository.impl.*
 import com.sentral.org.data.service.*
@@ -13,13 +13,21 @@ import com.sentral.org.data.session.SesiKasirProvider
 import com.sentral.org.ui.MainViewModel
 import com.sentral.org.ui.screen.pos.CheckoutViewModel
 import com.sentral.org.ui.screen.pos.KasirViewModel
+import androidx.room3.Room
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
 val appModule = module {
-    // 1. Core & Database
-    single { createAndroidPosDatabase(androidContext()) }
+    // 1. Core & Database — builder dibuat di sini (Android entry) lalu dikonfigurasi
+    // di common lewat createPosDatabase(builder).
+    single {
+        createPosDatabase(
+            Room.databaseBuilder<PosDatabase>(androidContext(), "pos.db")
+                .setDriver(BundledSQLiteDriver())
+        )
+    }
     single<PosWriteService> { RoomTransactionRunner(get()) }
     single { ProductSeeder(get()) }              // tambah baru
     single { DevSessionBootstrap(get(), get(), get()) }   // ShiftService sudah ada sebagai factory
