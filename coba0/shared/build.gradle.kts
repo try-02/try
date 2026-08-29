@@ -13,7 +13,7 @@ room3 {
 
 kotlin {
     // AGP 9: pakai androidMultiplatformLibrary (bukan com.android.library)
-    androidLibrary {
+    android {
         namespace = "com.sentral.org.shared"
         compileSdk = 37
         minSdk = 26
