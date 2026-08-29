@@ -1,5 +1,5 @@
 plugins {
-//    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.kotlin.multiplatform.library)
     alias(libs.plugins.ksp)
     alias(libs.plugins.room3)
@@ -13,7 +13,7 @@ room3 {
 
 kotlin {
     // AGP 9: pakai androidMultiplatformLibrary (bukan com.android.library)
-    androidLibrary {
+    androidMultiplatformLibrary {
         namespace = "com.sentral.org.shared"
         compileSdk = 37
         minSdk = 26
