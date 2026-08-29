@@ -5,6 +5,7 @@ kotlin = "2.4.20-RC"
 ksp = "2.3.11"
 kotlinxSerialization = "1.11.0"
 kotlinMultiplatform = "2.4.20-RC"   # sama dgn kotlin; untuk plugin kmp
+akml = "9.3.0-alpha03"
 
 # Database & Async
 room3 = "3.0.1"
@@ -118,5 +119,5 @@ room3 = { id = "androidx.room3", version.ref = "room3" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 stability-analyzer = { id = "com.github.skydoves.compose.stability.analyzer", version = "0.13.0" }
 # KMP
-# kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlinMultiplatform" }
-android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "9.3.0-alpha03" }
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlinMultiplatform" }
+android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "akml" }
