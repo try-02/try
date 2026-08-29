@@ -2,7 +2,6 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
-    alias(libs.plugins.room3)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.stability.analyzer)
 }
