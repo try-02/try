@@ -1,5 +1,6 @@
 package com.sentral.org.ui.screen.pos
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -295,6 +296,7 @@ fun PosUtamaScreen(
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             }
         },
+/**
         floatingActionButton = {
             // Anchor keranjang selalu terlihat saat di tab Produk (ponsel).
             if (tab == 0 && adaKeranjang) {
@@ -323,6 +325,68 @@ fun PosUtamaScreen(
                             Icon(
                                 imageVector = icon, 
                                 contentDescription = desc
+                            )
+                        }
+                    },
+                ) {
+                    FloatingActionButtonMenuItem(
+                        onClick = {
+                            fabExpanded = false
+                            sheetKeranjangTerbuka = true
+                        },
+                        icon = { Icon(Icons.Filled.ShoppingCartCheckout, contentDescription = null) },
+                        text = { Text("Lihat Keranjang") },
+                    )
+                    FloatingActionButtonMenuItem(
+                        onClick = {
+                            fabExpanded = false
+                            onNavigateToRiwayat()
+                        },
+                        icon = { Icon(Icons.Filled.History, contentDescription = null) },
+                        text = { Text("Riwayat") },
+                    )
+                }
+            }
+        },
+*/
+        floatingActionButton = {
+            if (tab == 0 && adaKeranjang) {
+                // 1. Menggunakan rememberSaveable sesuai saran artikel
+                var fabExpanded by rememberSaveable { mutableStateOf(false) }
+                
+                // 2. Menambahkan BackHandler: Cegah kembali ke layar sebelumnya jika menu terbuka
+                BackHandler(enabled = fabExpanded) { 
+                    fabExpanded = false 
+                }
+                
+                val warnaFab = MaterialTheme.colorScheme.primary 
+                val warnaIkon = MaterialTheme.colorScheme.onPrimary
+                
+                FloatingActionButtonMenu(
+                    expanded = fabExpanded,
+                    button = {
+                        ToggleFloatingActionButton(
+                            checked = fabExpanded,
+                            onCheckedChange = { fabExpanded = it },
+                            containerColor = { _ -> warnaFab } 
+                        ) {
+                            // 3. Efek rotasi membal (spring effect) dari Plus ke X
+                            val rotasi by animateFloatAsState(
+                                targetValue = if (fabExpanded) 45f else 0f, // Putar 45 derajat
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessLow
+                                ),
+                                label = "rotasiFab"
+                            )
+
+                            Icon(
+                                imageVector = Icons.Filled.Add, // Menggunakan ikon +
+                                contentDescription = if (fabExpanded) "Tutup menu" else "Menu kasir",
+                                tint = warnaIkon,
+                                modifier = Modifier.graphicsLayer {
+                                    rotationZ = rotasi // Menerapkan rotasi animasi di sini
+                                }
                             )
                         }
                     },
