@@ -47,7 +47,7 @@ import com.sentral.org.ui.screen.pos.formatRupiah
 private fun formatRupiah(amount: Long): String {
     return "Rp %,d".format(amount).replace(',', '.')
 }
-"/
+*/
 // ============================================================
 // Kumpulan dialog layar kasir. Semua memakai bentuk extraLarge
 // (28.dp) sesuai design system M3 Expressive.

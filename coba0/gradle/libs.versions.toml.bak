@@ -5,6 +5,7 @@ kotlin = "2.4.20-RC"
 ksp = "2.3.11"
 kotlinxSerialization = "1.11.0"
 kotlinMultiplatform = "2.4.20-RC"   # sama dgn kotlin; untuk plugin kmp
+akml = "9.3.0-alpha03"
 
 # Database & Async
 room3 = "3.0.1"
@@ -58,7 +59,7 @@ androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
 androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
-androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
+androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "1.5.0-alpha26" }
 androidx-compose-material-icon = { group = "androidx.compose.material", name = "material-icons-core", version.ref = "material-icon" }
 androidx-compose-material-icon-ext = { group = "androidx.compose.material", name = "material-icons-extended", version.ref = "material-icon" }
 
@@ -118,5 +119,5 @@ room3 = { id = "androidx.room3", version.ref = "room3" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 stability-analyzer = { id = "com.github.skydoves.compose.stability.analyzer", version = "0.13.0" }
 # KMP
-# kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlinMultiplatform" }
-android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "9.3.0-alpha03" }
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlinMultiplatform" }
+android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "akml" }

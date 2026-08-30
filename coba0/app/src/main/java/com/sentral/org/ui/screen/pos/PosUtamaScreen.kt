@@ -52,6 +52,7 @@ import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButtonMenu
 import androidx.compose.material3.FloatingActionButtonMenuItem
@@ -122,7 +123,7 @@ private enum class TabBawah(val label: String) {
  * - Keranjang = bottom sheet yang selalu bisa dipanggil dari FAB ringkasan.
  * - Hapus item keranjang via swipe + snackbar UNDO.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun PosUtamaScreen(
     onNavigateToRiwayat: () -> Unit,

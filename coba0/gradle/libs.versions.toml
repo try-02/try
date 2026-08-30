@@ -22,6 +22,7 @@ composeBom = "2026.08.00"
 navigationCompose = "2.10.0-rc01" # Versi standar penunjang Compose
 paging = "3.5.1"             # Penunjang rekomendasi pagination kita
 material-icon = "1.7.8"
+material3expressive = "1.5.0-alpha26"
 
 # Dependency Injection
 koin = "4.2.2" # Versi Koin mutakhir untuk Compose
@@ -59,7 +60,7 @@ androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
 androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
-androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
+androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3expressive" }
 androidx-compose-material-icon = { group = "androidx.compose.material", name = "material-icons-core", version.ref = "material-icon" }
 androidx-compose-material-icon-ext = { group = "androidx.compose.material", name = "material-icons-extended", version.ref = "material-icon" }
 
