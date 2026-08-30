@@ -41,7 +41,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.vector.ImageVector
 import com.sentral.org.ui.screen.pos.formatRupiah
 
 /** Fungsi pembantu sederhana untuk format Rupiah jika belum tersedia secara global

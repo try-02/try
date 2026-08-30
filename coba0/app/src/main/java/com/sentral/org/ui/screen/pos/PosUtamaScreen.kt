@@ -98,6 +98,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sentral.org.data.entity.KeranjangEntity
 import com.sentral.org.data.entity.ProdukEntity
@@ -304,15 +305,23 @@ fun PosUtamaScreen(
                         ToggleFloatingActionButton(
                             checked = fabExpanded,
                             onCheckedChange = { fabExpanded = it },
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary,
-                        ) {
+                        //    containerColor = MaterialTheme.colorScheme.primary,
+                        //    contentColor = MaterialTheme.colorScheme.onPrimary,
+                            containerColor = { progress -> 
+                                // Jika ingin warna statis, kembalikan warna yang sama tanpa memedulikan progress
+                                MaterialTheme.colorScheme.primary 
+                            }
+                        ) { scope -> // Membuka ToggleFloatingActionButtonScope
                             val icon = if (fabExpanded) Icons.Filled.Close else Icons.Filled.ShoppingCartCheckout
                             val desc = if (fabExpanded) "Tutup menu" else "Aksi kasir"
-                            animateFloatingActionButton(
-                                expanded = fabExpanded,
-                                collapsedContent = { Icon(icon, contentDescription = desc) },
-                                expandedContent = { Icon(icon, contentDescription = desc) },
+                        //    animateFloatingActionButton(
+                        //        expanded = fabExpanded,
+                        //        collapsedContent = { Icon(icon, contentDescription = desc) },
+                        //        expandedContent = { Icon(icon, contentDescription = desc) },
+                        //    )
+                            Icon(
+                                imageVector = icon, 
+                                contentDescription = desc
                             )
                         }
                     },
