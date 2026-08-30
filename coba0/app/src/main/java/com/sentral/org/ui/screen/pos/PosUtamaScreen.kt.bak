@@ -29,6 +29,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
@@ -325,7 +326,7 @@ fun PosUtamaScreen(
                                         if (ditahan > 0) Badge { Text("$ditahan") }
                                     },
                                 ) {
-                                    Icon(Icons.Filled.ReceiptLong, contentDescription = null)
+                                    Icon(Icons.AutoMirrored.Filled.ReceiptLong, contentDescription = null)
                                 }
                                 TabBawah.LAPORAN -> Icon(Icons.Filled.Insights, contentDescription = null)
                                 TabBawah.PENGATURAN -> Icon(Icons.Filled.Settings, contentDescription = null)
@@ -475,7 +476,7 @@ private fun TabPesananAktif(
 ) {
     if (keranjang.isEmpty()) {
         PlaceholderTab(
-            ikon = Icons.Filled.ReceiptLong,
+            ikon = Icons.AutoMirrored.Filled.ReceiptLong,
             judul = "Belum ada pesanan",
             pesan = "Keranjang yang ditahan atau baru dibuat\nakan muncul di sini.",
             modifier = modifier,
@@ -895,15 +896,13 @@ private fun PanelKeranjang(
             ) {
                 itemsIndexed(state.baris, key = { _, b -> b.itemId }) { _, baris ->
                     val dismissState = rememberSwipeToDismissBoxState(
-                        confirmValueChange = { nilai ->
-                            if (nilai == SwipeToDismissBoxValue.EndToStart) {
-                                onHapusBaris(baris.produkId)
-                                true
-                            } else {
-                                false
-                            }
-                        },
+                        positionalThreshold = { distance -> distance * 0.5f },
                     )
+                    LaunchedEffect(dismissState.currentValue) {
+                        if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
+                            onHapusBaris(baris.produkId)
+                        }
+                    }
                     SwipeToDismissBox(
                         state = dismissState,
                         enableDismissFromStartToEnd = false,

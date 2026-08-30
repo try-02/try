@@ -51,13 +51,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_21
     }
 
-    // Opt-in global M3 Expressive (hindari @OptIn per-file)
-    kotlinOptions {
-        freeCompilerArgs += listOf(
-            "-opt-in=androidx.compose.material3.ExperimentalMaterial3ExpressiveApi",
-        )
-    }
-
     buildFeatures {
         compose = true
         buildConfig = true
@@ -110,7 +103,7 @@ dependencies {
     // Shared KMP module (Room3, Koin core, dsb ada di dalamnya)
     implementation(project(":shared"))
 
-    // Room 3 (app butuh Room.databaseBuilder + BundledSQLiteDriver + type RoomDatabase
+  // Room 3 (app butuh Room.databaseBuilder + BundledSQLiteDriver + type RoomDatabase
     // untuk akses DAO via get<PosDatabase>().xxxDao())
     implementation(libs.room3.runtime)
     implementation(libs.room3.paging)

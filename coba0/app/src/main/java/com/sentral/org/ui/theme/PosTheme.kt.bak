@@ -2,13 +2,10 @@ package com.sentral.org.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.MaterialExpressiveTheme
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.expressiveDarkColorScheme
-import androidx.compose.material3.expressiveLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -68,9 +65,7 @@ private val DarkOnSurfaceVariant = Color(0xFFA9ADC2)
 private val DarkOutline = Color(0xFF8B90A6)
 private val DarkOutlineVariant = Color(0xFF34385A)
 
-// Base: expressive scheme (aktifkan expressive color roles + shape/typography
-// default M3 Expressive), lalu override dengan palet brand POS agar konsisten.
-private val LightColors = expressiveLightColorScheme().copy(
+private val LightColors = lightColorScheme(
     primary = Indigo600,
     onPrimary = OnIndigo,
     primaryContainer = Indigo100,
@@ -97,7 +92,7 @@ private val LightColors = expressiveLightColorScheme().copy(
     outlineVariant = LightOutlineVariant,
 )
 
-private val DarkColors = expressiveDarkColorScheme().copy(
+private val DarkColors = darkColorScheme(
     primary = Indigo300,
     onPrimary = OnIndigo300,
     primaryContainer = Indigo700,
@@ -156,19 +151,18 @@ private val PosTypography = BaseTypography.copy(
 )
 
 /**
- * Tema aplikasi POS dengan Material 3 Expressive.
- * Base color scheme pakai expressive scheme (aktifkan expressive color roles),
- * lalu di-override dengan palet brand agar tampilan kasir stabil & konsisten.
- * Typography & shapes ekspresif sudah diset di PosTypography/PosShapes.
+ * Tema aplikasi POS. Skema warna/typography/shapes mengikuti design
+ * system M3 Expressive (palet & bentuk ekspresif), dibungkus MaterialTheme
+ * standar — MaterialExpressiveTheme masih internal di versi material3 ini.
+ * Motion springy expressive menyusul saat library sudah stabil publik.
  * Mengikuti dark mode sistem secara otomatis.
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun PosTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {
-    MaterialExpressiveTheme(
+    MaterialTheme(
         colorScheme = if (darkTheme) DarkColors else LightColors,
         typography = PosTypography,
         shapes = PosShapes,

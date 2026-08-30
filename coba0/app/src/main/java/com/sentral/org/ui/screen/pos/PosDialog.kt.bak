@@ -19,11 +19,11 @@ import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SplitButtonDefaults
-import androidx.compose.material3.SplitButtonLayout
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -93,7 +93,7 @@ fun DialogKonfirmasi(
 }
 
 /**
- * Dialog pembayaran (spek 4.3): pilih metode via SplitButton (Tunai/QRIS)
+ * Dialog pembayaran (spek 4.3): pilih metode via SegmentedButton
  * (domain hanya punya TUNAI & QRIS), numpad besar untuk nominal tunai,
  * kembalian dihitung real-time.
  */
@@ -134,7 +134,23 @@ fun DialogPembayaran(
         },
         text = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                // Metode pembayaran dipilih lewat SplitButton di confirmButton di bawah.
+                // --- Pilih metode: SegmentedButton ---
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    SegmentedButton(
+                        selected = metode == 0,
+                        onClick = { metode = 0 },
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                        icon = {},
+                        label = { Text("Tunai") },
+                    )
+                    SegmentedButton(
+                        selected = metode == 1,
+                        onClick = { metode = 1 },
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                        icon = {},
+                        label = { Text("QRIS") },
+                    )
+                }
                 Spacer(Modifier.height(12.dp))
 
                 when (metode) {
@@ -227,45 +243,17 @@ fun DialogPembayaran(
             }
         },
         confirmButton = {
-            SplitButtonLayout(
-                leadingButton = {
-                    SplitButtonDefaults.LeadingButton(
-                        enabled = !sedangProses && (metode == 1 || cukup),
-                        onClick = {
-                            if (metode == 1) onKonfirmasiQris() else onKonfirmasiTunai(diterima)
-                        },
-                    ) {
-                        if (sedangProses) {
-                            ContainedLoadingIndicator(
-                                modifier = Modifier.size(SplitButtonDefaults.LeadingIconSize),
-                            )
-                        } else {
-                            Icon(
-                                if (metode == 1) Icons.Filled.QrCode2 else Icons.Filled.PointOfSale,
-                                Modifier.size(SplitButtonDefaults.LeadingIconSize),
-                                contentDescription = null,
-                            )
-                            Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                            Text(
-                                "Selesaikan • ${if (metode == 1) "QRIS" else "Tunai"}",
-                                fontWeight = FontWeight.Bold,
-                            )
-                        }
-                    }
+            Button(
+                enabled = !sedangProses && (metode == 1 || cukup),
+                onClick = {
+                    if (metode == 1) onKonfirmasiQris() else onKonfirmasiTunai(diterima)
                 },
-                trailingButton = {
-                    SplitButtonDefaults.TrailingButton(
-                        checked = metode == 1,
-                        onCheckedChange = { metode = if (it) 1 else 0 },
-                    ) {
-                        Icon(
-                            if (metode == 1) Icons.Filled.QrCode2 else Icons.Filled.PointOfSale,
-                            Modifier.size(SplitButtonDefaults.TrailingIconSize),
-                            contentDescription = "Ganti metode pembayaran",
-                        )
-                    }
-                },
-            )
+            ) {
+                Text(
+                    if (sedangProses) "Memproses…" else "Selesaikan",
+                    fontWeight = FontWeight.Bold,
+                )
+            }
         },
         dismissButton = {
             TextButton(onClick = onTutup) { Text("Batal") }
