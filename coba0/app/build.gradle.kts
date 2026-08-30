@@ -51,13 +51,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_21
     }
 
-    // Opt-in global M3 Expressive (hindari @OptIn per-file)
-    compilerOptions {
-        freeCompilerArgs.addAll(
-            "-opt-in=androidx.compose.material3.ExperimentalMaterial3ExpressiveApi"
-        )
-    }
-
     buildFeatures {
         compose = true
         buildConfig = true
@@ -103,6 +96,10 @@ android {
 kotlin {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+        freeCompilerArgs.addAll(
+            "-Xexpect-actual-classes",
+            "-opt-in=androidx.compose.material3.ExperimentalMaterial3ExpressiveApi"
+        )
     }
 }
 

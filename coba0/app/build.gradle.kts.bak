@@ -52,9 +52,9 @@ android {
     }
 
     // Opt-in global M3 Expressive (hindari @OptIn per-file)
-    kotlinOptions {
-        freeCompilerArgs += listOf(
-            "-opt-in=androidx.compose.material3.ExperimentalMaterial3ExpressiveApi",
+    compilerOptions {
+        freeCompilerArgs.addAll(
+            "-opt-in=androidx.compose.material3.ExperimentalMaterial3ExpressiveApi"
         )
     }
 
