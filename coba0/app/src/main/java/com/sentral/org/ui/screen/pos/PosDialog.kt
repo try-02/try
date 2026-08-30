@@ -253,7 +253,7 @@ fun DialogPembayaran(
                         } else {
                             Icon(
                                 imageVector = if (metode == 1) Icons.Filled.QrCode2 else Icons.Filled.PointOfSale,
-                                Modifier.size(SplitButtonDefaults.LeadingIconSize),
+                                modifier = Modifier.size(SplitButtonDefaults.LeadingIconSize),
                                 contentDescription = null,
                             )
                             Spacer(Modifier.size(ButtonDefaults.IconSpacing))
@@ -271,7 +271,7 @@ fun DialogPembayaran(
                     ) {
                         Icon(
                             imageVector = if (metode == 1) Icons.Filled.QrCode2 else Icons.Filled.PointOfSale,
-                            Modifier.size(SplitButtonDefaults.TrailingIconSize),
+                            modifier = Modifier.size(SplitButtonDefaults.TrailingIconSize),
                             contentDescription = "Ganti metode pembayaran",
                         )
                     }

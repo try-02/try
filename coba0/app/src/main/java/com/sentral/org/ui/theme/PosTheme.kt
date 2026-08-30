@@ -68,7 +68,7 @@ private val DarkOutlineVariant = Color(0xFF34385A)
 
 // Base: expressive scheme (aktifkan expressive color roles + shape/typography
 // default M3 Expressive), lalu override dengan palet brand POS agar konsisten.
-private val LightColors = LightColorScheme().copy(
+private val LightColors = lightColorScheme().copy(
     primary = Indigo600,
     onPrimary = OnIndigo,
     primaryContainer = Indigo100,
@@ -95,7 +95,7 @@ private val LightColors = LightColorScheme().copy(
     outlineVariant = LightOutlineVariant,
 )
 
-private val DarkColors = DarkColorScheme().copy(
+private val DarkColors = darkColorScheme().copy(
     primary = Indigo300,
     onPrimary = OnIndigo300,
     primaryContainer = Indigo700,

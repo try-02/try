@@ -299,6 +299,7 @@ fun PosUtamaScreen(
             // Anchor keranjang selalu terlihat saat di tab Produk (ponsel).
             if (tab == 0 && adaKeranjang) {
                 var fabExpanded by remember { mutableStateOf(false) }
+                val warnaFab = MaterialTheme.colorScheme.primary
                 FloatingActionButtonMenu(
                     expanded = fabExpanded,
                     button = {
@@ -307,11 +308,11 @@ fun PosUtamaScreen(
                             onCheckedChange = { fabExpanded = it },
                         //    containerColor = MaterialTheme.colorScheme.primary,
                         //    contentColor = MaterialTheme.colorScheme.onPrimary,
-                            containerColor = { progress -> 
+                            containerColor = { _ -> warnaFab
                                 // Jika ingin warna statis, kembalikan warna yang sama tanpa memedulikan progress
-                                MaterialTheme.colorScheme.primary 
+                                // MaterialTheme.colorScheme.primary 
                             }
-                        ) { scope -> // Membuka ToggleFloatingActionButtonScope
+                        ) { // scope -> // Membuka ToggleFloatingActionButtonScope
                             val icon = if (fabExpanded) Icons.Filled.Close else Icons.Filled.ShoppingCartCheckout
                             val desc = if (fabExpanded) "Tutup menu" else "Aksi kasir"
                         //    animateFloatingActionButton(

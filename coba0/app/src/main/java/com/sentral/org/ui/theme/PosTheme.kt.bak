@@ -7,8 +7,6 @@ import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.expressiveDarkColorScheme
-import androidx.compose.material3.expressiveLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -70,7 +68,7 @@ private val DarkOutlineVariant = Color(0xFF34385A)
 
 // Base: expressive scheme (aktifkan expressive color roles + shape/typography
 // default M3 Expressive), lalu override dengan palet brand POS agar konsisten.
-private val LightColors = expressiveLightColorScheme().copy(
+private val LightColors = LightColorScheme().copy(
     primary = Indigo600,
     onPrimary = OnIndigo,
     primaryContainer = Indigo100,
@@ -97,7 +95,7 @@ private val LightColors = expressiveLightColorScheme().copy(
     outlineVariant = LightOutlineVariant,
 )
 
-private val DarkColors = expressiveDarkColorScheme().copy(
+private val DarkColors = DarkColorScheme().copy(
     primary = Indigo300,
     onPrimary = OnIndigo300,
     primaryContainer = Indigo700,
