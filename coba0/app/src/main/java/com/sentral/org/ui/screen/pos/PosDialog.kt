@@ -15,11 +15,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.PointOfSale
 import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ContainedLoadingIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SplitButtonDefaults
@@ -38,7 +41,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.sentral.org.ui.screen.pos.formatRupiah
 
+/** Fungsi pembantu sederhana untuk format Rupiah jika belum tersedia secara global
+private fun formatRupiah(amount: Long): String {
+    return "Rp %,d".format(amount).replace(',', '.')
+}
+"/
 // ============================================================
 // Kumpulan dialog layar kasir. Semua memakai bentuk extraLarge
 // (28.dp) sesuai design system M3 Expressive.
@@ -97,6 +106,7 @@ fun DialogKonfirmasi(
  * (domain hanya punya TUNAI & QRIS), numpad besar untuk nominal tunai,
  * kembalian dihitung real-time.
  */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun DialogPembayaran(
     total: Long,
