@@ -1,0 +1,45 @@
+name: Optimized Build better-sqlite3 Termux ARM64
+
+on:
+  workflow_dispatch:
+    inputs:
+      node_package:
+        description: 'Pilih paket Node.js di Termux'
+        required: true
+        default: 'nodejs'
+        type: choice
+        options:
+          - nodejs-lts
+          - nodejs
+      sqlite_version:
+        description: 'Versi better-sqlite3'
+        required: true
+        default: '26.4.0'
+
+jobs:
+  build:
+    # OPSI 1 (Namespace Runner): ganti dengan 'namespace-profile-default'
+    # OPSI 2 (GitHub Native ARM64 - Gratis untuk Public Repo): pakai 'ubuntu-24.04-arm'
+    # OPSI 3 (GitHub Runner Standar): pakai 'ubuntu-latest' (butuh setup-qemu jika bukan ARM)
+    runs-on: ubuntu-24.04-arm
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build & Export Native Module
+        run: |
+          mkdir -p output
+          docker buildx build \
+            --build-arg NODE_PKG=${{ inputs.node_package }} \
+            --build-arg SQLITE_VERSION=${{ inputs.sqlite_version }} \
+            --target export \
+            --output type=local,dest=./output \
+            -f Dockerfile .
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: better-sqlite3-termux-aarch64
+          path: output/better-sqlite3-termux-aarch64.tar.gz
+          retention-days: 1
