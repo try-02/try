@@ -22,10 +22,10 @@ jobs:
               set -e
               export DEBIAN_FRONTEND=noninteractive
 
-              echo '=== 1. Install Golang & System Tools ==='
+              echo '=== 1. Install Build Tools, CMake & Go ==='
               apt update
               apt -y -o Dpkg::Options::=\"--force-confnew\" full-upgrade
-              apt install -yq -o Dpkg::Options::=\"--force-confnew\" nodejs golang git python make clang binutils build-essential libc++
+              apt install -yq -o Dpkg::Options::=\"--force-confnew\" nodejs golang git python make cmake clang binutils build-essential libc++
 
               # Bersihkan foreground-scripts npm
               npm config delete foreground-scripts || true
@@ -41,21 +41,30 @@ jobs:
               echo '=== 3. Install Koffi, tls-client-node & tough-cookie ==='
               cd /data/data/com.termux/files/home/build
               npm init -y
-              npm install koffi tls-client-node tough-cookie --ignore-scripts
+              npm install koffi tls-client-node tough-cookie
 
               echo '=== 4. Setup & Patch Koffi untuk Android ARM64 ==='
-              cd node_modules/koffi
-              # Buat target direktori android_arm64 dan salin binary prebuilt
-              mkdir -p build/koffi/android_arm64 build/Release
-              cp -f build/koffi/linux_arm64/koffi.node build/koffi/android_arm64/koffi.node
-              cp -f build/koffi/linux_arm64/koffi.node build/Release/koffi.node
+              # Temukan letak file binary koffi.node yang baru terpasang
+              KOFFI_NODE=\$(find node_modules/koffi -name 'koffi.node' -size +10k | head -n 1)
+              echo \"📍 Ditemukan koffi.node di: \$KOFFI_NODE\"
 
-              # Patch loader koffi agar mengenali android
-              find . -name '*.js' -o -name '*.mjs' -o -name '*.cjs' | while read -r f; do
+              if [ -n \"\$KOFFI_NODE\" ]; then
+                mkdir -p node_modules/koffi/build/koffi/android_arm64
+                mkdir -p node_modules/koffi/build/koffi/linux_arm64
+                mkdir -p node_modules/koffi/build/Release
+                cp -f \"\$KOFFI_NODE\" node_modules/koffi/build/koffi/android_arm64/koffi.node
+                cp -f \"\$KOFFI_NODE\" node_modules/koffi/build/koffi/linux_arm64/koffi.node
+                cp -f \"\$KOFFI_NODE\" node_modules/koffi/build/Release/koffi.node
+              else
+                echo 'ERROR: koffi.node tidak ditemukan!'
+                exit 1
+              fi
+
+              # Patch loader koffi agar mengenali platform android
+              find node_modules/koffi -name '*.js' -o -name '*.mjs' -o -name '*.cjs' | while read -r f; do
                 sed -i 's/process\.platform === .linux./(process.platform === \"linux\" || process.platform === \"android\")/g' \"\$f\"
                 sed -i 's/case .linux.:/case \"linux\":\ncase \"android\":/g' \"\$f\"
               done
-              cd /data/data/com.termux/files/home/build
 
               echo '=== 5. Setup & Patch tls-client-node ==='
               mkdir -p node_modules/tls-client-node/dist/bin node_modules/tls-client-node/bin

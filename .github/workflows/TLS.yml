@@ -13,7 +13,7 @@ jobs:
           mkdir -p output
           chmod 777 output
 
-      - name: Build Go TLS-Client & Setup Koffi inside Termux Docker
+      - name: Build Go TLS-Client & Compile Koffi inside Termux Docker
         run: |
           docker run --rm --privileged \
             -v "${{ github.workspace }}/output:/output" \
@@ -22,10 +22,10 @@ jobs:
               set -e
               export DEBIAN_FRONTEND=noninteractive
 
-              echo '=== 1. Install Build Tools, CMake & Go ==='
+              echo '=== 1. Install Compiler, CMake, Go & libandroid-spawn ==='
               apt update
               apt -y -o Dpkg::Options::=\"--force-confnew\" full-upgrade
-              apt install -yq -o Dpkg::Options::=\"--force-confnew\" nodejs golang git python make cmake clang binutils build-essential libc++
+              apt install -yq -o Dpkg::Options::=\"--force-confnew\" nodejs golang git python make cmake clang binutils build-essential libc++ libandroid-spawn
 
               # Bersihkan foreground-scripts npm
               npm config delete foreground-scripts || true
@@ -38,15 +38,14 @@ jobs:
               CGO_ENABLED=1 go build -buildmode=c-shared -o tls-client-arm64.so main.go
               ls -lh tls-client-arm64.so
 
-              echo '=== 3. Install Koffi, tls-client-node & tough-cookie ==='
+              echo '=== 3. Install & Compile Koffi Native (dengan spawn.h) ==='
               cd /data/data/com.termux/files/home/build
               npm init -y
               npm install koffi tls-client-node tough-cookie
 
-              echo '=== 4. Setup & Patch Koffi untuk Android ARM64 ==='
-              # Temukan letak file binary koffi.node yang baru terpasang
+              echo '=== 4. Setup & Verifikasi koffi.node ==='
               KOFFI_NODE=\$(find node_modules/koffi -name 'koffi.node' -size +10k | head -n 1)
-              echo \"📍 Ditemukan koffi.node di: \$KOFFI_NODE\"
+              echo \"📍 Ditemukan file binary: \$KOFFI_NODE\"
 
               if [ -n \"\$KOFFI_NODE\" ]; then
                 mkdir -p node_modules/koffi/build/koffi/android_arm64
@@ -56,11 +55,11 @@ jobs:
                 cp -f \"\$KOFFI_NODE\" node_modules/koffi/build/koffi/linux_arm64/koffi.node
                 cp -f \"\$KOFFI_NODE\" node_modules/koffi/build/Release/koffi.node
               else
-                echo 'ERROR: koffi.node tidak ditemukan!'
+                echo 'ERROR: koffi.node gagal terkompilasi!'
                 exit 1
               fi
 
-              # Patch loader koffi agar mengenali platform android
+              # Patch loader koffi agar mengenali android
               find node_modules/koffi -name '*.js' -o -name '*.mjs' -o -name '*.cjs' | while read -r f; do
                 sed -i 's/process\.platform === .linux./(process.platform === \"linux\" || process.platform === \"android\")/g' \"\$f\"
                 sed -i 's/case .linux.:/case \"linux\":\ncase \"android\":/g' \"\$f\"
