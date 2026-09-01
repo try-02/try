@@ -48,12 +48,11 @@ jobs:
               echo \"📍 Ditemukan file binary: \$KOFFI_NODE\"
 
               if [ -n \"\$KOFFI_NODE\" ]; then
-                mkdir -p node_modules/koffi/build/koffi/android_arm64
-                mkdir -p node_modules/koffi/build/koffi/linux_arm64
-                mkdir -p node_modules/koffi/build/Release
-                cp -f \"\$KOFFI_NODE\" node_modules/koffi/build/koffi/android_arm64/koffi.node
-                cp -f \"\$KOFFI_NODE\" node_modules/koffi/build/koffi/linux_arm64/koffi.node
-                cp -f \"\$KOFFI_NODE\" node_modules/koffi/build/Release/koffi.node
+                mkdir -p node_modules/koffi/build/koffi/android_arm64 node_modules/koffi/build/koffi/linux_arm64 node_modules/koffi/build/Release
+                [ \"\$KOFFI_NODE\" != \"node_modules/koffi/build/koffi/android_arm64/koffi.node\" ] && cp -f \"\$KOFFI_NODE\" node_modules/koffi/build/koffi/android_arm64/koffi.node || true
+                [ \"\$KOFFI_NODE\" != \"node_modules/koffi/build/koffi/linux_arm64/koffi.node\" ] && cp -f \"\$KOFFI_NODE\" node_modules/koffi/build/koffi/linux_arm64/koffi.node || true
+                [ \"\$KOFFI_NODE\" != \"node_modules/koffi/build/Release/koffi.node\" ] && cp -f \"\$KOFFI_NODE\" node_modules/koffi/build/Release/koffi.node || true
+                echo '✅ koffi.node siap di semua path!'
               else
                 echo 'ERROR: koffi.node gagal terkompilasi!'
                 exit 1
@@ -96,4 +95,4 @@ jobs:
         with:
           name: tls-client-termux-aarch64
           path: output/tls-client-termux-aarch64.tar.gz
-          retention-days: 7
+          retention-days: 1
