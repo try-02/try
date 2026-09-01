@@ -33,33 +33,39 @@ jobs:
             ghcr.io/termux-user-repository/termux-docker:aarch64 \
             bash -c "
               set -e
-              echo '=== 1. Install Compiler & Dependensi ==='
-              apt update && apt install -yq ${{ inputs.node_package }} python make clang binutils build-essential
+              export DEBIAN_FRONTEND=noninteractive
 
-              # Bersihkan config foreground-scripts sesuai rekomendasi npm Termux
+              echo '=== 1. Update Core System & Libc++ ==='
+              apt update
+              apt -y -o Dpkg::Options::=\"--force-confnew\" full-upgrade
+
+              echo '=== 2. Install Compiler & Node.js ==='
+              apt install -yq -o Dpkg::Options::=\"--force-confnew\" ${{ inputs.node_package }} python make clang binutils build-essential libc++
+
+              # Bersihkan config foreground-scripts npm
               npm config delete foreground-scripts || true
 
-              echo '=== 2. Versi Node & NPM ==='
+              echo '=== 3. Cek Versi Node & NPM ==='
               node -v
               npm -v
 
-              echo '=== 3. Unduh Package better-sqlite3 ==='
+              echo '=== 4. Download Package better-sqlite3 ==='
               mkdir -p /data/data/com.termux/files/home/build
               cd /data/data/com.termux/files/home/build
               npm init -y
               npm install better-sqlite3@${{ inputs.sqlite_version }} --ignore-scripts
 
-              echo '=== 4. Kompilasi C++ Native Module ==='
+              echo '=== 5. Kompilasi Native C++ Module ==='
               cd node_modules/better-sqlite3
               npm run build-release
 
-              echo '=== 5. Uji Coba Modul di Node.js ==='
+              echo '=== 6. Test Import Module di Node.js ==='
               node -e \"const Database = require('.'); console.log('SUCCESS: better-sqlite3 berhasil di-load!');\"
 
-              echo '=== 6. Verifikasi File Binary ==='
+              echo '=== 7. Verifikasi File Binary ==='
               ls -la build/Release/better_sqlite3.node
 
-              echo '=== 7. Mengarsipkan Modul ==='
+              echo '=== 8. Mengarsipkan Modul ==='
               cd /data/data/com.termux/files/home/build
               tar -czvf /output/better-sqlite3-termux-aarch64.tar.gz -C node_modules better-sqlite3
               echo '=== Build Selesai! ==='
