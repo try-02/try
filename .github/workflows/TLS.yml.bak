@@ -13,7 +13,7 @@ jobs:
           mkdir -p output
           chmod 777 output
 
-      - name: Build Go TLS-Client & Koffi inside Termux Docker
+      - name: Build Go TLS-Client & Setup Koffi inside Termux Docker
         run: |
           docker run --rm --privileged \
             -v "${{ github.workspace }}/output:/output" \
@@ -22,10 +22,10 @@ jobs:
               set -e
               export DEBIAN_FRONTEND=noninteractive
 
-              echo '=== 1. Install Build Tools & CMake ==='
+              echo '=== 1. Install Golang & System Tools ==='
               apt update
               apt -y -o Dpkg::Options::=\"--force-confnew\" full-upgrade
-              apt install -yq -o Dpkg::Options::=\"--force-confnew\" nodejs golang git python make cmake clang binutils build-essential libc++
+              apt install -yq -o Dpkg::Options::=\"--force-confnew\" nodejs golang git python make clang binutils build-essential libc++
 
               # Bersihkan foreground-scripts npm
               npm config delete foreground-scripts || true
@@ -38,42 +38,38 @@ jobs:
               CGO_ENABLED=1 go build -buildmode=c-shared -o tls-client-arm64.so main.go
               ls -lh tls-client-arm64.so
 
-              echo '=== 3. Install & Build Koffi dari Source ==='
+              echo '=== 3. Install Koffi, tls-client-node & tough-cookie ==='
               cd /data/data/com.termux/files/home/build
               npm init -y
               npm install koffi tls-client-node tough-cookie --ignore-scripts
 
-              # Compile Koffi menggunakan toolchain CNoke + CMake
+              echo '=== 4. Setup & Patch Koffi untuk Android ARM64 ==='
               cd node_modules/koffi
-              node src/cnoke/cnoke.js -P . -D src/koffi --build || node src/cnoke/cnoke.js -P . -D src/koffi --prebuild || node src/cnoke/cnoke.js --clang --release || true
+              # Buat target direktori android_arm64 dan salin binary prebuilt
+              mkdir -p build/koffi/android_arm64 build/Release
+              cp -f build/koffi/linux_arm64/koffi.node build/koffi/android_arm64/koffi.node
+              cp -f build/koffi/linux_arm64/koffi.node build/Release/koffi.node
 
-              # Salin binary koffi.node ke seluruh direktori target
-              echo '=== Verifikasi koffi.node ==='
-              KOFFI_NODE=\$(find . -name 'koffi.node' -size +10k | head -n 1)
-              if [ -n \"\$KOFFI_NODE\" ]; then
-                echo \"Ditemukan binary: \$KOFFI_NODE\"
-                mkdir -p build/Release build/koffi/android_arm64 build/koffi/linux_arm64
-                cp -f \"\$KOFFI_NODE\" build/Release/koffi.node
-                cp -f \"\$KOFFI_NODE\" build/koffi/android_arm64/koffi.node
-                cp -f \"\$KOFFI_NODE\" build/koffi/linux_arm64/koffi.node
-              else
-                echo 'ERROR: koffi.node gagal terkompilasi!'
-                exit 1
-              fi
+              # Patch loader koffi agar mengenali android
+              find . -name '*.js' -o -name '*.mjs' -o -name '*.cjs' | while read -r f; do
+                sed -i 's/process\.platform === .linux./(process.platform === \"linux\" || process.platform === \"android\")/g' \"\$f\"
+                sed -i 's/case .linux.:/case \"linux\":\ncase \"android\":/g' \"\$f\"
+              done
               cd /data/data/com.termux/files/home/build
 
-              echo '=== 4. Setup tls-client-node ==='
+              echo '=== 5. Setup & Patch tls-client-node ==='
               mkdir -p node_modules/tls-client-node/dist/bin node_modules/tls-client-node/bin
               find node_modules/tls-client-node -name \"tls-client-linux-arm64*.so\" -exec cp -f /data/data/com.termux/files/home/build/tls-client/cffi_dist/tls-client-arm64.so {} \;
               cp -f /data/data/com.termux/files/home/build/tls-client/cffi_dist/tls-client-arm64.so node_modules/tls-client-node/dist/bin/tls-client-linux-arm64.so || true
               cp -f /data/data/com.termux/files/home/build/tls-client/cffi_dist/tls-client-arm64.so node_modules/tls-client-node/bin/tls-client-linux-arm64.so || true
 
-              # Patch platform check di dalam tls-client-node
+              # Patch check platform di tls-client-node
               find node_modules/tls-client-node -name '*.js' | while read -r f; do
-                sed -i 's/process\.platform === .linux./process.platform === \"linux\" || process.platform === \"android\"/g' \"\$f\"
+                sed -i 's/process\.platform === .linux./(process.platform === \"linux\" || process.platform === \"android\")/g' \"\$f\"
+                sed -i 's/case .linux.:/case \"linux\":\ncase \"android\":/g' \"\$f\"
               done
 
-              echo '=== 5. Uji Coba Module Lengkap di Node.js ==='
+              echo '=== 6. Uji Coba Module Lengkap di Node.js ==='
               node -e \"
                 const koffi = require('./node_modules/koffi');
                 console.log('✅ 1. Koffi native module OK!');
@@ -82,7 +78,7 @@ jobs:
                 console.log('✅ 2. TLSClient native engine OK!');
               \"
 
-              echo '=== 6. Mengarsipkan Paket Lengkap ==='
+              echo '=== 7. Mengarsipkan Paket Lengkap ==='
               tar --hard-dereference -czvf /output/tls-client-termux-aarch64.tar.gz -C node_modules tls-client-node koffi tough-cookie
               echo '=== Build Selesai! ==='
             "
@@ -92,4 +88,4 @@ jobs:
         with:
           name: tls-client-termux-aarch64
           path: output/tls-client-termux-aarch64.tar.gz
-          retention-days: 1
+          retention-days: 7
