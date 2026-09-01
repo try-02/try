@@ -67,7 +67,7 @@ jobs:
 
               echo '=== 8. Mengarsipkan Modul ==='
               cd /data/data/com.termux/files/home/build
-              tar -czvf /output/better-sqlite3-termux-aarch64.tar.gz -C node_modules better-sqlite3
+              tar --hard-dereference -czvf /output/better-sqlite3-termux-aarch64.tar.gz -C node_modules better-sqlite3
               echo '=== Build Selesai! ==='
             "
 

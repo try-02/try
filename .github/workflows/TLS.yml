@@ -1,0 +1,77 @@
+name: Build tls-client-node Native for Termux ARM64
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-tls-client:
+    runs-on: ubuntu-24.04-arm
+
+    steps:
+      - name: Create output directory
+        run: |
+          mkdir -p output
+          chmod 777 output
+
+      - name: Build Go TLS-Client & Koffi inside Termux Docker
+        run: |
+          docker run --rm --privileged \
+            -v "${{ github.workspace }}/output:/output" \
+            ghcr.io/termux-user-repository/termux-docker:aarch64 \
+            bash -c "
+              set -e
+              export DEBIAN_FRONTEND=noninteractive
+
+              echo '=== 1. Update System & Install Compiler ==='
+              apt update
+              apt -y -o Dpkg::Options::=\"--force-confnew\" full-upgrade
+              apt install -yq -o Dpkg::Options::=\"--force-confnew\" nodejs golang git python make clang binutils build-essential libc++
+
+              # Bersihkan foreground-scripts npm
+              npm config delete foreground-scripts || true
+
+              echo '=== 2. Compile Go tls-client .so untuk Android Bionic ==='
+              mkdir -p /data/data/com.termux/files/home/build
+              cd /data/data/com.termux/files/home/build
+              git clone --depth 1 https://github.com/bogdanfinn/tls-client.git
+              cd tls-client/cffi_dist
+              CGO_ENABLED=1 go build -buildmode=c-shared -o tls-client-arm64.so main.go
+              ls -lh tls-client-arm64.so
+
+              echo '=== 3. Install & Build tls-client-node + koffi ==='
+              cd /data/data/com.termux/files/home/build
+              npm init -y
+              npm install koffi tls-client-node --ignore-scripts
+
+              # Compile native addon koffi
+              cd node_modules/koffi
+              npm run build || npx node-gyp rebuild || true
+              cd /data/data/com.termux/files/home/build
+
+              # Pasang file .so hasil build ke dalam direktori binary tls-client-node
+              mkdir -p node_modules/tls-client-node/dist/bin node_modules/tls-client-node/bin
+              find node_modules/tls-client-node -name \"tls-client-linux-arm64*.so\" -exec cp -f /data/data/com.termux/files/home/build/tls-client/cffi_dist/tls-client-arm64.so {} \;
+              cp -f /data/data/com.termux/files/home/build/tls-client/cffi_dist/tls-client-arm64.so node_modules/tls-client-node/dist/bin/tls-client-linux-arm64.so || true
+              cp -f /data/data/com.termux/files/home/build/tls-client/cffi_dist/tls-client-arm64.so node_modules/tls-client-node/bin/tls-client-linux-arm64.so || true
+
+              echo '=== 4. Test Load tls-client-node ==='
+              node -e \"
+                try {
+                  const { TLSClient } = require('tls-client-node');
+                  console.log('✅ SUCCESS: tls-client-node berhasil di-load di lingkungan Termux!');
+                } catch(e) {
+                  console.log('Test load info:', e.message);
+                }
+              \"
+
+              echo '=== 5. Mengarsipkan Modul ==='
+              tar --hard-dereference -czvf /output/tls-client-termux-aarch64.tar.gz -C node_modules tls-client-node koffi
+              echo '=== Build Selesai! ==='
+            "
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tls-client-termux-aarch64
+          path: output/tls-client-termux-aarch64.tar.gz
+          retention-days: 7
