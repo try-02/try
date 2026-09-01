@@ -6,7 +6,7 @@ on:
       node_package:
         description: 'Pilih paket Node.js di Termux'
         required: true
-        default: 'nodejs-lts'
+        default: 'nodejs'
         type: choice
         options:
           - nodejs-lts
@@ -14,7 +14,7 @@ on:
       sqlite_version:
         description: 'Versi better-sqlite3'
         required: true
-        default: 'latest'
+        default: '26.4.0'
 
 jobs:
   build:
