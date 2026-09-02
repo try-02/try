@@ -35,6 +35,16 @@ class VoidService(
 
             val items = transactionItems.getByTransaction(tx.id)
             check(items.isNotEmpty()) { "Transaksi tidak memiliki item" }
+
+            // Hitung refund CASH lebih dulu supaya fail-fast shift bisa dicek sebelum tulis
+            val cashRefund = payments.getByTransaction(tx.id)
+                .filter { it.metode == MetodePembayaran.CASH }
+                .sumOf { it.jumlah }
+
+            if (cashRefund > 0 && shift == null) {
+                throw PosDataException.Validation("Void transaksi CASH membutuhkan shift terbuka")
+            }
+
             check(transactions.markVoid(tx.id, request.now, request.reason) == 1) {
                 "Transaksi sudah berubah status"
             }
@@ -54,16 +64,12 @@ class VoidService(
                 )
             }
 
-            val cashRefund = payments.getByTransaction(tx.id)
-                .filter { it.metode == MetodePembayaran.CASH }
-                .sumOf { it.jumlah }
             if (cashRefund > 0) {
-                val sid = shift?.id ?: throw PosDataException.Validation("Void transaksi CASH membutuhkan shift")
                 cashLedger.insert(
                     PergerakanKasEntity(
-                        shiftId = sid,
-                        // CATATAN: enum belum punya nilai khusus untuk refund VOID;
-                        // pertimbangkan menambahkan VOID_REFUND agar laporan kas akurat.
+                        shiftId = shift!!.id,
+                        // TODO: pertimbangkan menambahkan enum VOID_REFUND di tahap produksi
+                        // agar laporan kas lebih akurat membedakan RETUR vs VOID.
                         jenis = JenisPergerakanKas.RETUR,
                         jumlahDelta = -cashRefund,
                         transaksiId = tx.id,
@@ -75,4 +81,3 @@ class VoidService(
             }
         }
     }
-}

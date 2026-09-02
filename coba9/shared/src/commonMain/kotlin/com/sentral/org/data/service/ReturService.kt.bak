@@ -27,6 +27,11 @@ class ReturService(
                 throw PosDataException.Validation("Item transaksi duplikat dalam satu retur")
             }
 
+            // Fail-fast: CASH refund WAJIB punya shift terbuka
+            if (request.refundMethod == MetodePembayaran.CASH && request.shiftId == null) {
+                throw PosDataException.Validation("Refund CASH membutuhkan shift terbuka")
+            }
+
             val transaction = transactions.getById(request.transactionId)
                 ?: throw PosDataException.NotFound("Transaksi tidak ditemukan")
             if (transaction.status != StatusTransaksi.SELESAI) {
@@ -134,7 +139,8 @@ class ReturService(
             }
 
             if (request.refundMethod == MetodePembayaran.CASH && totalRefund > 0) {
-                val sid = shift?.id ?: throw PosDataException.Validation("Refund CASH membutuhkan shift")
+                // shift sudah dijamin tidak null oleh fail-fast di atas
+                val sid = shift!!.id
                 cashLedger.insert(
                     PergerakanKasEntity(
                         shiftId = sid,
@@ -151,4 +157,3 @@ class ReturService(
             ReturnResult(returnId, totalRefund)
         }
     }
-}
