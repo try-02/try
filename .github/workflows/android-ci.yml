@@ -95,7 +95,7 @@ jobs:
           disable-animations: true
           working-directory: ./coba9
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
-          script: ./gradlew :shared:connectedDebugAndroidTest --rerun-tasks --stacktrace
+          script: ./gradlew :shared:connectedAndroidTest --rerun-tasks --stacktrace
 
       - name: Upload instrumentation test reports
         if: always()
