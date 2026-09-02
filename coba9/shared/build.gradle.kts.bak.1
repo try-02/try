@@ -22,10 +22,6 @@ kotlin {
         }
     }
 
-    instrumentedTest {
-            enabled = true
-        }
-
     iosArm64()
     iosSimulatorArm64()
 
@@ -52,14 +48,6 @@ kotlin {
             // NativeSQLiteDriver butuh linker -lsqlite3 (lihat下面)
             // atau tetap sqlite-bundled (cross-platform, no linker flag).
             // Default kita pakai sqlite-bundled di commonMain; baris ini opsional.
-        }
-        val androidTest by getting {
-            dependencies {
-                implementation(libs.androidx.test.ext.junit)
-                implementation(libs.androidx.test.runner)
-                // Jika ingin testing database Room 3 di device Android:
-                // implementation(libs.room3.testing) 
-            }
         }
     }
 }
