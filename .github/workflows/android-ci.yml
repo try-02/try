@@ -10,7 +10,7 @@ concurrency:
 
 defaults:
   run:
-    working-directory: ./coba2
+    working-directory: ./coba9
 
 jobs:
   test:
@@ -40,7 +40,6 @@ jobs:
       # 1. Memberikan izin eksekusi Gradle
       - name: Make gradlew executable
         run: chmod +x ./gradlew
-
       # 2. Menjalankan Unit Test
       - name: Run Pure Unit Tests
         run: ./gradlew :app:testDebugUnitTest --stacktrace
@@ -50,7 +49,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: unit-test-report
-          path: coba2/app/build/reports/tests/testDebugUnitTest/
+          path: coba9/app/build/reports/tests/testDebugUnitTest/
           retention-days: 1
 
   instrumented-tests:
@@ -77,7 +76,7 @@ jobs:
           add-job-summary: on-failure
           cache-encryption-key: ${{ secrets.GRADLE_CACHE_ENCRYPTION_KEY }}
 
-      # 1. Memberikan izin eksekusi Gradle (Diubah dari ./coba2/gradlew karena working-directory sudah ./coba2)
+      # 1. Memberikan izin eksekusi Gradle (Diubah dari ./coba9/gradlew karena working-directory sudah ./coba9)
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
@@ -94,9 +93,9 @@ jobs:
           arch: x86_64
           force-avd-creation: false
           disable-animations: true
-          working-directory: ./coba2
+          working-directory: ./coba9
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
-          script: ./gradlew :app:connectedDebugAndroidTest --rerun-tasks --stacktrace
+          script: ./gradlew :shared:connectedAndroidTest --rerun-tasks --stacktrace
 
       - name: Upload instrumentation test reports
         if: always()
@@ -104,8 +103,8 @@ jobs:
         with:
           name: instrumentation-test-reports
           path: |
-            coba2/**/build/reports/androidTests/
-            coba2**/build/outputs/androidTest-results/
-            coba2/app/build/reports/androidTests/connected/debug/index.html
+            coba9/**/build/reports/androidTests/
+            coba9**/build/outputs/androidTest-results/
+            coba9/app/build/reports/androidTests/connected/debug/index.html
           if-no-files-found: ignore
           retention-days: 1
