@@ -5,7 +5,7 @@ on:
 
 defaults:
   run:
-    working-directory: ./coba0
+    working-directory: ./coba9
 
 jobs:
   build:
@@ -26,7 +26,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
         with:
-          # Arahkan root project ke subfolder coba0
+          # Arahkan root project ke subfolder coba9
           cache-encryption-key: ${{ secrets.GRADLE_CACHE_ENCRYPTION_KEY }}
           # Set false dulu jika ingin workflow_dispatch selalu memperbarui cache
           cache-read-only: false 
@@ -51,7 +51,7 @@ jobs:
         env:
           BUILD_TOOLS_VERSION: "34.0.0"
         with:
-          releaseDirectory: coba0/app/build/outputs/apk/release
+          releaseDirectory: coba9/app/build/outputs/apk/release
           signingKeyBase64: ${{ secrets.KEYSTORE_BASE64 }}
           alias: ${{ secrets.KEY_ALIAS }}
           keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -63,6 +63,6 @@ jobs:
           name: pos-offline-release-signed-apk
           path: |
             ${{ steps.sign_app.outputs.signedReleaseFile }}
-            coba0/app/**/*.json
+            coba9/app/**/*.json
           retention-days: 1
           if-no-files-found: error

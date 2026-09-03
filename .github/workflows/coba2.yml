@@ -1,4 +1,4 @@
-name: Android Release Build 0
+name: Android Release Build 9
 
 on:
   workflow_dispatch:
@@ -63,6 +63,6 @@ jobs:
           name: pos-offline-release-signed-apk
           path: |
             ${{ steps.sign_app.outputs.signedReleaseFile }}
-            coba9/app/**/*.json
+            coba9/**/*.json
           retention-days: 1
           if-no-files-found: error
