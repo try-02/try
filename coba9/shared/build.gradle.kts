@@ -24,6 +24,10 @@ kotlin {
         }
     }
 
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
+    }
+
     iosArm64()
     iosSimulatorArm64()
 
