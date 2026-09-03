@@ -4,7 +4,7 @@ agp = "9.5.0-alpha03"
 kotlin = "2.4.20-RC3"
 ksp = "2.3.11"
 kotlinxSerialization = "1.11.0"
-kotlinMultiplatform = "2.4.20-RC3"   # sama dgn kotlin; untuk plugin kmp
+kotlinMultiplatform = "2.4.20-RC"   # sama dgn kotlin; untuk plugin kmp
 akml = "9.4.0"
 
 # Database & Async
