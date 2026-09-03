@@ -40,11 +40,9 @@ jobs:
       # 1. Memberikan izin eksekusi Gradle
       - name: Make gradlew executable
         run: chmod +x ./gradlew
-      - name: check
-        run: ./gradlew check
       # 2. Menjalankan Unit Test
       - name: Run Pure Unit Tests
-        run: ./gradlew :shared:allTests :app:testDebugUnitTest --stacktrace
+        run: ./gradlew test --stacktrace
 
       - name: Upload Test Report
         if: always()
