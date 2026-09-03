@@ -31,6 +31,9 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
         with:
@@ -61,7 +64,7 @@ jobs:
           java-version: '21'
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@v6
         with:
           # Arahkan root project ke subfolder coba9
           cache-encryption-key: ${{ secrets.GRADLE_CACHE_ENCRYPTION_KEY }}
@@ -69,6 +72,9 @@ jobs:
           cache-read-only: false 
           add-job-summary: 'always'
           cache-provider: Enhanced
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
 
       # Perintah ini akan otomatis menyalakan iOS Simulator di Mac dan menjalankan tes :shared
       - name: Run iOS Simulator Tests
