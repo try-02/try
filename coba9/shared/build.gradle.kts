@@ -41,7 +41,7 @@ kotlin {
             implementation(libs.coroutines.core)
             // DI (Koin core KMP)
             implementation(libs.koin.core)
-            implementation(libs.koin.compose)
+            // implementation(libs.koin.compose)
             // Serialization
             implementation(libs.kotlinx.serialization.json)
         }

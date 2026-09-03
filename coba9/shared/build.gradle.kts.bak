@@ -78,7 +78,7 @@ tasks.matching { it.name.startsWith("lint") || it.name.contains("Lint") }.config
 
 // Room KSP harus dijalankan per target source set
 dependencies {
-    add("kspCommonMainMetadata", libs.room3.compiler)
+//    add("kspCommonMainMetadata", libs.room3.compiler)
     add("kspAndroid", libs.room3.compiler)
     add("kspIosArm64", libs.room3.compiler)
     add("kspIosSimulatorArm64", libs.room3.compiler)
