@@ -32,7 +32,9 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-com.sentral.org.data.service.PrinterService
+import com.sentral.org.data.service.PrinterService
+import com.sentral.org.data.model.PrinterStatus
+import com.sentral.org.data.model.PrinterStatus.SIAP
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class KasirViewModel(
@@ -61,9 +63,9 @@ class KasirViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     /** Status printer untuk ditampilkan di TopAppBar. */
-    val printerStatus: StateFlow<com.sentral.org.data.model.PrinterStatus> = 
+    val printerStatus: StateFlow<PrinterStatus> = 
         printerService.status
-            .stateIn(viewModelScope, SharingStarted.Eagerly, com.sentral.org.data.model.PrinterStatus.SIAP)
+            .stateIn(viewModelScope, SharingStarted.Eagerly, SIAP)
 
     val uiState: StateFlow<KasirUiState> = combine(
         produkRepo.observeAktif(),
