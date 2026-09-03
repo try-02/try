@@ -53,7 +53,5 @@ abstract class PosDatabase : RoomDatabase() {
 // constructor. `expect object` ini WAJIB di commonMain; Room/KSP yang generate
 // `actual` implementasinya (jangan buat `actual object` manual — itu yg bikin
 // error "@ConstructedBy definition must be an 'expect' declaration").
-@Suppress("KotlinNoActualForExpect", "NO_ACTUAL_FOR_EXPECT")
-expect object PosDatabaseConstructor : RoomDatabaseConstructor<PosDatabase> {
-    override fun initialize(): PosDatabase
-}
+@Suppress("KotlinNoActualForExpect")
+internal expect object PosDatabaseConstructor : RoomDatabaseConstructor<PosDatabase>
