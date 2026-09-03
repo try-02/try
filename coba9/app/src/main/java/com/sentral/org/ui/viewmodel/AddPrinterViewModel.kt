@@ -1,0 +1,272 @@
+package com.sentral.org.ui.viewmodel
+
+import android.annotation.SuppressLint
+import android.app.Application
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothManager
+import android.bluetooth.le.BluetoothLeScanner
+import android.bluetooth.le.ScanCallback
+import android.bluetooth.le.ScanResult
+import android.content.Context
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.dantsu.escposprinter.EscPosCharsetEncoding
+import com.dantsu.escposprinter.EscPosPrinter
+import com.dantsu.escposprinter.connection.bluetooth.BluetoothConnection
+import com.dantsu.escposprinter.connection.tcp.TcpConnection
+import com.sentral.org.data.entity.PrinterEntity
+import com.sentral.org.data.repository.PrinterRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+
+data class BluetoothDeviceUi(
+    val name: String,
+    val address: String,
+    val isPaired: Boolean,
+)
+
+sealed interface PrinterTestResult {
+    data object Testing : PrinterTestResult
+    data class Success(val printer: PrinterEntity) : PrinterTestResult
+    data class Failed(val message: String) : PrinterTestResult
+}
+
+@SuppressLint("MissingPermission")
+class AddPrinterViewModel(
+    application: Application,
+    private val printerRepo: PrinterRepository,
+) : AndroidViewModel(application) {
+
+    private val _bluetoothDevices = MutableStateFlow<List<BluetoothDeviceUi>>(emptyList())
+    val bluetoothDevices: StateFlow<List<BluetoothDeviceUi>> = _bluetoothDevices.asStateFlow()
+
+    private val _isScanning = MutableStateFlow(false)
+    val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
+
+    private val _scanProgress = MutableStateFlow(0f)
+    val scanProgress: StateFlow<Float> = _scanProgress.asStateFlow()
+
+    private val _testResult = MutableSharedFlow<PrinterTestResult>()
+    val testResult: SharedFlow<PrinterTestResult> = _testResult.asSharedFlow()
+
+    private var scanner: BluetoothLeScanner? = null
+    private var scanCallback: ScanCallback? = null
+    private val foundDevices = mutableMapOf<String, BluetoothDeviceUi>()
+
+    companion object {
+        private const val SCAN_DURATION_MS = 15000L // 15 detik
+        private const val CONNECTION_TIMEOUT_MS = 10000L // 10 detik
+        private const val PRINTER_DPI = 203
+        private const val PRINTER_WIDTH_MM = 80f // 80mm printer
+        private const val CHARS_PER_LINE = 48 // Standard untuk 80mm printer
+        private val CHARSET_UTF8 = EscPosCharsetEncoding("UTF-8", 28)
+    }
+
+    fun startBluetoothScan() {
+        if (_isScanning.value) return
+
+        viewModelScope.launch {
+            _isScanning.value = true
+            _scanProgress.value = 0f
+            foundDevices.clear()
+            _bluetoothDevices.value = emptyList()
+
+            val context = getApplication<Application>()
+            val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+            val bluetoothAdapter = bluetoothManager.adapter
+
+            if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled) {
+                _isScanning.value = false
+                return@launch
+            }
+
+            scanner = bluetoothAdapter.bluetoothLeScanner
+
+            scanCallback = object : ScanCallback() {
+                override fun onScanResult(callbackType: Int, result: ScanResult) {
+                    val device = result.device
+                    val name = device.name ?: "Unknown Device"
+                    val address = device.address
+                    val isPaired = device.bondState == BluetoothDevice.BOND_BONDED
+
+                    if (!foundDevices.containsKey(address)) {
+                        foundDevices[address] = BluetoothDeviceUi(
+                            name = name,
+                            address = address,
+                            isPaired = isPaired,
+                        )
+                        _bluetoothDevices.value = foundDevices.values.toList()
+                    }
+                }
+
+                override fun onScanFailed(errorCode: Int) {
+                    _isScanning.value = false
+                    _scanProgress.value = 0f
+                }
+            }
+
+            try {
+                scanner?.startScan(scanCallback)
+            } catch (e: SecurityException) {
+                _isScanning.value = false
+                return@launch
+            }
+
+            // Progress animation
+            val startTime = System.currentTimeMillis()
+            while (_isScanning.value) {
+                val elapsed = System.currentTimeMillis() - startTime
+                _scanProgress.value = (elapsed.toFloat() / SCAN_DURATION_MS).coerceIn(0f, 1f)
+                
+                if (elapsed >= SCAN_DURATION_MS) {
+                    stopScan()
+                    break
+                }
+                
+                delay(100)
+            }
+        }
+    }
+
+    private fun stopScan() {
+        try {
+            scanner?.stopScan(scanCallback)
+        } catch (e: SecurityException) {
+            // Ignore
+        }
+        scanCallback = null
+        _isScanning.value = false
+        _scanProgress.value = 0f
+    }
+
+    fun testBluetoothConnection(device: BluetoothDeviceUi) {
+        viewModelScope.launch {
+            _testResult.emit(PrinterTestResult.Testing)
+
+            val result = withContext(Dispatchers.IO) {
+                withTimeoutOrNull(CONNECTION_TIMEOUT_MS) {
+                    try {
+                        val context = getApplication<Application>()
+                        val bluetoothAdapter = (context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
+                        val bluetoothDevice = bluetoothAdapter.getRemoteDevice(device.address)
+                        val connection = BluetoothConnection(bluetoothDevice)
+
+                        val printer = EscPosPrinter(
+                            connection,
+                            PRINTER_DPI,
+                            PRINTER_WIDTH_MM,
+                            CHARS_PER_LINE,
+                            CHARSET_UTF8,
+                        )
+
+                        // Test print
+                        printer.printFormattedText("[C]TEST CONNECTION\n")
+                        printer.disconnectPrinter()
+
+                        // Create printer entity
+                        PrinterEntity(
+                            nama = device.name,
+                            tipeKoneksi = "BLUETOOTH",
+                            isDefault = false,
+                            prioritas = 1,
+                            karakterPerBaris = CHARS_PER_LINE,
+                            lebarKertas = "80mm",
+                            mendukungStatus = true,
+                            alamatBluetooth = device.address,
+                            alamatWifi = null,
+                            portWifi = null,
+                            usbVendorId = null,
+                            usbProductId = null,
+                            dibuatPada = System.currentTimeMillis(),
+                            gagalStatusBerturut = 0,
+                            dinonaktifkanOtomatis = false,
+                        )
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
+            }
+
+            if (result != null) {
+                _testResult.emit(PrinterTestResult.Success(result))
+            } else {
+                _testResult.emit(PrinterTestResult.Failed("Tidak dapat terhubung ke printer. Pastikan printer menyala dan dalam jangkauan."))
+            }
+        }
+    }
+
+    fun testWifiConnection(name: String, ipAddress: String, port: Int) {
+        viewModelScope.launch {
+            _testResult.emit(PrinterTestResult.Testing)
+
+            val result = withContext(Dispatchers.IO) {
+                withTimeoutOrNull(CONNECTION_TIMEOUT_MS) {
+                    try {
+                        val connection = TcpConnection(ipAddress, port, 5000)
+                        val printer = EscPosPrinter(
+                            connection,
+                            PRINTER_DPI,
+                            PRINTER_WIDTH_MM,
+                            CHARS_PER_LINE,
+                            CHARSET_UTF8,
+                        )
+
+                        // Test print
+                        printer.printFormattedText("[C]TEST CONNECTION\n")
+                        printer.disconnectPrinter()
+
+                        // Create printer entity
+                        PrinterEntity(
+                            nama = name,
+                            tipeKoneksi = "WIFI",
+                            isDefault = false,
+                            prioritas = 1,
+                            karakterPerBaris = CHARS_PER_LINE,
+                            lebarKertas = "80mm",
+                            mendukungStatus = true,
+                            alamatBluetooth = null,
+                            alamatWifi = ipAddress,
+                            portWifi = port,
+                            usbVendorId = null,
+                            usbProductId = null,
+                            dibuatPada = System.currentTimeMillis(),
+                            gagalStatusBerturut = 0,
+                            dinonaktifkanOtomatis = false,
+                        )
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
+            }
+
+            if (result != null) {
+                _testResult.emit(PrinterTestResult.Success(result))
+            } else {
+                _testResult.emit(PrinterTestResult.Failed("Tidak dapat terhubung ke printer. Periksa IP address dan port."))
+            }
+        }
+    }
+
+    fun savePrinter(printer: PrinterEntity) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                printerRepo.insert(printer)
+            }
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        stopScan()
+    }
+}

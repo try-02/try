@@ -49,7 +49,16 @@ fun PosNavHost(
                 PrinterSettingsScreen(
                     onBack = { navController.popBackStack() },
                     onAddPrinter = { 
-                        // TODO: Navigate to AddPrinterScreen di Tahap 4
+                        navController.navigate(PosRoute.AddPrinter) // <-- Hubungkan ke route AddPrinter
+                    },
+                )
+            }
+
+            composable<PosRoute.AddPrinter> {
+                AddPrinterScreen(
+                    onBack = { navController.popBackStack() },
+                    onSaved = { 
+                        navController.popBackStack()
                     },
                 )
             }

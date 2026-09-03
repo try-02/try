@@ -22,6 +22,9 @@ import org.koin.dsl.module
 import com.sentral.org.data.service.PrinterService
 import com.sentral.org.hardware.EscPosPrinterDriver
 
+import com.sentral.org.ui.viewmodel.AddPrinterViewModel
+import android.app.Application
+
 val appModule = module {
     // 1. Core & Database — builder dibuat di sini (Android entry) lalu dikonfigurasi
     // di common lewat createPosDatabase(builder).
@@ -103,5 +106,9 @@ val appModule = module {
                 kotlinx.coroutines.Dispatchers.IO + kotlinx.coroutines.SupervisorJob()
             ),
         )
+    }
+
+    viewModel { (application: Application) ->
+        AddPrinterViewModel(application, get())
     }
 }

@@ -1,0 +1,671 @@
+package com.sentral.org.ui.screen.settings
+
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sentral.org.data.entity.PrinterEntity
+import com.sentral.org.ui.navigation.PosRoute
+import com.sentral.org.ui.viewmodel.AddPrinterViewModel
+import com.sentral.org.ui.viewmodel.BluetoothDeviceUi
+import com.sentral.org.ui.viewmodel.PrinterTestResult
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun AddPrinterScreen(
+    onBack: () -> Unit,
+    onSaved: () -> Unit,
+    viewModel: AddPrinterViewModel = viewModel(),
+) {
+    var selectedTab by rememberSaveable { mutableIntStateOf(0) } // 0 = Bluetooth, 1 = WiFi
+    var showTestDialog by remember { mutableStateOf(false) }
+    var testResult by remember { mutableStateOf<PrinterTestResult?>(null) }
+
+    // Collect states
+    val bluetoothDevices by viewModel.bluetoothDevices.collectAsState()
+    val isScanning by viewModel.isScanning.collectAsState()
+    val scanProgress by viewModel.scanProgress.collectAsState()
+
+    // Permission launcher
+    val context = LocalContext.current
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val allGranted = permissions.all { it.value }
+        if (allGranted) {
+            viewModel.startBluetoothScan()
+        }
+    }
+
+    // Check and request permissions on first launch
+    LaunchedEffect(Unit) {
+        val requiredPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            arrayOf(
+                Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.BLUETOOTH_CONNECT,
+            )
+        } else {
+            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+
+        val missingPermissions = requiredPermissions.filter {
+            ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
+        }
+
+        if (missingPermissions.isEmpty()) {
+            viewModel.startBluetoothScan()
+        } else {
+            permissionLauncher.launch(missingPermissions.toTypedArray())
+        }
+    }
+
+    // Cleanup on disposal
+    LaunchedEffect(Unit) {
+        // This will be called when composable leaves composition
+        // ViewModel.onCleared() will handle cleanup
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        "Tambah Printer",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                ),
+            )
+        },
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+        ) {
+            // Tab row
+            TabRow(
+                selectedTabIndex = selectedTab,
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.primary,
+            ) {
+                Tab(
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 },
+                    text = {
+                        Text(
+                            "Bluetooth",
+                            fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
+                        )
+                    },
+                    icon = { Icon(Icons.Filled.Bluetooth, contentDescription = null) },
+                )
+                Tab(
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 },
+                    text = {
+                        Text(
+                            "WiFi",
+                            fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
+                        )
+                    },
+                    icon = { Icon(Icons.Filled.Wifi, contentDescription = null) },
+                )
+            }
+
+            // Content
+            when (selectedTab) {
+                0 -> BluetoothTab(
+                    devices = bluetoothDevices,
+                    isScanning = isScanning,
+                    scanProgress = scanProgress,
+                    onRescan = {
+                        val requiredPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            arrayOf(
+                                Manifest.permission.BLUETOOTH_SCAN,
+                                Manifest.permission.BLUETOOTH_CONNECT,
+                            )
+                        } else {
+                            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
+                        }
+
+                        val missingPermissions = requiredPermissions.filter {
+                            ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
+                        }
+
+                        if (missingPermissions.isEmpty()) {
+                            viewModel.startBluetoothScan()
+                        } else {
+                            permissionLauncher.launch(missingPermissions.toTypedArray())
+                        }
+                    },
+                    onDeviceSelected = { device ->
+                        testResult = null
+                        showTestDialog = true
+                        viewModel.testBluetoothConnection(device)
+                    },
+                )
+                1 -> WifiTab(
+                    onTestConnection = { name, ip, port ->
+                        testResult = null
+                        showTestDialog = true
+                        viewModel.testWifiConnection(name, ip, port)
+                    },
+                )
+            }
+        }
+
+        // Test connection dialog
+        AnimatedVisibility(
+            visible = showTestDialog,
+            enter = fadeIn(),
+            exit = fadeOut(),
+        ) {
+            TestConnectionDialog(
+                result = testResult,
+                onDismiss = {
+                    showTestDialog = false
+                    testResult = null
+                },
+                onSave = { printer ->
+                    viewModel.savePrinter(printer)
+                    onSaved()
+                },
+            )
+        }
+    }
+
+    // Observe test result changes
+    LaunchedEffect(Unit) {
+        viewModel.testResult.collect { result ->
+            testResult = result
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun BluetoothTab(
+    devices: List<BluetoothDeviceUi>,
+    isScanning: Boolean,
+    scanProgress: Float,
+    onRescan: () -> Unit,
+    onDeviceSelected: (BluetoothDeviceUi) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+    ) {
+        // Header with rescan button
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column {
+                Text(
+                    "Perangkat Bluetooth",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    if (isScanning) "Memindai perangkat..." else "${devices.size} perangkat ditemukan",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            OutlinedButton(
+                onClick = onRescan,
+                enabled = !isScanning,
+            ) {
+                Icon(
+                    Icons.Filled.Refresh,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text("Scan Ulang")
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        // Progress indicator
+        AnimatedVisibility(visible = isScanning) {
+            Column {
+                LinearProgressIndicator(
+                    progress = { scanProgress },
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Pastikan printer dalam mode pairing",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(16.dp))
+            }
+        }
+
+        // Device list
+        if (devices.isEmpty() && !isScanning) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .weight(1f),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.size(88.dp),
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Filled.Search,
+                                contentDescription = null,
+                                modifier = Modifier.size(40.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        "Tidak ada perangkat ditemukan",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "Tap 'Scan Ulang' untuk memindai kembali",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(devices, key = { it.address }) { device ->
+                    BluetoothDeviceCard(
+                        device = device,
+                        onClick = { onDeviceSelected(device) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun BluetoothDeviceCard(
+    device: BluetoothDeviceUi,
+    onClick: () -> Unit,
+) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp,
+            pressedElevation = 4.dp,
+        ),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = if (device.isPaired) MaterialTheme.colorScheme.primaryContainer
+                else MaterialTheme.colorScheme.surfaceVariant,
+                modifier = Modifier.size(48.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Filled.Bluetooth,
+                        contentDescription = null,
+                        tint = if (device.isPaired) MaterialTheme.colorScheme.onPrimaryContainer
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+            }
+
+            Spacer(Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    device.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    device.address,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (device.isPaired) {
+                    Spacer(Modifier.height(4.dp))
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                    ) {
+                        Text(
+                            "Paired",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                        )
+                    }
+                }
+            }
+
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Pilih",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun WifiTab(
+    onTestConnection: (name: String, ip: String, port: Int) -> Unit,
+) {
+    var printerName by rememberSaveable { mutableStateOf("") }
+    var ipAddress by rememberSaveable { mutableStateOf("") }
+    var portText by rememberSaveable { mutableStateOf("9100") }
+
+    val isValid = printerName.isNotBlank() && 
+                  ipAddress.isNotBlank() && 
+                  isValidIpAddress(ipAddress) &&
+                  portText.toIntOrNull() in 1..65535
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+    ) {
+        Text(
+            "Konfigurasi Printer WiFi",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "Masukkan alamat IP dan port printer thermal Anda",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        Spacer(Modifier.height(24.dp))
+
+        OutlinedTextField(
+            value = printerName,
+            onValueChange = { printerName = it },
+            label = { Text("Nama Printer") },
+            placeholder = { Text("Contoh: Printer Kasir 1") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = ipAddress,
+            onValueChange = { ipAddress = it },
+            label = { Text("Alamat IP") },
+            placeholder = { Text("192.168.1.100") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            isError = ipAddress.isNotBlank() && !isValidIpAddress(ipAddress),
+            supportingText = {
+                if (ipAddress.isNotBlank() && !isValidIpAddress(ipAddress)) {
+                    Text("Format IP tidak valid")
+                }
+            },
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = portText,
+            onValueChange = { portText = it.filter { c -> c.isDigit() } },
+            label = { Text("Port") },
+            placeholder = { Text("9100") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            isError = portText.toIntOrNull() !in 1..65535,
+            supportingText = {
+                if (portText.toIntOrNull() !in 1..65535) {
+                    Text("Port harus antara 1-65535")
+                }
+            },
+        )
+
+        Spacer(Modifier.weight(1f))
+
+        Button(
+            onClick = {
+                val port = portText.toIntOrNull() ?: 9100
+                onTestConnection(printerName, ipAddress, port)
+            },
+            enabled = isValid,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            shape = MaterialTheme.shapes.large,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+            ),
+        ) {
+            Icon(Icons.Filled.Wifi, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text(
+                "Test Koneksi",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun TestConnectionDialog(
+    result: PrinterTestResult?,
+    onDismiss: () -> Unit,
+    onSave: (PrinterEntity) -> Unit,
+) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            when (result) {
+                is PrinterTestResult.Testing -> CircularProgressIndicator()
+                is PrinterTestResult.Success -> Icon(
+                    Icons.Filled.CheckCircle,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                is PrinterTestResult.Failed -> Icon(
+                    Icons.Filled.Error,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                )
+                null -> CircularProgressIndicator()
+            }
+        },
+        title = {
+            Text(
+                when (result) {
+                    is PrinterTestResult.Testing -> "Menguji Koneksi..."
+                    is PrinterTestResult.Success -> "Koneksi Berhasil!"
+                    is PrinterTestResult.Failed -> "Koneksi Gagal"
+                    null -> "Menguji Koneksi..."
+                },
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+            )
+        },
+        text = {
+            when (result) {
+                is PrinterTestResult.Testing -> Text(
+                    "Sedang mencoba terhubung ke printer. Harap tunggu...",
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                is PrinterTestResult.Success -> Column {
+                    Text(
+                        "Printer siap digunakan!",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Tap 'Simpan' untuk menambahkan printer ke daftar.",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                is PrinterTestResult.Failed -> Column {
+                    Text(
+                        result.message,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Pastikan printer menyala dan terhubung ke jaringan yang sama.",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                null -> Text(
+                    "Mempersiapkan...",
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+            }
+        },
+        confirmButton = {
+            when (result) {
+                is PrinterTestResult.Success -> {
+                    Button(
+                        onClick = { onSave(result.printer) },
+                    ) {
+                        Text("Simpan")
+                    }
+                }
+                is PrinterTestResult.Failed -> {
+                    Button(
+                        onClick = onDismiss,
+                    ) {
+                        Text("Coba Lagi")
+                    }
+                }
+                else -> {}
+            }
+        },
+        dismissButton = {
+            if (result !is PrinterTestResult.Testing) {
+                OutlinedButton(onClick = onDismiss) {
+                    Text("Batal")
+                }
+            }
+        },
+    )
+}
+
+private fun isValidIpAddress(ip: String): Boolean {
+    val parts = ip.split(".")
+    if (parts.size != 4) return false
+    return parts.all { part ->
+        val num = part.toIntOrNull() ?: return@all false
+        num in 0..255
+    }
+}

@@ -6,5 +6,4 @@ import com.sentral.org.data.repository.PrinterRepository
 class OfflinePrinterRepository(private val dao: PrinterDao) : PrinterRepository {
     override fun observeAll() = dao.observeAll()
     override suspend fun getDefault() = dao.getDefault()
-    override suspend fun insert(entity: PrinterEntity) = dao.insert(entity)  // ← BARU
 }

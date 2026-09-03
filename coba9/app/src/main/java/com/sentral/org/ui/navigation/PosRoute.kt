@@ -12,4 +12,5 @@ sealed interface PosRoute {
     // Contoh mengirim argumen dengan aman
     @Serializable data class RiwayatTransaksi(val kasirId: Long? = null) : PosRoute
     @Serializable data object PrinterSettings : PosRoute  // ← BARU
+    @Serializable data object AddPrinter : PosRoute
 }
