@@ -10,6 +10,8 @@ import com.sentral.org.ui.screen.pos.PosUtamaScreen
 import com.sentral.org.ui.theme.PosTheme
 
 import com.sentral.org.ui.screen.settings.PrinterSettingsScreen
+import com.sentral.org.ui.screen.settings.AddPrinterScreen
+
 
 @Composable
 fun PosNavHost(
