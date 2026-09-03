@@ -112,9 +112,9 @@ fun DialogKonfirmasi(
 fun DialogPembayaran(
     total: Long,
     sedangProses: Boolean,
-    metodeAwal: Int = 0, // 0 = Tunai, 1 = QRIS
     onKonfirmasiTunai: (Long) -> Unit,
     onKonfirmasiQris: () -> Unit,
+    metodeAwal: Int = 0, // 0 = Tunai, 1 = QRIS
     onTutup: () -> Unit,
 ) {
     var metode by rememberSaveable { mutableIntStateOf(metodeAwal) }

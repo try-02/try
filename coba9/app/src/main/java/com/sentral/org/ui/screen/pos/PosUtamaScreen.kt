@@ -77,7 +77,8 @@ import androidx.compose.material3.ToggleFloatingActionButton
 import androidx.compose.material3.animateFloatingActionButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.SheetValue
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -493,7 +494,8 @@ LaunchedEffect(Unit) {
                 val tinggiLayar = LocalConfiguration.current.screenHeightDp
                 ModalBottomSheet(
                     onDismissRequest = { sheetKeranjangTerbuka = false },
-                    sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false),
+                    // Ganti rememberModalBottomSheetState menjadi rememberBottomSheetState:
+                    sheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden),
                     shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
                     containerColor = MaterialTheme.colorScheme.surface,
                 ) {
