@@ -1,20 +1,22 @@
 <resources>
-    <!-- 1. TEMA UNTUK SPLASH SCREEN (Sudah benar) -->
+    <!-- 1. TEMA UNTUK SPLASH SCREEN (Modern Dark Navy Theme) -->
     <style name="Theme.App.Starting" parent="Theme.SplashScreen">
-        <!-- Latar belakang tetap putih -->
-        <item name="windowSplashScreenBackground">#FFFFFF</item>
+        <!-- Latar belakang Splash Screen senada dengan background icon -->
+        <item name="windowSplashScreenBackground">#0B132B</item>
     
-        <!-- UBAH BARIS INI: Arahkan ke file XML yang baru dibuat -->
+        <!-- Icon animasi / logo utama -->
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_logo_pos</item>
     
-        <!-- Setelah Splash selesai, kembali ke tema utama -->
+        <!-- Durasi animasi icon jika diperlukan -->
+        <item name="windowSplashScreenAnimationDuration">500</item>
+    
+        <!-- Setelah Splash selesai, beralih ke tema utama -->
         <item name="postSplashScreenTheme">@style/Theme.SentralOrg</item>
     </style>
 
-    <!-- 2. TAMBAHKAN TEMA UTAMA INI YANG HILANG -->
+    <!-- 2. TEMA UTAMA APLIKASI -->
     <style name="Theme.SentralOrg" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Sesuaikan warna tema utama aplikasi Anda di sini -->
-        <item name="colorPrimary">#1976D2</item>
+        <item name="colorPrimary">#0284C7</item>
         <item name="colorSecondary">#0E7490</item>
         <item name="android:statusBarColor">#F4F5FB</item>
         <item name="android:windowLightStatusBar">true</item>

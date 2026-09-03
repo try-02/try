@@ -1,32 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24"
-    android:tint="#1976D2"> <!-- Warna biru material yang elegan -->
-    
-    <!-- Kerangka luar mesin kasir -->
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- 1. STRUK KASIR (Receipt Keluar dari Atas) -->
     <path
-        android:fillColor="@android:color/white"
-        android:pathData="M17,1H7A2,2 0 0,0 5,3V21A2,2 0 0,0 7,23H17A2,2 0 0,0 19,21V3A2,2 0 0,0 17,1M7,19V17H17V19M17,15H7V5H17Z"/>
-    
-    <!-- Tombol atas kiri -->
+        android:pathData="M44,18 L64,18 L64,32 L60.5,30 L57,32 L54,30 L51,32 L47.5,30 L44,32 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="54"
+                android:startY="18"
+                android:endX="54"
+                android:endY="32"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#E2E8F0" />
+                <item android:offset="1.0" android:color="#CBD5E1" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- Garis detail pada struk -->
     <path
-        android:fillColor="@android:color/white"
-        android:pathData="M9,7H11V9H9Z"/>
-        
-    <!-- Tombol atas kanan -->
+        android:fillColor="#94A3B8"
+        android:pathData="M48,22h12v2h-12z M48,26h8v2h-8z" />
+
+    <!-- 2. SHADOW TERMINAL (Bayangan halus di bawah mesin) -->
     <path
-        android:fillColor="@android:color/white"
-        android:pathData="M13,7H15V9H13Z"/>
-        
-    <!-- Tombol bawah kiri -->
+        android:fillColor="#000000"
+        android:fillAlpha="0.3"
+        android:pathData="M38,82 h32 a4,4 0 0,1 4,4 v0 a4,4 0 0,1 -4,4 h-32 a4,4 0 0,1 -4,-4 v0 a4,4 0 0,1 4,-4 z" />
+
+    <!-- 3. BODY MESIN POS (Bodi Smart Terminal Ergonomis) -->
     <path
-        android:fillColor="@android:color/white"
-        android:pathData="M9,11H11V13H9Z"/>
-        
-    <!-- Tombol bawah kanan -->
+        android:pathData="M37,28 h34 a7,7 0 0,1 7,7 v45 a7,7 0 0,1 -7,7 h-34 a7,7 0 0,1 -7,-7 v-45 a7,7 0 0,1 7,-7 z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="30"
+                android:startY="28"
+                android:endX="78"
+                android:endY="87"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#FFFFFF" />
+                <item android:offset="1.0" android:color="#E2E8F0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- 4. LAYAR SENTUH POS (Screen dengan Gradasi Cyan-Blue Modern) -->
     <path
-        android:fillColor="@android:color/white"
-        android:pathData="M13,11H15V13H13Z"/>
+        android:pathData="M35,36 h38 a4,4 0 0,1 4,4 v32 a4,4 0 0,1 -4,4 h-38 a4,4 0 0,1 -4,-4 v-32 a4,4 0 0,1 4,-4 z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="35"
+                android:startY="36"
+                android:endX="77"
+                android:endY="76"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#0284C7" />
+                <item android:offset="1.0" android:color="#0369A1" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- 5. KONTEN LAYAR: SIMBOL PEMBAYARAN DIGITAL / TRANSAKSI SUKSES -->
+    <!-- Gelombang Contactless/NFC -->
+    <path
+        android:fillColor="#38BDF8"
+        android:fillAlpha="0.8"
+        android:pathData="M48,46 a6,6 0 0,1 12,0"
+        android:strokeWidth="2"
+        android:strokeColor="#38BDF8"
+        android:strokeLineCap="round" />
+    <path
+        android:fillColor="#E0F2FE"
+        android:pathData="M51,50 a3,3 0 0,1 6,0"
+        android:strokeWidth="2"
+        android:strokeColor="#E0F2FE"
+        android:strokeLineCap="round" />
+
+    <!-- Centang Verifikasi / Sukses di tengah layar -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M52,64 L47,59 L49,57 L52,60 L59,53 L61,55 Z" />
+
+    <!-- 6. CHIP / TOMBOL AKSI BAWAH -->
+    <path
+        android:fillColor="#64748B"
+        android:pathData="M44,79 h20 a2,2 0 0,1 2,2 v0 a2,2 0 0,1 -2,2 h-20 a2,2 0 0,1 -2,-2 v0 a2,2 0 0,1 2,-2 z" />
+
+    <!-- Lampu Indikator Pembayaran Hijau/Aktif -->
+    <path
+        android:fillColor="#22C55E"
+        android:pathData="M38,79.5 a1.5,1.5 0 1,0 0,3 a1.5,1.5 0 1,0 0,-3" />
 </vector>

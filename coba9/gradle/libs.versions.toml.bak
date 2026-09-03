@@ -1,28 +1,28 @@
 [versions]
 # Core Build & Kotlin
-agp = "9.5.0-alpha03"
-kotlin = "2.4.20-RC3"
+agp = "9.5.0-alpha02"
+kotlin = "2.4.20-RC"
 ksp = "2.3.11"
 kotlinxSerialization = "1.11.0"
 kotlinMultiplatform = "2.4.20-RC"   # sama dgn kotlin; untuk plugin kmp
-akml = "9.4.0"
+akml = "9.3.0-alpha03"
 
 # Database & Async
-room3 = "3.0.2"
+room3 = "3.0.1"
 sqlite = "2.7.0"
 coroutines = "1.11.0"
 
 # AndroidX & Lifecycle
 coreKtx = "1.19.0"
-lifecycle = "2.12.0-alpha02"
+lifecycle = "2.12.0-alpha01"
 activityCompose = "1.13.0"
 
 # Compose
 composeBom = "2026.08.00"
-navigationCompose = "2.10.0" # Versi standar penunjang Compose
+navigationCompose = "2.10.0-rc01" # Versi standar penunjang Compose
 paging = "3.5.1"             # Penunjang rekomendasi pagination kita
 material-icon = "1.7.8"
-material3expressive = "1.5.0-alpha27"
+material3expressive = "1.5.0-alpha26"
 
 # Dependency Injection
 koin = "4.2.2" # Versi Koin mutakhir untuk Compose
@@ -36,7 +36,7 @@ aaltoXml = "1.4.0"
 staxApi = "1.0-2"
 splash = "1.2.0"
 google-material = "1.14.0"
-slack-compose-lint = "1.6.0"
+slack-compose-lint = "1.5.4"
 
 # Test
 junit = "4.13.2"

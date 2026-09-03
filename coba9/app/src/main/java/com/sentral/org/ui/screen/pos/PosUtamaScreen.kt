@@ -92,7 +92,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -183,7 +184,10 @@ LaunchedEffect(Unit) {
         }
     }
 
-    val isTablet = LocalConfiguration.current.screenWidthDp >= LEBAR_TABLET_DP
+    val density = LocalDensity.current
+    val windowInfo = LocalWindowInfo.current
+    val lebarLayarDp = with(density) { windowInfo.containerSize.width.toDp() }
+    val isTablet = lebarLayarDp >= LEBAR_TABLET_DP.dp // atau lebarLayarDp.value >= LEBAR_TABLET_DP
     val adaKeranjang = state.baris.isNotEmpty()
 
     Scaffold(
@@ -491,7 +495,7 @@ LaunchedEffect(Unit) {
             // TODO (tahap produksi): di tablet, pakai panel samping tetap (two-pane) 
             // daripada bottom sheet agar kasir tidak perlu buka/tutup sheet berulang kali.
             if (sheetKeranjangTerbuka) {
-                val tinggiLayar = LocalConfiguration.current.screenHeightDp
+                val tinggiLayarDp = with(density) { windowInfo.containerSize.height.toDp() }
                 ModalBottomSheet(
                     onDismissRequest = { sheetKeranjangTerbuka = false },
                     // Ganti rememberModalBottomSheetState menjadi rememberBottomSheetState:
@@ -521,7 +525,7 @@ LaunchedEffect(Unit) {
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height((tinggiLayar * 0.72f).dp),
+                            .height(tinggiLayarDp * 0.72f), // Dp * Float langsung menghasilkan Dp
                     )
                 }
             }
