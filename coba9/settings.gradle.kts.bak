@@ -20,11 +20,6 @@ dependencyResolutionManagement {
         // Mengambil repositori JitPack eksternal sesuai dokumentasi resmi JitPack
         maven { url = uri("https://jitpack.io") }
     }
-    configurations.all {
-        resolutionStrategy {
-            force("org.jetbrains:annotations:23.0.0")
-        }
-    }
 }
 
 // ============================================================================
