@@ -19,8 +19,6 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
-import com.sentral.org.data.entity.PrinterEntity
-import com.sentral.org.data.service.PrinterDriver
 import com.sentral.org.data.service.PrinterService
 import com.sentral.org.hardware.EscPosPrinterDriver
 
@@ -97,15 +95,13 @@ val appModule = module {
     viewModelOf(::KasirViewModel)
 
     // 6. Printer & Hardware
-    factory<PrinterDriver> { (printer: PrinterEntity) ->
-        EscPosPrinterDriver(androidContext(), printer)
-    }
-    
     single {
         PrinterService(
             printerDao = get(),
-            driverFactory = { printer -> get<PrinterDriver>(parameters = { printer }) },
-            scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO),
+            driverFactory = { printer -> EscPosPrinterDriver(androidContext(), printer) },
+            scope = kotlinx.coroutines.CoroutineScope(
+                kotlinx.coroutines.Dispatchers.IO + kotlinx.coroutines.SupervisorJob()
+            ),
         )
     }
 }

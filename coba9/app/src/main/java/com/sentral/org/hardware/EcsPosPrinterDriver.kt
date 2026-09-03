@@ -1,10 +1,9 @@
 package com.sentral.org.hardware
 
 import android.content.Context
+import com.dantsu.escposprinter.EscPosPrinter
 import com.dantsu.escposprinter.connection.bluetooth.BluetoothConnection
 import com.dantsu.escposprinter.connection.tcp.TcpConnection
-import com.dantsu.escposprinter.connection.usb.UsbConnection
-import com.dantsu.escposprinter.EscPosPrinter
 import com.sentral.org.data.entity.PrinterEntity
 import com.sentral.org.data.model.MetodePembayaran
 import com.sentral.org.data.model.PrintResult
@@ -20,22 +19,28 @@ import kotlinx.coroutines.withContext
 
 /**
  * Implementasi PrinterDriver untuk Android menggunakan library DantSu ESC/POS.
- * 
- * CATATAN: Semua operasi I/O di-dispatch ke Dispatchers.IO agar tidak 
- * membloktor main thread.
+ *
+ * CATATAN API DantSu 3.x:
+ * - Method cetak utama: printFormattedText(String)
+ * - Cleanup: disconnect() (bukan Closeable.use{})
+ * - Semua operasi I/O di-dispatch ke Dispatchers.IO agar tidak memblokir main thread.
  */
 class EscPosPrinterDriver(
     private val context: Context,
-    private val printer: PrinterEntity,
+    private val printerConfig: PrinterEntity,
 ) : PrinterDriver {
 
-    override val name: String = "ESC/POS ${printer.tipeKoneksi}"
+    override val name: String = "ESC/POS ${printerConfig.tipeKoneksi}"
 
     override suspend fun testConnection(): Boolean = withContext(Dispatchers.IO) {
         try {
-            val escPrinter = connect() ?: return@withContext false
-            escPrinter.use { it.printText("TEST\n") }
-            true
+            val printer = connect() ?: return@withContext false
+            try {
+                printer.printFormattedText("TEST\n")
+                true
+            } finally {
+                printer.disconnect()
+            }
         } catch (e: Exception) {
             false
         }
@@ -43,24 +48,27 @@ class EscPosPrinterDriver(
 
     override suspend fun print(receipt: ReceiptData): PrintResult = withContext(Dispatchers.IO) {
         try {
-            val escPrinter = connect() 
+            val printer = connect()
                 ?: return@withContext PrintResult.Failure(
-                    "Gagal koneksi ke printer", 
-                    isRetryable = true
+                    "Gagal koneksi ke printer",
+                    isRetryable = true,
                 )
-            
-            escPrinter.use { printer ->
-                printHeader(printer, receipt)
-                printItems(printer, receipt)
-                printTotals(printer, receipt)
-                printPayments(printer, receipt)
+
+            try {
+                val charsPerLine = printerConfig.karakterPerBaris
+
+                printHeader(printer, receipt, charsPerLine)
+                printItems(printer, receipt, charsPerLine)
+                printTotals(printer, receipt, charsPerLine)
+                printPayments(printer, receipt, charsPerLine)
                 printFooter(printer, receipt)
-                
-                // Feed 3 baris agar struk mudah disobek
-                printer.feedPaper(3)
-                printer.cutPaper()
+
+                // Feed beberapa baris agar struk mudah disobek
+                printer.printFormattedText("\n\n\n")
+            } finally {
+                printer.disconnect()
             }
-            
+
             PrintResult.Success
         } catch (e: Exception) {
             PrintResult.Failure(
@@ -71,117 +79,134 @@ class EscPosPrinterDriver(
     }
 
     override suspend fun disconnect() {
-        // DantSu library pakai use{} pattern, koneksi otomatis tertutup
+        // Koneksi dikelola per-job (buka-cetak-tutup), jadi tidak ada 
+        // koneksi persisten yang perlu ditutup di sini.
     }
 
     // ---------- Private helpers ----------
 
     private fun connect(): EscPosPrinter? {
-        return when (PrinterConnectionType.valueOf(printer.tipeKoneksi)) {
+        val connectionType = safeConnectionType(printerConfig.tipeKoneksi) ?: return null
+        val dpi = 203
+        val widthMM = 48f
+        val charsPerLine = printerConfig.karakterPerBaris
+
+        return when (connectionType) {
             PrinterConnectionType.BLUETOOTH -> {
-                val address = printer.alamatBluetooth ?: return null
-                val connection = BluetoothConnection(
-                    android.bluetooth.BluetoothAdapter.getDefaultAdapter()
-                        .getRemoteDevice(address)
-                )
-                EscPosPrinter(connection, 203, 48f, printer.karakterPerBaris)
+                val address = printerConfig.alamatBluetooth ?: return null
+                val adapter = android.bluetooth.BluetoothAdapter.getDefaultAdapter() ?: return null
+                val device = adapter.getRemoteDevice(address)
+                val connection = BluetoothConnection(device)
+                EscPosPrinter(connection, dpi, widthMM, charsPerLine)
             }
             PrinterConnectionType.WIFI -> {
-                val address = printer.alamatWifi ?: return null
-                val port = printer.portWifi ?: 9100
+                val address = printerConfig.alamatWifi ?: return null
+                val port = printerConfig.portWifi ?: 9100
                 val connection = TcpConnection(address, port)
-                EscPosPrinter(connection, 203, 48f, printer.karakterPerBaris)
+                EscPosPrinter(connection, dpi, widthMM, charsPerLine)
             }
             PrinterConnectionType.USB -> {
-                // USB butuh UsbManager dan permission, lebih kompleks
-                // TODO: implement USB connection
+                // USB butuh UsbManager + permission, lebih kompleks.
+                // TODO: implement USB connection di tahap selanjutnya.
                 null
             }
         }
     }
 
-    private fun printHeader(printer: EscPosPrinter, receipt: ReceiptData) {
-        printer.apply {
-            printText(receipt.toko.nama + "\n")
-            printText(receipt.toko.alamat + "\n")
-            printText("--------------------------------\n")
-            
-            val dateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
-            val waktu = dateFormat.format(Date(receipt.transaksi.waktu))
-            
-            printText("No: ${receipt.transaksi.nomor}\n")
-            printText("Kasir: ${receipt.transaksi.kasir}\n")
-            printText("Waktu: $waktu\n")
-            printText("--------------------------------\n")
-        }
+    private fun safeConnectionType(value: String): PrinterConnectionType? {
+        return PrinterConnectionType.entries.firstOrNull { it.name == value }
     }
 
-    private fun printItems(printer: EscPosPrinter, receipt: ReceiptData) {
+    private fun printHeader(printer: EscPosPrinter, receipt: ReceiptData, charsPerLine: Int) {
+        val dateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+        val waktu = dateFormat.format(Date(receipt.transaksi.waktu))
+
+        val header = buildString {
+            append(receipt.toko.nama).append("\n")
+            if (receipt.toko.alamat.isNotBlank()) {
+                append(receipt.toko.alamat).append("\n")
+            }
+            append("-".repeat(charsPerLine)).append("\n")
+            append("No: ").append(receipt.transaksi.nomor).append("\n")
+            append("Kasir: ").append(receipt.transaksi.kasir).append("\n")
+            append("Waktu: ").append(waktu).append("\n")
+            append("-".repeat(charsPerLine)).append("\n")
+        }
+        printer.printFormattedText(header)
+    }
+
+    private fun printItems(printer: EscPosPrinter, receipt: ReceiptData, charsPerLine: Int) {
+        val sb = StringBuilder()
         receipt.items.forEach { item ->
             val qty = item.jumlah / 1000  // QUANTITY_SCALE
             val lineTotal = ReceiptFormatter.formatMoney(item.totalBaris)
-            
-            printer.apply {
-                printText(item.nama + "\n")
-                printText("  $qty x ${ReceiptFormatter.formatMoney(item.hargaSatuan)}")
-                printText(" " * (printer.karakterPerBaris - 10 - lineTotal.length))
-                printText(lineTotal + "\n")
-            }
+            val priceStr = ReceiptFormatter.formatMoney(item.hargaSatuan)
+
+            sb.append(item.nama).append("\n")
+
+            val detail = "  $qty x $priceStr"
+            val padding = (charsPerLine - detail.length - lineTotal.length).coerceAtLeast(1)
+            sb.append(detail)
+            sb.append(" ".repeat(padding))
+            sb.append(lineTotal).append("\n")
         }
+        printer.printFormattedText(sb.toString())
     }
 
-    private fun printTotals(printer: EscPosPrinter, receipt: ReceiptData) {
-        printer.apply {
-            printText("--------------------------------\n")
-            printAlignedLine("Subtotal", ReceiptFormatter.formatMoney(receipt.transaksi.subtotal))
-            
-            if (receipt.transaksi.diskon > 0) {
-                printAlignedLine("Diskon", "-${ReceiptFormatter.formatMoney(receipt.transaksi.diskon)}")
-            }
-            if (receipt.transaksi.pajak > 0) {
-                printAlignedLine("Pajak", ReceiptFormatter.formatMoney(receipt.transaksi.pajak))
-            }
-            
-            printText("--------------------------------\n")
-            printAlignedLine("TOTAL", ReceiptFormatter.formatMoney(receipt.transaksi.total), bold = true)
+    private fun printTotals(printer: EscPosPrinter, receipt: ReceiptData, charsPerLine: Int) {
+        val sb = StringBuilder()
+        sb.append("-".repeat(charsPerLine)).append("\n")
+        sb.append(alignedLine("Subtotal", ReceiptFormatter.formatMoney(receipt.transaksi.subtotal), charsPerLine))
+
+        if (receipt.transaksi.diskon > 0) {
+            sb.append(alignedLine("Diskon", "-${ReceiptFormatter.formatMoney(receipt.transaksi.diskon)}", charsPerLine))
         }
+        if (receipt.transaksi.pajak > 0) {
+            sb.append(alignedLine("Pajak", ReceiptFormatter.formatMoney(receipt.transaksi.pajak), charsPerLine))
+        }
+
+        sb.append("-".repeat(charsPerLine)).append("\n")
+        sb.append(alignedLine("TOTAL", ReceiptFormatter.formatMoney(receipt.transaksi.total), charsPerLine))
+
+        printer.printFormattedText(sb.toString())
     }
 
-    private fun printPayments(printer: EscPosPrinter, receipt: ReceiptData) {
-        printer.apply {
-            printText("\n")
-            receipt.payments.forEach { payment ->
-                val metode = when (payment.metode) {
-                    MetodePembayaran.CASH -> "TUNAI"
-                    MetodePembayaran.QRIS -> "QRIS"
-                }
-                printAlignedLine(metode, ReceiptFormatter.formatMoney(payment.jumlah))
-                
-                if (payment.diterima != null) {
-                    printAlignedLine("Diterima", ReceiptFormatter.formatMoney(payment.diterima))
-                }
-                if (payment.kembalian != null && payment.kembalian > 0) {
-                    printAlignedLine("Kembali", ReceiptFormatter.formatMoney(payment.kembalian))
-                }
+    private fun printPayments(printer: EscPosPrinter, receipt: ReceiptData, charsPerLine: Int) {
+        val sb = StringBuilder()
+        sb.append("\n")
+
+        receipt.payments.forEach { payment ->
+            val metode = when (payment.metode) {
+                MetodePembayaran.CASH -> "TUNAI"
+                MetodePembayaran.QRIS -> "QRIS"
+            }
+            sb.append(alignedLine(metode, ReceiptFormatter.formatMoney(payment.jumlah), charsPerLine))
+
+            // Assign ke local val untuk hindari smart cast issue lintas module
+            val diterima = payment.diterima
+            if (diterima != null) {
+                sb.append(alignedLine("Diterima", ReceiptFormatter.formatMoney(diterima), charsPerLine))
+            }
+
+            val kembalian = payment.kembalian ?: 0L
+            if (kembalian > 0) {
+                sb.append(alignedLine("Kembali", ReceiptFormatter.formatMoney(kembalian), charsPerLine))
             }
         }
+
+        printer.printFormattedText(sb.toString())
     }
 
     private fun printFooter(printer: EscPosPrinter, receipt: ReceiptData) {
-        printer.apply {
-            printText("\n")
-            printText(receipt.footer + "\n")
-        }
+        printer.printFormattedText("\n${receipt.footer}\n")
     }
 
-    private fun EscPosPrinter.printAlignedLine(label: String, value: String, bold: Boolean = false) {
-        val padding = karakterPerBaris - label.length - value.length
-        val spaces = if (padding > 0) " ".repeat(padding) else " "
-        if (bold) {
-            printText(label + spaces + value + "\n")
-        } else {
-            printText(label + spaces + value + "\n")
-        }
+    /**
+     * Buat baris rata kiri-kanan: "Label          Value"
+     */
+    private fun alignedLine(label: String, value: String, charsPerLine: Int): String {
+        val padding = (charsPerLine - label.length - value.length).coerceAtLeast(1)
+        return label + " ".repeat(padding) + value + "\n"
     }
 
     private fun isRetryableError(e: Exception): Boolean {
