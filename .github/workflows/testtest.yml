@@ -44,7 +44,7 @@ jobs:
         run: ./gradlew check
       # 2. Menjalankan Unit Test
       - name: Run Pure Unit Tests
-        run: ./gradlew :shared:allTests :app:testDebugUnitTest --stacktrace
+        run: ./gradlew :app:assembleDebug :shared:assembleDebug --stacktrace
 
       - name: Upload Test Report
         if: always()
