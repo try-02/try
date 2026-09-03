@@ -2,6 +2,7 @@ package com.sentral.org.hardware
 
 import android.content.Context
 import com.dantsu.escposprinter.EscPosPrinter
+import com.dantsu.escposprinter.connection.PrinterConnection
 import com.dantsu.escposprinter.connection.bluetooth.BluetoothConnection
 import com.dantsu.escposprinter.connection.tcp.TcpConnection
 import com.sentral.org.data.entity.PrinterEntity
@@ -21,8 +22,8 @@ import kotlinx.coroutines.withContext
  * Implementasi PrinterDriver untuk Android menggunakan library DantSu ESC/POS.
  *
  * CATATAN API DantSu 3.x:
- * - Method cetak utama: printFormattedText(String)
- * - Cleanup: disconnect() (bukan Closeable.use{})
+ * - Method cetak: printFormattedText(String)
+ * - Cleanup: PrinterConnection.close() (bukan EscPosPrinter.disconnect())
  * - Semua operasi I/O di-dispatch ke Dispatchers.IO agar tidak memblokir main thread.
  */
 class EscPosPrinterDriver(
@@ -32,14 +33,23 @@ class EscPosPrinterDriver(
 
     override val name: String = "ESC/POS ${printerConfig.tipeKoneksi}"
 
+    /**
+     * Pasangan printer + connection. Kita simpan reference connection terpisah
+     * karena cleanup dilakukan via connection.close(), bukan lewat EscPosPrinter.
+     */
+    private data class PrinterHandle(
+        val printer: EscPosPrinter,
+        val connection: PrinterConnection,
+    )
+
     override suspend fun testConnection(): Boolean = withContext(Dispatchers.IO) {
         try {
-            val printer = connect() ?: return@withContext false
+            val handle = connect() ?: return@withContext false
             try {
-                printer.printFormattedText("TEST\n")
+                handle.printer.printFormattedText("TEST\n")
                 true
             } finally {
-                printer.disconnect()
+                handle.connection.close()
             }
         } catch (e: Exception) {
             false
@@ -48,13 +58,14 @@ class EscPosPrinterDriver(
 
     override suspend fun print(receipt: ReceiptData): PrintResult = withContext(Dispatchers.IO) {
         try {
-            val printer = connect()
+            val handle = connect()
                 ?: return@withContext PrintResult.Failure(
                     "Gagal koneksi ke printer",
                     isRetryable = true,
                 )
 
             try {
+                val printer = handle.printer
                 val charsPerLine = printerConfig.karakterPerBaris
 
                 printHeader(printer, receipt, charsPerLine)
@@ -66,7 +77,7 @@ class EscPosPrinterDriver(
                 // Feed beberapa baris agar struk mudah disobek
                 printer.printFormattedText("\n\n\n")
             } finally {
-                printer.disconnect()
+                handle.connection.close()
             }
 
             PrintResult.Success
@@ -79,38 +90,39 @@ class EscPosPrinterDriver(
     }
 
     override suspend fun disconnect() {
-        // Koneksi dikelola per-job (buka-cetak-tutup), jadi tidak ada 
+        // Koneksi dikelola per-job (buka-cetak-tutup), jadi tidak ada
         // koneksi persisten yang perlu ditutup di sini.
     }
 
     // ---------- Private helpers ----------
 
-    private fun connect(): EscPosPrinter? {
+    private fun connect(): PrinterHandle? {
         val connectionType = safeConnectionType(printerConfig.tipeKoneksi) ?: return null
         val dpi = 203
         val widthMM = 48f
         val charsPerLine = printerConfig.karakterPerBaris
 
-        return when (connectionType) {
+        val connection: PrinterConnection = when (connectionType) {
             PrinterConnectionType.BLUETOOTH -> {
                 val address = printerConfig.alamatBluetooth ?: return null
                 val adapter = android.bluetooth.BluetoothAdapter.getDefaultAdapter() ?: return null
                 val device = adapter.getRemoteDevice(address)
-                val connection = BluetoothConnection(device)
-                EscPosPrinter(connection, dpi, widthMM, charsPerLine)
+                BluetoothConnection(device)
             }
             PrinterConnectionType.WIFI -> {
                 val address = printerConfig.alamatWifi ?: return null
                 val port = printerConfig.portWifi ?: 9100
-                val connection = TcpConnection(address, port)
-                EscPosPrinter(connection, dpi, widthMM, charsPerLine)
+                TcpConnection(address, port)
             }
             PrinterConnectionType.USB -> {
                 // USB butuh UsbManager + permission, lebih kompleks.
                 // TODO: implement USB connection di tahap selanjutnya.
-                null
+                return null
             }
         }
+
+        val printer = EscPosPrinter(connection, dpi, widthMM, charsPerLine)
+        return PrinterHandle(printer, connection)
     }
 
     private fun safeConnectionType(value: String): PrinterConnectionType? {
