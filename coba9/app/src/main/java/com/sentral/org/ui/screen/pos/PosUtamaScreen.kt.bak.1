@@ -108,12 +108,6 @@ import com.sentral.org.data.model.QUANTITY_SCALE
 import com.sentral.org.data.model.StatusKeranjang
 import org.koin.androidx.compose.koinViewModel
 
-import com.sentral.org.data.model.PrinterStatus.SIBUK
-import com.sentral.org.data.model.PrinterStatus.ERROR
-import com.sentral.org.data.model.PrinterStatus.DINONAKTIFKAN
-import com.sentral.org.data.model.PrinterStatus.SIAP
-import androidx.compose.material.icons.filled.Print
-
 /** Ambang lebar layar: di atas ini keranjang tampil sebagai panel samping tetap. */
 private const val LEBAR_TABLET_DP = 840
 
@@ -137,14 +131,12 @@ private enum class TabBawah(val label: String) {
 fun PosUtamaScreen(
     onNavigateToRiwayat: () -> Unit,
     onNavigateToTutupShift: () -> Unit,
-    onNavigateToPrinterSettings: () -> Unit,  // ← BARU
     modifier: Modifier = Modifier,
     viewModel: KasirViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val profil by viewModel.profilToko.collectAsStateWithLifecycle()
     val stokPerProduk by viewModel.stokPerProduk.collectAsStateWithLifecycle()
-    val printerStatus by viewModel.printerStatus.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val haptic = LocalHapticFeedback.current
 
@@ -250,38 +242,6 @@ LaunchedEffect(Unit) {
                                 Icon(Icons.Filled.ShoppingBag, contentDescription = "Buka keranjang")
                             }
                         }
-        // Printer status indicator
-            IconButton(onClick = { onNavigateToPrinterSettings() }) {
-            BadgedBox(
-                badge = {
-                    when (printerStatus) {
-                        SIBUK -> {
-                            Badge { 
-                                Text("●", color = MaterialTheme.colorScheme.secondary) 
-                            }
-                        }
-                        ERROR,
-                        DINONAKTIFKAN -> {
-                            Badge { 
-                                Text("!", color = MaterialTheme.colorScheme.onError) 
-                            }
-                        }
-                        else -> {} // SIAP = tidak ada badge
-                    }
-                },
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Print,
-                    contentDescription = "Status printer: ${printerStatus.name}",
-                    tint = when (printerStatus) {
-                        SIAP -> MaterialTheme.colorScheme.primary
-                        SIBUK -> MaterialTheme.colorScheme.secondary
-                        ERROR,
-                        DINONAKTIFKAN -> MaterialTheme.colorScheme.error
-                    },
-                )
-            }
-        }
                         IconButton(onClick = onNavigateToRiwayat) {
                             Icon(Icons.Filled.History, contentDescription = "Riwayat")
                         }

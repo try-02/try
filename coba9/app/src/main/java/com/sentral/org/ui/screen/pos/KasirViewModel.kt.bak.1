@@ -32,8 +32,6 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-com.sentral.org.data.service.PrinterService
-
 @OptIn(ExperimentalCoroutinesApi::class)
 class KasirViewModel(
     private val cartService: CartService,
@@ -43,7 +41,6 @@ class KasirViewModel(
     private val persediaanDao: PersediaanDao,
     private val profilRepo: ProfilTokoRepository,
     private val sesi: SesiKasirProvider,
-    private val printerService: PrinterService,
 ) : ViewModel() {
 
     private val pilihanManual = MutableStateFlow<Long?>(null)
@@ -59,11 +56,6 @@ class KasirViewModel(
     val stokPerProduk: StateFlow<Map<Long, Long>> = persediaanDao.observeAll()
         .map { daftar -> daftar.associate { it.produkId to it.jumlah / QUANTITY_SCALE } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
-
-    /** Status printer untuk ditampilkan di TopAppBar. */
-    val printerStatus: StateFlow<com.sentral.org.data.model.PrinterStatus> = 
-        printerService.status
-            .stateIn(viewModelScope, SharingStarted.Eagerly, com.sentral.org.data.model.PrinterStatus.SIAP)
 
     val uiState: StateFlow<KasirUiState> = combine(
         produkRepo.observeAktif(),

@@ -9,8 +9,6 @@ import androidx.navigation.compose.rememberNavController
 import com.sentral.org.ui.screen.pos.PosUtamaScreen
 import com.sentral.org.ui.theme.PosTheme
 
-import com.sentral.org.ui.screen.settings.PrinterSettingsScreen
-
 @Composable
 fun PosNavHost(
     modifier: Modifier = Modifier,
@@ -37,20 +35,8 @@ fun PosNavHost(
                         navController.navigate(PosRoute.RiwayatTransaksi()) 
                     },
                     onNavigateToTutupShift = {
-                        // TODO: Logika navigasi tutup shift
-                    },
-                    onNavigateToPrinterSettings = {
-                        navController.navigate(PosRoute.PrinterSettings)
-                    },
-                )
-            }
-
-            composable<PosRoute.PrinterSettings> {
-                PrinterSettingsScreen(
-                    onBack = { navController.popBackStack() },
-                    onAddPrinter = { 
-                        // TODO: Navigate to AddPrinterScreen di Tahap 4
-                    },
+                        // Logika navigasi tutup shift
+                    }
                 )
             }
 
