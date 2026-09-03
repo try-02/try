@@ -52,6 +52,7 @@ kotlin {
             // Default kita pakai sqlite-bundled di commonMain; baris ini opsional.
         }
         commonTest.dependencies {
+            implementation(kotlin("test"))
             implementation(libs.junit)
             implementation(libs.kotlinx.coroutines.test)
             // (Room 3 runtime dan BundledSQLiteDriver sudah otomatis tersedia dari commonMain)
