@@ -460,8 +460,8 @@ LaunchedEffect(Unit) {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         viewModel.tambahProduk(it)
                     },
-                    modifier = Modifier.fillMaxSize(),
                     ruangBawah = 104.dp, // agar FAB tidak menutupi kartu terbawah
+                    modifier = Modifier.fillMaxSize(),
                 )
 
                 1 -> TabPesananAktif(
@@ -764,8 +764,8 @@ private fun PanelProduk(
                 produk = produk,
                 stokPerProduk = stokPerProduk,
                 onProdukDipilih = onProdukDipilih,
-                modifier = Modifier.weight(1f),
                 ruangBawah = ruangBawah,
+                modifier = Modifier.weight(1f),
             )
         }
     }
