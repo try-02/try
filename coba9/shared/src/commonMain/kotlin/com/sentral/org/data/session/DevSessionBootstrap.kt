@@ -4,6 +4,7 @@ import com.sentral.org.data.dao.KasirDao
 import com.sentral.org.data.dao.ShiftDao
 import com.sentral.org.data.entity.KasirEntity
 import com.sentral.org.data.service.ShiftService
+import com.sentral.org.shared.currentTimeMillis
 import kotlinx.coroutines.flow.first
 
 /**

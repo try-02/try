@@ -2,6 +2,7 @@ package com.sentral.org.data.seed
 
 import androidx.room3.withWriteTransaction   // API Room 3.x pengganti withTransaction
 import com.sentral.org.data.PosDatabase
+import com.sentral.org.shared.currentTimeMillis
 
 class ProductSeeder(private val db: PosDatabase) {
 
