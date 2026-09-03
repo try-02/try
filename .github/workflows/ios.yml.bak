@@ -1,0 +1,75 @@
+name: CI Multiplatform Test
+
+on:
+  push:
+    branches: [ "main", "master", "develop" ]
+  pull_request:
+    branches: [ "main", "master", "develop" ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: ./coba9
+
+jobs:
+  # ============================================================
+  # JOB 1: Android & JVM Test (Dijalankan di Linux Ubuntu)
+  # ============================================================
+  test-android-jvm:
+    name: Android & Shared JVM Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          # Arahkan root project ke subfolder coba9
+          cache-encryption-key: ${{ secrets.GRADLE_CACHE_ENCRYPTION_KEY }}
+          # Set false dulu jika ingin workflow_dispatch selalu memperbarui cache
+          cache-read-only: false 
+          add-job-summary: 'always'
+          cache-provider: Enhanced
+
+      - name: Run Android Lint & JVM Tests
+        run: ./gradlew check
+
+  # ============================================================
+  # JOB 2: iOS Simulator Test (Dijalankan di Cloud Mac)
+  # ============================================================
+  test-ios-simulator:
+    name: iOS Simulator Tests
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          # Arahkan root project ke subfolder coba9
+          cache-encryption-key: ${{ secrets.GRADLE_CACHE_ENCRYPTION_KEY }}
+          # Set false dulu jika ingin workflow_dispatch selalu memperbarui cache
+          cache-read-only: false 
+          add-job-summary: 'always'
+          cache-provider: Enhanced
+
+      # Perintah ini akan otomatis menyalakan iOS Simulator di Mac dan menjalankan tes :shared
+      - name: Run iOS Simulator Tests
+        run: ./gradlew :shared:iosSimulatorArm64Test
