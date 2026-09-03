@@ -51,6 +51,7 @@ import org.koin.compose.koinInject
 fun PrinterSettingsScreen(
     onBack: () -> Unit,
     onAddPrinter: () -> Unit,
+    modifier: Modifier = Modifier,
     printerRepo: PrinterRepository = koinInject(),
 ) {
     val printers by printerRepo.observeAll().collectAsStateWithLifecycle(initialValue = emptyList())
