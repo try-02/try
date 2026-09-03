@@ -17,6 +17,8 @@ kotlin {
         namespace = "com.sentral.org.shared"
         compileSdk = 37
         minSdk = 26
+        withHostTest {
+            }
         compilerOptions {
             jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
         }
