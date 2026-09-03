@@ -1,7 +1,5 @@
 package com.sentral.org.data.model
 
-import kotlin.jvm.JvmInline
-
 /**
  * Seluruh kuantitas tersimpan (item keranjang, item transaksi, saldo & mutasi
  * persediaan) memakai fixed-point dengan skala ini: 1 buah = 1_000.
@@ -9,7 +7,7 @@ import kotlin.jvm.JvmInline
 const val QUANTITY_SCALE = 1000L
 
 /** 2 buah -> 2_000. Satu-satunya pintu konversi dari input pengguna ke storage. */
-fun quantityOf(units: Long): Long = multiplyExact(units, QUANTITY_SCALE)
+fun quantityOf(units: Long): Long = Math.multiplyExact(units, QUANTITY_SCALE)
 
 @JvmInline
 value class Quantity(val scaled: Long) {

@@ -60,6 +60,13 @@ kotlin {
     }
 }
 
+configurations.matching { it.name.contains("HostTest") || it.name.contains("UnitTest") }.configureEach {
+    resolutionStrategy.dependencySubstitution {
+        substitute(module("androidx.sqlite:sqlite-bundled"))
+            .using(module("androidx.sqlite:sqlite-bundled-jvm:${libs.versions.sqlite.get()}"))
+    }
+}
+
 // Room KSP harus dijalankan per target source set
 dependencies {
     add("kspCommonMainMetadata", libs.room3.compiler)

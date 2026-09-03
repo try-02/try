@@ -6,7 +6,7 @@ import com.sentral.org.data.PosDatabase
 class ProductSeeder(private val db: PosDatabase) {
 
     suspend fun seedIfEmpty() {
-        val waktu = currentTimeMillis()
+        val waktu = System.currentTimeMillis()
         val items = SeedProduct.getDefaultItems()
 
         db.withWriteTransaction {

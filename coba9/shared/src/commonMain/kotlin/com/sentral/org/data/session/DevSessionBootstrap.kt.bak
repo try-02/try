@@ -29,7 +29,7 @@ class DevSessionBootstrap(
                     nama = "Kasir Dev",
                     pinHash = null,   // belum dipakai; diisi saat fitur login PIN ada
                     aktif = true,
-                    dibuatPada = currentTimeMillis(),
+                    dibuatPada = System.currentTimeMillis(),
                 )
             )
 
@@ -38,7 +38,7 @@ class DevSessionBootstrap(
         shiftService.open(
             cashierId = kasirId,
             openingCash = KAS_AWAL_DEV,
-            now = currentTimeMillis(),
+            now = System.currentTimeMillis(),
             note = "Auto-open (dev bootstrap)",
         ).getOrThrow()
     }

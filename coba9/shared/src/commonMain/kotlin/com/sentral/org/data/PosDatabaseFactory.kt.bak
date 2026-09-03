@@ -17,5 +17,5 @@ import kotlinx.coroutines.Dispatchers
  */
 fun createPosDatabase(builder: RoomDatabase.Builder<PosDatabase>): PosDatabase =
     builder
-        .setQueryCoroutineContext(Dispatchers.Default)
+        .setQueryCoroutineContext(Dispatchers.IO)
         .build()
