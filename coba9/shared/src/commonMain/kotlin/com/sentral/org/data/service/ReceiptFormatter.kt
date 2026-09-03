@@ -29,6 +29,7 @@ object ReceiptFormatter {
                 nama = toko?.namaToko ?: "Toko",
                 alamat = toko?.alamat ?: "",
                 footer = toko?.catatanFooter ?: "Terima kasih",
+                logoUri = toko?.logoUri,  // ← BARU
             ),
             transaksi = TransactionInfo(
                 nomor = transaksi.nomorTransaksi,

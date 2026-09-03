@@ -45,6 +45,7 @@ data class StoreInfo(
     val nama: String,
     val alamat: String,
     val footer: String,
+    val logoUri: String? = null,  // ← BARU: URI logo (content://, file://, atau null)
 )
 
 data class TransactionInfo(
