@@ -26,7 +26,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SplitButtonDefaults
-import androidx.compose.material3.SplitButton
+import androidx.compose.material3.SplitButtonLayout
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -240,7 +240,7 @@ fun DialogPembayaran(
             }
         },
         confirmButton = {
-            SplitButton( // <-- Ganti SplitButtonLayout menjadi SplitButton
+            SplitButtonLayout(
                 leadingButton = {
                     SplitButtonDefaults.LeadingButton(
                         // Tombol aktif hanya jika total valid DAN (QRIS ATAU tunai cukup)
