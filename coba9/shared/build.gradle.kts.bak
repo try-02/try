@@ -71,11 +71,6 @@ configurations.matching { it.name.contains("HostTest") || it.name.contains("Unit
     }
 }
 
-// Workaround bug AGP & KSP: menghubungkan task LintModel ke task KSP secara eksplisit
-tasks.matching { it.name.endsWith("LintModel") }.configureEach {
-    dependsOn(tasks.matching { it.name.startsWith("ksp") })
-}
-
 // Room KSP harus dijalankan per target source set
 dependencies {
     add("kspCommonMainMetadata", libs.room3.compiler)
