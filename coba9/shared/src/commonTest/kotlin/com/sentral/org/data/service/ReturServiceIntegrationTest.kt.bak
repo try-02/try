@@ -1,9 +1,7 @@
 package com.sentral.org.data.service
 
-import androidx.room3.Room
-import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
 import com.sentral.org.data.PosDatabase
+import com.sentral.org.data.createInMemoryPosDatabase
 import com.sentral.org.data.entity.ItemKeranjangEntity
 import com.sentral.org.data.entity.ItemTransaksiEntity
 import com.sentral.org.data.entity.KasirEntity
@@ -13,21 +11,29 @@ import com.sentral.org.data.entity.PersediaanEntity
 import com.sentral.org.data.entity.ProdukEntity
 import com.sentral.org.data.entity.ShiftEntity
 import com.sentral.org.data.entity.TransaksiEntity
-import com.sentral.org.data.model.*
-import kotlinx.coroutines.runBlocking
-import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Before
-import org.junit.Test
-import org.junit.runner.RunWith
+import com.sentral.org.data.model.CheckoutRequest
+import com.sentral.org.data.model.CheckoutResult
+import com.sentral.org.data.model.JenisDiskon
+import com.sentral.org.data.model.JenisPergerakanKas
+import com.sentral.org.data.model.JenisPergerakanPersediaan
+import com.sentral.org.data.model.MetodePembayaran
+import com.sentral.org.data.model.PaymentRequest
+import com.sentral.org.data.model.PosDataException
+import com.sentral.org.data.model.ReturnLineRequest
+import com.sentral.org.data.model.ReturnRequest
+import com.sentral.org.data.model.ReturnResult
+import com.sentral.org.data.model.StatusKeranjang
+import com.sentral.org.data.model.StatusShift
+import com.sentral.org.data.model.StatusTransaksi
+import com.sentral.org.data.model.TujuanStokPengembalian
+import com.sentral.org.data.model.VoidRequest
+import kotlinx.coroutines.test.runTest
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
-/**
- * Membuktikan aturan bisnis ReturService pada database Room sungguhan:
- * arah tujuan stok (NORMAL/RUSAK/DISPOSE), kas shift konsisten, dan yang
- * terpenting: retur bertahap TIDAK PERNAH melebihi nilai neto baris.
- */
-@RunWith(AndroidJUnit4::class)
 class ReturServiceIntegrationTest {
 
     private lateinit var db: PosDatabase
@@ -35,10 +41,9 @@ class ReturServiceIntegrationTest {
     private lateinit var checkoutService: CheckoutService
     private lateinit var voidService: VoidService
 
-    @Before
+    @BeforeTest
     fun setUp() {
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
-        db = Room.inMemoryDatabaseBuilder(context, PosDatabase::class.java).build()
+        db = createInMemoryPosDatabase()
         val inventory = InventoryMutationService(db.persediaanDao(), db.pergerakanPersediaanDao())
         returService = ReturService(
             write = RoomTransactionRunner(db),
@@ -76,12 +81,10 @@ class ReturServiceIntegrationTest {
         )
     }
 
-    @After
+    @AfterTest
     fun tearDown() {
         db.close()
     }
-
-    // ---------- Fixture helpers ----------
 
     private data class Sesi(val kasirId: Long, val shiftId: Long)
 
@@ -97,8 +100,6 @@ class ReturServiceIntegrationTest {
                 selisihKas = null, ditutupPada = null, catatan = "",
             )
         )
-        // Meniru ShiftService.open(): kas awal WAJIB tercatat di ledger,
-        // agar invariant "kas_awal + penjualan - retur = expected cash" teruji penuh.
         db.pergerakanKasDao().insert(
             PergerakanKasEntity(
                 shiftId = shiftId, jenis = JenisPergerakanKas.KAS_AWAL, jumlahDelta = 100_000,
@@ -123,7 +124,6 @@ class ReturServiceIntegrationTest {
         return id
     }
 
-    /** Checkout CASH sungguhan lewat jalur produksi (sudah terbukti oleh suite checkout). */
     private suspend fun checkoutLangsung(
         sesi: Sesi, produkId: Long, harga: Long, qty: Long, nomor: String,
         payment: PaymentRequest,
@@ -152,7 +152,6 @@ class ReturServiceIntegrationTest {
         ).getOrThrow()
     }
 
-    /** Penyemaian LANGSUNG transaksi+item dgn nilai baris presisi (untuk tes matematis). */
     private data class TxSeed(val transaksiId: Long, val itemId: Long)
 
     private suspend fun seedTransaksiPresisi(
@@ -175,7 +174,7 @@ class ReturServiceIntegrationTest {
             listOf(
                 ItemTransaksiEntity(
                     transaksiId = txId, produkId = produkId, namaProduk = "P",
-                    hargaSatuan = 0, // tidak dipakai dalam matematika retur
+                    hargaSatuan = 0,
                     jumlah = jumlah, totalBaris = totalBaris,
                     diskonItem = diskonItem, hargaModal = 0,
                 )
@@ -187,10 +186,8 @@ class ReturServiceIntegrationTest {
     private suspend fun itemIdPertama(transaksiId: Long): Long =
         db.itemTransaksiDao().getByTransaction(transaksiId).first().id
 
-    // ---------- SKENARIO 1: retur NORMAL end-to-end ----------
-
     @Test
-    fun returNormalMengembalikanStokMengurangiKasDanTercatatLengkap() = runBlocking {
+    fun returNormalMengembalikanStokMengurangiKasDanTercatatLengkap() = runTest {
         val sesi = seedKasirShift()
         val produkId = seedProduk("RET-NORMAL", harga = 10_000, stok = 10_000)
         val trx = checkoutLangsung(
@@ -208,10 +205,8 @@ class ReturServiceIntegrationTest {
             )
         ).getOrThrow()
 
-        // Refund proporsional eksak: 1/3 x 30.000
         assertEquals(10_000L, hasil.refundAmount)
 
-        // Header & baris pengembalian
         val header = db.returDao().getById(hasil.returnId)!!
         assertEquals(10_000L, header.jumlahPengembalian)
         assertEquals(MetodePembayaran.CASH, header.metodePengembalian)
@@ -220,19 +215,16 @@ class ReturServiceIntegrationTest {
         assertEquals(1_000L, baris[0].jumlahDikembalikan)
         assertEquals(TujuanStokPengembalian.NORMAL, baris[0].tujuanStok)
 
-        // Stok normal bertambah, rusak tetap nol
         val stok = db.persediaanDao().getByProdukId(produkId)!!
         assertEquals(8_000L, stok.jumlah)
         assertEquals(0L, stok.jumlahRusak)
 
-        // Ledger persediaan: saldo 7.000 -> 8.000, tepat satu mutasi
         val mutasi = db.pergerakanPersediaanDao().getByRetur(hasil.returnId).single()
         assertEquals(JenisPergerakanPersediaan.PENGEMBALIAN_NORMAL, mutasi.jenis)
         assertEquals(1_000L, mutasi.perubahanJumlah)
         assertEquals(7_000L, mutasi.saldoJumlahSebelum)
         assertEquals(8_000L, mutasi.saldoJumlahSetelah)
 
-        // Kas shift: KAS_AWAL + PENJUALAN - RETUR = 100rb + 30rb - 10rb
         val returRow = db.pergerakanKasDao().getByShift(sesi.shiftId)
             .single { it.jenis == JenisPergerakanKas.RETUR }
         assertEquals(-10_000L, returRow.jumlahDelta)
@@ -240,10 +232,8 @@ class ReturServiceIntegrationTest {
         assertEquals(120_000L, db.pergerakanKasDao().getExpectedCash(sesi.shiftId))
     }
 
-    // ---------- SKENARIO 2: retur RUSAK ----------
-
     @Test
-    fun returRusakMasukKeSaldoRusakTanpaMenyentuhStokNormal() = runBlocking {
+    fun returRusakMasukKeSaldoRusakTanpaMenyentuhStokNormal() = runTest {
         val sesi = seedKasirShift()
         val produkId = seedProduk("RET-RUSAK", harga = 5_000, stok = 10_000)
         val trx = checkoutLangsung(
@@ -262,8 +252,8 @@ class ReturServiceIntegrationTest {
 
         assertEquals(5_000L, hasil.refundAmount)
         val stok = db.persediaanDao().getByProdukId(produkId)!!
-        assertEquals(8_000L, stok.jumlah)      // barang rusak TIDAK jadi stok normal
-        assertEquals(1_000L, stok.jumlahRusak) // masuk keranjang rusak
+        assertEquals(8_000L, stok.jumlah)
+        assertEquals(1_000L, stok.jumlahRusak)
 
         val mutasi = db.pergerakanPersediaanDao().getByRetur(hasil.returnId).single()
         assertEquals(JenisPergerakanPersediaan.PENGEMBALIAN_RUSAK, mutasi.jenis)
@@ -276,10 +266,8 @@ class ReturServiceIntegrationTest {
         )
     }
 
-    // ---------- SKENARIO 3: TIDAK_DIKEMBALIKAN ----------
-
     @Test
-    fun returDisposeTidakMengubahPersediaanMaupunKasFisik() = runBlocking {
+    fun returDisposeTidakMengubahPersediaanMaupunKasFisik() = runTest {
         val sesi = seedKasirShift()
         val produkId = seedProduk("RET-DISPOSE", harga = 7_000, stok = 5_000)
         val trx = checkoutLangsung(
@@ -292,34 +280,27 @@ class ReturServiceIntegrationTest {
             ReturnRequest(
                 transactionId = trx.transactionId, cashierId = sesi.kasirId, shiftId = sesi.shiftId,
                 lines = listOf(ReturnLineRequest(itemId, 1_000, TujuanStokPengembalian.TIDAK_DIKEMBALIKAN)),
-                refundMethod = MetodePembayaran.QRIS, // uang kembali via QRIS, kas fisik tak tersentuh
+                refundMethod = MetodePembayaran.QRIS,
                 now = System.currentTimeMillis(),
             )
         ).getOrThrow()
 
         assertEquals(7_000L, hasil.refundAmount)
-        // Barang tidak kembali ke mana pun
         val stok = db.persediaanDao().getByProdukId(produkId)!!
         assertEquals(4_000L, stok.jumlah)
         assertEquals(0L, stok.jumlahRusak)
         assertTrue(db.pergerakanPersediaanDao().getByRetur(hasil.returnId).isEmpty())
-        // Refund QRIS tidak menyentuh kas fisik
         assertTrue(
             db.pergerakanKasDao().getByShift(sesi.shiftId)
                 .none { it.jenis == JenisPergerakanKas.RETUR }
         )
-        // Namun tetap tercatat sebagai pengembalian sah
         assertEquals(7_000L, db.returDao().getById(hasil.returnId)!!.jumlahPengembalian)
     }
 
-    // ---------- SKENARIO 4: REGRESI anti-over-refund (paling penting) ----------
-
     @Test
-    fun returBertahapTidakPernahMelebihiNilaiNetoBaris() = runBlocking {
+    fun returBertahapTidakPernahMelebihiNilaiNetoBaris() = runTest {
         val sesi = seedKasirShift()
         val produkId = seedProduk("RET-BUDGET", harga = 101, stok = 10_000)
-        // Baris disemai langsung dgn nilai presisi: 3 unit bernilai neto Rp101.
-        // Pembulatan per-sesi: round(101/3) = 34 -> TANPA klem, 3 sesi = 102 (over-refund!).
         val seed = seedTransaksiPresisi(
             sesi, produkId, "TRX-OVR", jumlah = 3_000, totalBaris = 101,
         )
@@ -338,18 +319,14 @@ class ReturServiceIntegrationTest {
 
         assertEquals(34L, s1.refundAmount)
         assertEquals(34L, s2.refundAmount)
-        assertEquals("sesi ke-3 harus diklem oleh sisa budget", 33L, s3.refundAmount)
+        assertEquals(33L, s3.refundAmount, "sesi ke-3 harus diklem oleh sisa budget")
 
-        // Invariant utama lintas semua sesi: total refund PERSIS neto baris.
         val totalRefund = listOf(s1, s2, s3).sumOf {
             db.returDao().getItemsByReturn(it.returnId).sumOf { b -> b.jumlahRefund }
         }
         assertEquals(101L, totalRefund)
-
-        // Ketiga unit kembali ke stok normal, masing-masing tepat sekali.
         assertEquals(13_000L, db.persediaanDao().getByProdukId(produkId)!!.jumlah)
 
-        // Quantity habis -> sesi ke-4 ditolak guard sisa quantity.
         val s4 = returService.process(
             ReturnRequest(
                 transactionId = seed.transaksiId, cashierId = sesi.kasirId, shiftId = sesi.shiftId,
@@ -360,10 +337,8 @@ class ReturServiceIntegrationTest {
         assertTrue(s4.isFailure)
     }
 
-    // ---------- SKENARIO 5: guard quantity ----------
-
     @Test
-    fun returMelebihiSisaQuantityDitolakTanpaJejak() = runBlocking {
+    fun returMelebihiSisaQuantityDitolakTanpaJejak() = runTest {
         val sesi = seedKasirShift()
         val produkId = seedProduk("RET-GUARD", harga = 10_000, stok = 10_000)
         val seed = seedTransaksiPresisi(sesi, produkId, "TRX-QG", jumlah = 2_000, totalBaris = 20_000)
@@ -378,15 +353,12 @@ class ReturServiceIntegrationTest {
 
         assertTrue(hasil.isFailure)
         assertTrue(hasil.exceptionOrNull() is PosDataException.Validation)
-        // Tidak ada jejak penulisan apa pun
         assertTrue(db.returDao().getByTransaction(seed.transaksiId).isEmpty())
         assertEquals(10_000L, db.persediaanDao().getByProdukId(produkId)!!.jumlah)
     }
 
-    // ---------- SKENARIO 6: retur pada transaksi VOID ----------
-
     @Test
-    fun returPadaTransaksiVoidDitolak() = runBlocking {
+    fun returPadaTransaksiVoidDitolak() = runTest {
         val sesi = seedKasirShift()
         val produkId = seedProduk("RET-VOID", harga = 9_000, stok = 10_000)
         val trx = checkoutLangsung(

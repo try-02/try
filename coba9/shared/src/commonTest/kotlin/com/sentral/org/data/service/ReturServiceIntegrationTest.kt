@@ -27,6 +27,7 @@ import com.sentral.org.data.model.StatusShift
 import com.sentral.org.data.model.StatusTransaksi
 import com.sentral.org.data.model.TujuanStokPengembalian
 import com.sentral.org.data.model.VoidRequest
+import com.sentral.org.shared.currentTimeMillis
 import kotlinx.coroutines.test.runTest
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -89,7 +90,7 @@ class ReturServiceIntegrationTest {
     private data class Sesi(val kasirId: Long, val shiftId: Long)
 
     private suspend fun seedKasirShift(): Sesi {
-        val now = System.currentTimeMillis()
+        val now = currentTimeMillis()
         val kasirId = db.kasirDao().insert(
             KasirEntity(nama = "Kasir Retur", pinHash = null, aktif = true, dibuatPada = now)
         )
@@ -110,7 +111,7 @@ class ReturServiceIntegrationTest {
     }
 
     private suspend fun seedProduk(sku: String, harga: Long, stok: Long): Long {
-        val now = System.currentTimeMillis()
+        val now = currentTimeMillis()
         val id = db.produkDao().insert(
             ProdukEntity(
                 nama = "Produk $sku", sku = sku, barcode = null, harga = harga,
@@ -128,7 +129,7 @@ class ReturServiceIntegrationTest {
         sesi: Sesi, produkId: Long, harga: Long, qty: Long, nomor: String,
         payment: PaymentRequest,
     ): CheckoutResult {
-        val now = System.currentTimeMillis()
+        val now = currentTimeMillis()
         val cartId = db.keranjangDao().insert(
             KeranjangEntity(
                 nama = "Cart", status = StatusKeranjang.AKTIF, kasirId = sesi.kasirId,
@@ -158,7 +159,7 @@ class ReturServiceIntegrationTest {
         sesi: Sesi, produkId: Long, nomor: String,
         jumlah: Long, totalBaris: Long, diskonItem: Long = 0,
     ): TxSeed {
-        val now = System.currentTimeMillis()
+        val now = currentTimeMillis()
         val txId = db.transaksiDao().insert(
             TransaksiEntity(
                 nomorTransaksi = nomor, kasirId = sesi.kasirId, namaKasir = "Kasir Retur",
@@ -201,7 +202,7 @@ class ReturServiceIntegrationTest {
             ReturnRequest(
                 transactionId = trx.transactionId, cashierId = sesi.kasirId, shiftId = sesi.shiftId,
                 lines = listOf(ReturnLineRequest(itemId, 1_000, TujuanStokPengembalian.NORMAL)),
-                refundMethod = MetodePembayaran.CASH, now = System.currentTimeMillis(),
+                refundMethod = MetodePembayaran.CASH, now = currentTimeMillis(),
             )
         ).getOrThrow()
 
@@ -246,7 +247,7 @@ class ReturServiceIntegrationTest {
             ReturnRequest(
                 transactionId = trx.transactionId, cashierId = sesi.kasirId, shiftId = sesi.shiftId,
                 lines = listOf(ReturnLineRequest(itemId, 1_000, TujuanStokPengembalian.RUSAK)),
-                refundMethod = MetodePembayaran.CASH, now = System.currentTimeMillis(),
+                refundMethod = MetodePembayaran.CASH, now = currentTimeMillis(),
             )
         ).getOrThrow()
 
@@ -281,7 +282,7 @@ class ReturServiceIntegrationTest {
                 transactionId = trx.transactionId, cashierId = sesi.kasirId, shiftId = sesi.shiftId,
                 lines = listOf(ReturnLineRequest(itemId, 1_000, TujuanStokPengembalian.TIDAK_DIKEMBALIKAN)),
                 refundMethod = MetodePembayaran.QRIS,
-                now = System.currentTimeMillis(),
+                now = currentTimeMillis(),
             )
         ).getOrThrow()
 
@@ -309,7 +310,7 @@ class ReturServiceIntegrationTest {
             ReturnRequest(
                 transactionId = seed.transaksiId, cashierId = sesi.kasirId, shiftId = sesi.shiftId,
                 lines = listOf(ReturnLineRequest(seed.itemId, 1_000, TujuanStokPengembalian.NORMAL)),
-                refundMethod = MetodePembayaran.QRIS, now = System.currentTimeMillis(),
+                refundMethod = MetodePembayaran.QRIS, now = currentTimeMillis(),
             )
         ).getOrThrow()
 
@@ -331,7 +332,7 @@ class ReturServiceIntegrationTest {
             ReturnRequest(
                 transactionId = seed.transaksiId, cashierId = sesi.kasirId, shiftId = sesi.shiftId,
                 lines = listOf(ReturnLineRequest(seed.itemId, 1_000, TujuanStokPengembalian.NORMAL)),
-                refundMethod = MetodePembayaran.QRIS, now = System.currentTimeMillis(),
+                refundMethod = MetodePembayaran.QRIS, now = currentTimeMillis(),
             )
         )
         assertTrue(s4.isFailure)
@@ -347,7 +348,7 @@ class ReturServiceIntegrationTest {
             ReturnRequest(
                 transactionId = seed.transaksiId, cashierId = sesi.kasirId, shiftId = sesi.shiftId,
                 lines = listOf(ReturnLineRequest(seed.itemId, 3_000, TujuanStokPengembalian.NORMAL)),
-                refundMethod = MetodePembayaran.QRIS, now = System.currentTimeMillis(),
+                refundMethod = MetodePembayaran.QRIS, now = currentTimeMillis(),
             )
         )
 
@@ -368,14 +369,14 @@ class ReturServiceIntegrationTest {
         val itemId = itemIdPertama(trx.transactionId)
 
         voidService.void(
-            VoidRequest(trx.transactionId, sesi.kasirId, sesi.shiftId, "tes", System.currentTimeMillis())
+            VoidRequest(trx.transactionId, sesi.kasirId, sesi.shiftId, "tes", currentTimeMillis())
         ).getOrThrow()
 
         val hasil = returService.process(
             ReturnRequest(
                 transactionId = trx.transactionId, cashierId = sesi.kasirId, shiftId = sesi.shiftId,
                 lines = listOf(ReturnLineRequest(itemId, 1_000, TujuanStokPengembalian.NORMAL)),
-                refundMethod = MetodePembayaran.QRIS, now = System.currentTimeMillis(),
+                refundMethod = MetodePembayaran.QRIS, now = currentTimeMillis(),
             )
         )
         assertTrue(hasil.isFailure)

@@ -20,6 +20,7 @@ import com.sentral.org.data.model.PosDataException
 import com.sentral.org.data.model.StatusKeranjang
 import com.sentral.org.data.model.StatusShift
 import com.sentral.org.data.model.StatusTransaksi
+import com.sentral.org.shared.currentTimeMillis
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.async
@@ -81,7 +82,7 @@ class CheckoutServiceIntegrationTest {
     }
 
     private suspend fun seedStandar(): Fixture {
-        val now = System.currentTimeMillis()
+        val now = currentTimeMillis()
         val cashierId = db.kasirDao().insert(
             KasirEntity(nama = "Kasir A", pinHash = null, aktif = true, dibuatPada = now)
         )
@@ -131,7 +132,7 @@ class CheckoutServiceIntegrationTest {
         ),
         discount = DiscountInput.Nominal(diskonEkspektasi),
         transactionNumber = number,
-        now = System.currentTimeMillis(),
+        now = currentTimeMillis(),
     )
 
     @Test
@@ -179,7 +180,7 @@ class CheckoutServiceIntegrationTest {
         val seededTxId = db.transaksiDao().insert(
             TransaksiEntity(
                 nomorTransaksi = nomorBentrok, kasirId = f.cashierId, namaKasir = "Kasir A",
-                shiftId = f.shiftId, dibuatPada = System.currentTimeMillis(),
+                shiftId = f.shiftId, dibuatPada = currentTimeMillis(),
                 subtotal = 1, diskon = 0, pajak = 0, total = 1,
                 jenisDiskon = JenisDiskon.NOMINAL, nilaiDiskon = 0,
                 status = StatusTransaksi.SELESAI, dibatalkanPada = null,

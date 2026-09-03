@@ -1,9 +1,7 @@
 package com.sentral.org.data.service
 
-import androidx.room3.Room
-import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
 import com.sentral.org.data.PosDatabase
+import com.sentral.org.data.createInMemoryPosDatabase
 import com.sentral.org.data.entity.ItemKeranjangEntity
 import com.sentral.org.data.entity.KasirEntity
 import com.sentral.org.data.entity.KeranjangEntity
@@ -11,22 +9,28 @@ import com.sentral.org.data.entity.PergerakanKasEntity
 import com.sentral.org.data.entity.PersediaanEntity
 import com.sentral.org.data.entity.ProdukEntity
 import com.sentral.org.data.entity.ShiftEntity
-import com.sentral.org.data.model.*
-import kotlinx.coroutines.runBlocking
-import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertTrue
-import org.junit.Before
-import org.junit.Test
-import org.junit.runner.RunWith
+import com.sentral.org.data.model.CheckoutRequest
+import com.sentral.org.data.model.CheckoutResult
+import com.sentral.org.data.model.JenisPergerakanKas
+import com.sentral.org.data.model.JenisPergerakanPersediaan
+import com.sentral.org.data.model.MetodePembayaran
+import com.sentral.org.data.model.PaymentRequest
+import com.sentral.org.data.model.PosDataException
+import com.sentral.org.data.model.ReturnLineRequest
+import com.sentral.org.data.model.ReturnRequest
+import com.sentral.org.data.model.StatusKeranjang
+import com.sentral.org.data.model.StatusShift
+import com.sentral.org.data.model.StatusTransaksi
+import com.sentral.org.data.model.TujuanStokPengembalian
+import com.sentral.org.data.model.VoidRequest
+import kotlinx.coroutines.test.runTest
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
-/**
- * Membuktikan guard VoidService pada database Room sungguhan:
- * pembatalan mengembalikan stok & kas secara SIMETRIS dengan penjualan,
- * transaksi yang sudah diretur tidak bisa di-VOID, dan void ganda mustahil.
- */
-@RunWith(AndroidJUnit4::class)
 class VoidServiceIntegrationTest {
 
     private lateinit var db: PosDatabase
@@ -34,10 +38,9 @@ class VoidServiceIntegrationTest {
     private lateinit var checkoutService: CheckoutService
     private lateinit var returService: ReturService
 
-    @Before
+    @BeforeTest
     fun setUp() {
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
-        db = Room.inMemoryDatabaseBuilder(context, PosDatabase::class.java).build()
+        db = createInMemoryPosDatabase()
         val inventory = InventoryMutationService(db.persediaanDao(), db.pergerakanPersediaanDao())
         voidService = VoidService(
             write = RoomTransactionRunner(db),
@@ -75,12 +78,10 @@ class VoidServiceIntegrationTest {
         )
     }
 
-    @After
+    @AfterTest
     fun tearDown() {
         db.close()
     }
-
-    // ---------- Fixture helpers ----------
 
     private data class Sesi(val kasirId: Long, val shiftId: Long)
 
@@ -96,8 +97,6 @@ class VoidServiceIntegrationTest {
                 selisihKas = null, ditutupPada = null, catatan = "",
             )
         )
-        // Meniru ShiftService.open(): kas awal WAJIB tercatat di ledger,
-        // agar invariant "kas_awal + penjualan - retur = expected cash" teruji penuh.
         db.pergerakanKasDao().insert(
             PergerakanKasEntity(
                 shiftId = shiftId, jenis = JenisPergerakanKas.KAS_AWAL, jumlahDelta = 100_000,
@@ -122,7 +121,6 @@ class VoidServiceIntegrationTest {
         return id
     }
 
-    /** Checkout sungguhan lewat jalur produksi (sudah terbukti oleh suite checkout). */
     private suspend fun checkoutLangsung(
         sesi: Sesi, produkId: Long, harga: Long, qty: Long, nomor: String,
         payment: PaymentRequest,
@@ -154,10 +152,8 @@ class VoidServiceIntegrationTest {
     private suspend fun itemIdPertama(transaksiId: Long): Long =
         db.itemTransaksiDao().getByTransaction(transaksiId).first().id
 
-    // ---------- SKENARIO 1: void CASH end-to-end ----------
-
     @Test
-    fun voidCashMengembalikanStokMengurangiKasDanMenandaiTransaksi() = runBlocking {
+    fun voidCashMengembalikanStokMengurangiKasDanMenandaiTransaksi() = runTest {
         val sesi = seedKasirShift()
         val produkId = seedProduk("VOID-CASH", harga = 12_000, stok = 9_000)
         val trx = checkoutLangsung(
@@ -174,25 +170,21 @@ class VoidServiceIntegrationTest {
             )
         ).getOrThrow()
 
-        // Status transaksi & jejak alasan
         val tx = db.transaksiDao().getById(trx.transactionId)!!
         assertEquals(StatusTransaksi.VOID, tx.status)
         assertNotNull(tx.dibatalkanPada)
         assertEquals("Salah input kasir", tx.alasanPembatalan)
 
-        // Stok kembali PERSIS ke saldo awal
         val stok = db.persediaanDao().getByProdukId(produkId)!!
         assertEquals(9_000L, stok.jumlah)
         assertEquals(0L, stok.jumlahRusak)
 
-        // Ledger persediaan: satu mutasi reversal, saldo 7.000 -> 9.000
         val mutasi = db.pergerakanPersediaanDao().getByProduk(produkId)
             .single { it.jenis == JenisPergerakanPersediaan.PEMBATALAN_PENJUALAN }
         assertEquals(2_000L, mutasi.perubahanJumlah)
         assertEquals(7_000L, mutasi.saldoJumlahSebelum)
         assertEquals(9_000L, mutasi.saldoJumlahSetelah)
 
-        // Kas shift: PENJUALAN +24rb lalu RETUR -24rb -> expected kembali ke kas awal
         val kasRows = db.pergerakanKasDao().getByShift(sesi.shiftId)
         assertEquals(24_000L, kasRows.filter { it.jenis == JenisPergerakanKas.PENJUALAN }.sumOf { it.jumlahDelta })
         val refundRow = kasRows.single { it.jenis == JenisPergerakanKas.RETUR }
@@ -201,10 +193,8 @@ class VoidServiceIntegrationTest {
         assertEquals(100_000L, db.pergerakanKasDao().getExpectedCash(sesi.shiftId))
     }
 
-    // ---------- SKENARIO 2: void QRIS tidak menyentuh kas fisik ----------
-
     @Test
-    fun voidQrisMengembalikanStokTanpaPergerakanKasFisik() = runBlocking {
+    fun voidQrisMengembalikanStokTanpaPergerakanKasFisik() = runTest {
         val sesi = seedKasirShift()
         val produkId = seedProduk("VOID-QRIS", harga = 8_000, stok = 5_000)
         val trx = checkoutLangsung(
@@ -222,17 +212,14 @@ class VoidServiceIntegrationTest {
         assertEquals(StatusTransaksi.VOID, db.transaksiDao().getById(trx.transactionId)!!.status)
         assertEquals(5_000L, db.persediaanDao().getByProdukId(produkId)!!.jumlah)
 
-        // Penjualan QRIS tidak mencatat kas fisik, begitu pula refund-nya.
         val kasRows = db.pergerakanKasDao().getByShift(sesi.shiftId)
         assertTrue(kasRows.none { it.jenis == JenisPergerakanKas.PENJUALAN })
         assertTrue(kasRows.none { it.jenis == JenisPergerakanKas.RETUR })
         assertEquals(100_000L, db.pergerakanKasDao().getExpectedCash(sesi.shiftId))
     }
 
-    // ---------- SKENARIO 3: retur memblokir void ----------
-
     @Test
-    fun voidPadaTransaksiYangSudahDireturDitolakTanpaEfek() = runBlocking {
+    fun voidPadaTransaksiYangSudahDireturDitolakTanpaEfek() = runTest {
         val sesi = seedKasirShift()
         val produkId = seedProduk("VOID-AFTER-RET", harga = 12_000, stok = 9_000)
         val trx = checkoutLangsung(
@@ -241,7 +228,6 @@ class VoidServiceIntegrationTest {
         )
         val itemId = itemIdPertama(trx.transactionId)
 
-        // Retur PARSIAL 1 dari 2 unit (refund QRIS agar kas tak berubah).
         returService.process(
             ReturnRequest(
                 transactionId = trx.transactionId, cashierId = sesi.kasirId, shiftId = sesi.shiftId,
@@ -260,9 +246,8 @@ class VoidServiceIntegrationTest {
         assertTrue(hasil.isFailure)
         assertTrue(hasil.exceptionOrNull() is PosDataException.InvalidState)
 
-        // Void GAGAL total: transaksi tetap SELESAI, stok hanya terpengaruh retur.
         assertEquals(StatusTransaksi.SELESAI, db.transaksiDao().getById(trx.transactionId)!!.status)
-        assertEquals(8_000L, db.persediaanDao().getByProdukId(produkId)!!.jumlah) // 9rb - 2rb + 1rb
+        assertEquals(8_000L, db.persediaanDao().getByProdukId(produkId)!!.jumlah)
         assertTrue(
             db.pergerakanPersediaanDao().getByProduk(produkId)
                 .none { it.jenis == JenisPergerakanPersediaan.PEMBATALAN_PENJUALAN }
@@ -272,10 +257,8 @@ class VoidServiceIntegrationTest {
         )
     }
 
-    // ---------- SKENARIO 4: void ganda mustahil ----------
-
     @Test
-    fun voidGandaHanyaEfekSatuKali() = runBlocking {
+    fun voidGandaHanyaEfekSatuKali() = runTest {
         val sesi = seedKasirShift()
         val produkId = seedProduk("VOID-DOUBLE", harga = 10_000, stok = 10_000)
         val trx = checkoutLangsung(
@@ -300,13 +283,11 @@ class VoidServiceIntegrationTest {
         assertTrue(kedua.isFailure)
         assertTrue(kedua.exceptionOrNull() is PosDataException.InvalidState)
 
-        // Stok dipulihkan TEPAT SEKALI meski dua permintaan void masuk.
         assertEquals(10_000L, db.persediaanDao().getByProdukId(produkId)!!.jumlah)
         assertEquals(
             1, db.pergerakanPersediaanDao().getByProduk(produkId)
                 .count { it.jenis == JenisPergerakanPersediaan.PEMBATALAN_PENJUALAN }
         )
-        // Refund kas juga hanya sekali.
         assertEquals(
             1, db.pergerakanKasDao().getByShift(sesi.shiftId)
                 .count { it.jenis == JenisPergerakanKas.RETUR }

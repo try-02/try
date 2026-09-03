@@ -23,6 +23,7 @@ import com.sentral.org.data.model.StatusShift
 import com.sentral.org.data.model.StatusTransaksi
 import com.sentral.org.data.model.TujuanStokPengembalian
 import com.sentral.org.data.model.VoidRequest
+import com.sentral.org.shared.currentTimeMillis
 import kotlinx.coroutines.test.runTest
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -86,7 +87,7 @@ class VoidServiceIntegrationTest {
     private data class Sesi(val kasirId: Long, val shiftId: Long)
 
     private suspend fun seedKasirShift(): Sesi {
-        val now = System.currentTimeMillis()
+        val now = currentTimeMillis()
         val kasirId = db.kasirDao().insert(
             KasirEntity(nama = "Kasir Void", pinHash = null, aktif = true, dibuatPada = now)
         )
@@ -107,7 +108,7 @@ class VoidServiceIntegrationTest {
     }
 
     private suspend fun seedProduk(sku: String, harga: Long, stok: Long): Long {
-        val now = System.currentTimeMillis()
+        val now = currentTimeMillis()
         val id = db.produkDao().insert(
             ProdukEntity(
                 nama = "Produk $sku", sku = sku, barcode = null, harga = harga,
@@ -125,7 +126,7 @@ class VoidServiceIntegrationTest {
         sesi: Sesi, produkId: Long, harga: Long, qty: Long, nomor: String,
         payment: PaymentRequest,
     ): CheckoutResult {
-        val now = System.currentTimeMillis()
+        val now = currentTimeMillis()
         val cartId = db.keranjangDao().insert(
             KeranjangEntity(
                 nama = "Cart", status = StatusKeranjang.AKTIF, kasirId = sesi.kasirId,
@@ -166,7 +167,7 @@ class VoidServiceIntegrationTest {
         voidService.void(
             VoidRequest(
                 transactionId = trx.transactionId, cashierId = sesi.kasirId, shiftId = sesi.shiftId,
-                reason = "Salah input kasir", now = System.currentTimeMillis(),
+                reason = "Salah input kasir", now = currentTimeMillis(),
             )
         ).getOrThrow()
 
@@ -205,7 +206,7 @@ class VoidServiceIntegrationTest {
         voidService.void(
             VoidRequest(
                 transactionId = trx.transactionId, cashierId = sesi.kasirId, shiftId = sesi.shiftId,
-                reason = "QRIS gagal konfirmasi", now = System.currentTimeMillis(),
+                reason = "QRIS gagal konfirmasi", now = currentTimeMillis(),
             )
         ).getOrThrow()
 
@@ -232,14 +233,14 @@ class VoidServiceIntegrationTest {
             ReturnRequest(
                 transactionId = trx.transactionId, cashierId = sesi.kasirId, shiftId = sesi.shiftId,
                 lines = listOf(ReturnLineRequest(itemId, 1_000, TujuanStokPengembalian.NORMAL)),
-                refundMethod = MetodePembayaran.QRIS, now = System.currentTimeMillis(),
+                refundMethod = MetodePembayaran.QRIS, now = currentTimeMillis(),
             )
         ).getOrThrow()
 
         val hasil = voidService.void(
             VoidRequest(
                 transactionId = trx.transactionId, cashierId = sesi.kasirId, shiftId = sesi.shiftId,
-                reason = "harus gagal", now = System.currentTimeMillis(),
+                reason = "harus gagal", now = currentTimeMillis(),
             )
         )
 
@@ -269,14 +270,14 @@ class VoidServiceIntegrationTest {
         voidService.void(
             VoidRequest(
                 transactionId = trx.transactionId, cashierId = sesi.kasirId, shiftId = sesi.shiftId,
-                reason = "pertama", now = System.currentTimeMillis(),
+                reason = "pertama", now = currentTimeMillis(),
             )
         ).getOrThrow()
 
         val kedua = voidService.void(
             VoidRequest(
                 transactionId = trx.transactionId, cashierId = sesi.kasirId, shiftId = sesi.shiftId,
-                reason = "kedua harus gagal", now = System.currentTimeMillis(),
+                reason = "kedua harus gagal", now = currentTimeMillis(),
             )
         )
 
