@@ -1,4 +1,4 @@
-name: Android Release Build 2
+name: Android Release Build 0
 
 on:
   workflow_dispatch:
@@ -37,7 +37,7 @@ jobs:
           chmod +x ./gradlew
 
           # Hapus 'clean' agar build cache & configuration cache optimal
-          ./gradlew assembleRelease \
+          ./gradlew :app:assembleRelease \
             --non-interactive \
             --stacktrace \
             --console=plain

@@ -22,10 +22,6 @@ kotlin {
         }
     }
 
-    instrumentedTest {
-            enabled = true
-        }
-
     iosArm64()
     iosSimulatorArm64()
 
@@ -53,13 +49,10 @@ kotlin {
             // atau tetap sqlite-bundled (cross-platform, no linker flag).
             // Default kita pakai sqlite-bundled di commonMain; baris ini opsional.
         }
-        val androidTest by getting {
-            dependencies {
-                implementation(libs.androidx.test.ext.junit)
-                implementation(libs.androidx.test.runner)
-                // Jika ingin testing database Room 3 di device Android:
-                // implementation(libs.room3.testing) 
-            }
+        commonTest.dependencies {
+            implementation(libs.junit)
+            implementation(libs.kotlinx.coroutines.test)
+            // (Room 3 runtime dan BundledSQLiteDriver sudah otomatis tersedia dari commonMain)
         }
     }
 }

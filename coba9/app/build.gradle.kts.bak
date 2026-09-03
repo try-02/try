@@ -56,14 +56,14 @@ android {
         buildConfig = true
     }
 
-//    sourceSets {
-//        named("androidTest") {
-//            assets.directories.add(layout.projectDirectory.dir("schemas").toString())
-//        }
-//        named("debug") {
-//            assets.directories.add(layout.projectDirectory.dir("schemas").toString())
-//        }
-//    }
+    sourceSets {
+        named("androidTest") {
+            assets.directories.add(layout.projectDirectory.dir("schemas").toString())
+        }
+        named("debug") {
+            assets.directories.add(layout.projectDirectory.dir("schemas").toString())
+        }
+    }
 
     packaging {
         resources {
@@ -167,7 +167,7 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
-    // androidTestImplementation(libs.room3.testing)
+    androidTestImplementation(libs.room3.testing)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.kotlinx.coroutines.test)

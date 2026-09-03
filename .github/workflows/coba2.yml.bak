@@ -1,11 +1,11 @@
-name: Android Release Build 2
+name: Android Release Build 0
 
 on:
   workflow_dispatch:
 
 defaults:
   run:
-    working-directory: ./coba2
+    working-directory: ./coba0
 
 jobs:
   build:
@@ -26,7 +26,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
         with:
-          # Arahkan root project ke subfolder coba2
+          # Arahkan root project ke subfolder coba0
           cache-encryption-key: ${{ secrets.GRADLE_CACHE_ENCRYPTION_KEY }}
           # Set false dulu jika ingin workflow_dispatch selalu memperbarui cache
           cache-read-only: false 
@@ -37,7 +37,7 @@ jobs:
           chmod +x ./gradlew
 
           # Hapus 'clean' agar build cache & configuration cache optimal
-          ./gradlew assembleRelease \
+          ./gradlew :app:assembleRelease \
             --non-interactive \
             --stacktrace \
             --console=plain
@@ -51,7 +51,7 @@ jobs:
         env:
           BUILD_TOOLS_VERSION: "34.0.0"
         with:
-          releaseDirectory: coba2/app/build/outputs/apk/release
+          releaseDirectory: coba0/app/build/outputs/apk/release
           signingKeyBase64: ${{ secrets.KEYSTORE_BASE64 }}
           alias: ${{ secrets.KEY_ALIAS }}
           keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -63,6 +63,6 @@ jobs:
           name: pos-offline-release-signed-apk
           path: |
             ${{ steps.sign_app.outputs.signedReleaseFile }}
-            coba2/app/**/*.json
+            coba0/app/**/*.json
           retention-days: 1
           if-no-files-found: error
