@@ -8,11 +8,3 @@ plugins {
     alias(libs.plugins.kotlin.serialization) apply false
     alias(libs.plugins.stability.analyzer) apply false
 }
-
-buildscript {
-    configurations.all {
-        resolutionStrategy {
-            force("org.jetbrains:annotations:23.0.0")
-        }
-    }
-}
