@@ -71,8 +71,8 @@ configurations.matching { it.name.contains("HostTest") || it.name.contains("Unit
     }
 }
 
-// Workaround bug AGP & KSP: menghubungkan task LintModel ke task KSP secara eksplisit
-tasks.matching { it.name.endsWith("LintModel") }.configureEach {
+// Workaround bug AGP & KSP: Hubungkan SEMUA task Lint ke task KSP secara menyeluruh
+tasks.matching { it.name.startsWith("lint") || it.name.contains("Lint") }.configureEach {
     dependsOn(tasks.matching { it.name.startsWith("ksp") })
 }
 
