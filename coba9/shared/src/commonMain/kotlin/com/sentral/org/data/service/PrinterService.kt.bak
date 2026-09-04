@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+import android.util.Log
+
 /**
  * Service yang mengelola antrian cetak dan health tracking printer.
  * 
@@ -68,13 +70,13 @@ class PrinterService(
                 activeDriver = driverFactory(defaultPrinter)
                 activePrinter = defaultPrinter
                 _status.value = PrinterStatus.SIAP
-                android.util.Log.e("PrinterService", "✅ Initialized with printer: ${defaultPrinter.nama}")
+                Log.e("PrinterService", "✅ Initialized with printer: ${defaultPrinter.nama}")
             } else {
-                android.util.Log.w("PrinterService", "⚠️ No default printer found, using NoOp driver")
+                Log.e("PrinterService", "⚠️ No default printer found, using NoOp driver") // ini log w loh
             }
             isInitialized = true
         } catch (e: Exception) {
-            android.util.Log.e("PrinterService", "❌ Failed to initialize printer: ${e.message}")
+            Log.e("PrinterService", "❌ Failed to initialize printer: ${e.message}")
             isInitialized = true
         }
     }
@@ -105,7 +107,7 @@ class PrinterService(
         activeDriver = driverFactory(printer)
         activePrinter = printer
         _status.value = PrinterStatus.SIAP
-        android.util.Log.e("PrinterService", "🔄 Switched to printer: ${printer.nama}")
+        Log.e("PrinterService", "🔄 Switched to printer: ${printer.nama}")
     }
 
     /**
@@ -166,10 +168,10 @@ class PrinterService(
         
         if (shouldDisable) {
             _status.value = PrinterStatus.DINONAKTIFKAN
-            android.util.Log.e("PrinterService", "🚫 Printer disabled after $current failures")
+            Log.e("PrinterService", "🚫 Printer disabled after $current failures")
         } else {
             _status.value = PrinterStatus.ERROR
-            android.util.Log.e("PrinterService", "⚠️ Print failed (${current}/$MAX_CONSECUTIVE_FAILURES): ${failure.message}") // ini log w loh
+            Log.e("PrinterService", "⚠️ Print failed (${current}/$MAX_CONSECUTIVE_FAILURES): ${failure.message}") // ini log w loh
         }
     }
 
