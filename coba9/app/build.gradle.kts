@@ -32,6 +32,12 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            
+            // AGP 9.3+ Modern DSL: Mengaktifkan semua optimisasi R8 tingkat lanjut
+            optimization {
+                enable = true
+            }
+            
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
