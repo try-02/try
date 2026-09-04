@@ -112,6 +112,18 @@ val appModule = module {
         )
     }
     viewModelOf(::MainViewModel)
-    viewModelOf(::KasirViewModel)
+    viewModel {
+        KasirViewModel(
+            cartService = get(),
+            checkoutService = get(),
+            produkRepo = get(),
+            cartRepo = get(),
+            persediaanDao = get(),
+            profilRepo = get(),
+            sesi = get(),
+            printerService = get(),
+            transaksiRepo = get(),  // ← BARU
+        )
+    }
     viewModelOf(::AddPrinterViewModel)
 }

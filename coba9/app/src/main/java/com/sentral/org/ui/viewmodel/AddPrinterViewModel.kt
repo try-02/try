@@ -29,6 +29,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
+import com.sentral.org.data.service.PrinterService
+
 data class BluetoothDeviceUi(
     val name: String,
     val address: String,
@@ -45,6 +47,7 @@ sealed interface PrinterTestResult {
 class AddPrinterViewModel(
     application: Application,
     private val printerRepo: PrinterRepository,
+    private val printerService: PrinterService,  // ← TAMBAH
 ) : AndroidViewModel(application) {
 
     private val _bluetoothDevices = MutableStateFlow<List<BluetoothDeviceUi>>(emptyList())
@@ -268,8 +271,12 @@ class AddPrinterViewModel(
                     printer
                 }
                 
-                printerRepo.insert(printerToSave)
-                android.util.Log.e("AddPrinterVM", "💾 Printer saved: ${printerToSave.nama}, isDefault=${printerToSave.isDefault}")
+                val savedId = printerRepo.insert(printerToSave)
+                android.util.Log.d("AddPrinterVM", "💾 Printer saved: ${printerToSave.nama}, isDefault=${printerToSave.isDefault}, id=$savedId")
+                
+                // ===== LANGSUNG RELOAD DI SINI (bukan di UI callback) =====
+                printerService.reloadPrinter()
+                android.util.Log.d("AddPrinterVM", "🔄 PrinterService reloaded")
             }
         }
     }

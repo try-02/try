@@ -12,9 +12,9 @@ import com.sentral.org.ui.theme.PosTheme
 import com.sentral.org.ui.screen.settings.PrinterSettingsScreen
 import com.sentral.org.ui.screen.settings.AddPrinterScreen
 import com.sentral.org.data.service.PrinterService
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
-import org.koin.compose.koinInject // Koin untuk Compose Multiplatform
+// import androidx.compose.runtime.rememberCoroutineScope
+// import kotlinx.coroutines.launch
+// import org.koin.compose.koinInject // Koin untuk Compose Multiplatform
 
 @Composable
 fun PosNavHost(
@@ -60,15 +60,10 @@ fun PosNavHost(
             }
 
             composable<PosRoute.AddPrinter> {
-                val coroutineScope = rememberCoroutineScope()
-                val printerService = koinInject<PrinterService>()
-
                 AddPrinterScreen(
                     onBack = { navController.popBackStack() },
-                    onSaved = {
-                        coroutineScope.launch {
-                            printerService.reloadPrinter()
-                        }
+                    onSaved = { 
+                        // Tidak perlu reload di sini, sudah dilakukan di ViewModel
                         navController.popBackStack()
                     },
                 )

@@ -125,5 +125,11 @@ val appModule = module {
             transaksiRepo = get(),  // ← BARU
         )
     }
-    viewModelOf(::AddPrinterViewModel)
+    viewModel { (application: Application) ->
+        AddPrinterViewModel(
+            application = application,
+            printerRepo = get(),
+            printerService = get(),  // ← TAMBAH
+        )
+    }
 }
