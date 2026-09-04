@@ -42,7 +42,8 @@ class PrinterService(
 
     private companion object {
         const val MAX_CONSECUTIVE_FAILURES = 3
-        const val TAG = "PrinterService"
+        // const val TAG = "PrinterService"
+        const val log = Logger.withTag("PrinterService")
     }
 
     data class PrintJob(
@@ -72,7 +73,7 @@ class PrinterService(
             try {
                 activeDriver.disconnect()
             } catch (e: Exception) {
-                android.util.Log.w(TAG, "⚠️ Error disconnecting old driver: ${e.message}")
+                log.e { "⚠️ Error disconnecting old driver: ${e.message}" }
             }
             
             try {
@@ -82,15 +83,15 @@ class PrinterService(
                     activeDriver = driverFactory(defaultPrinter)
                     activePrinter = defaultPrinter
                     _status.value = PrinterStatus.SIAP
-                    android.util.Log.d(TAG, "✅ Initialized with printer: ${defaultPrinter.nama} (${defaultPrinter.tipeKoneksi})")
+                    log.e { "✅ Initialized with printer: ${defaultPrinter.nama} (${defaultPrinter.tipeKoneksi})" }
                 } else {
                     activeDriver = NoOpPrinterDriver()
                     activePrinter = null
                     _status.value = PrinterStatus.SIAP
-                    android.util.Log.w(TAG, "⚠️ No default printer found, using NoOp driver")
+                    log.e { "⚠️ No default printer found, using NoOp driver" }
                 }
             } catch (e: Exception) {
-                android.util.Log.e(TAG, "❌ Failed to initialize printer: ${e.message}", e)
+                log.e { "❌ Failed to initialize printer: ${e.message}", e }
                 activeDriver = NoOpPrinterDriver()
                 activePrinter = null
             } finally {
@@ -104,7 +105,7 @@ class PrinterService(
      * Dipanggil langsung dari AddPrinterViewModel setelah save.
      */
     suspend fun reloadPrinter() {
-        android.util.Log.d(TAG, "🔄 reloadPrinter() called")
+        log.e { "🔄 reloadPrinter() called" }
         initializeDefaultPrinter()
     }
 
@@ -121,7 +122,7 @@ class PrinterService(
             }
             
             if (!isInitialized) {
-                android.util.Log.w(TAG, "⚠️ Printer not initialized after 5s, using current driver")
+                log.e { "⚠️ Printer not initialized after 5s, using current driver" }
             }
             
             printQueue.trySend(PrintJob(receipt, onResult))
@@ -143,7 +144,7 @@ class PrinterService(
             activePrinter = printer
             _status.value = PrinterStatus.SIAP
         }
-        android.util.Log.d(TAG, "🔄 Switched to printer: ${printer.nama}")
+        log.e { "🔄 Switched to printer: ${printer.nama}" }
     }
 
     /**
@@ -156,7 +157,7 @@ class PrinterService(
             val result = try {
                 activeDriver.print(job.receipt)
             } catch (e: Exception) {
-                android.util.Log.e(TAG, "❌ Print exception: ${e.message}", e)
+                log.e { "❌ Print exception: ${e.message}", e }
                 PrintResult.Failure(e.message ?: "Unknown error", isRetryable = true)
             }
             
@@ -192,10 +193,10 @@ class PrinterService(
         
         if (shouldDisable) {
             _status.value = PrinterStatus.DINONAKTIFKAN
-            android.util.Log.e(TAG, "🚫 Printer disabled after $current failures")
+            log.e { "🚫 Printer disabled after $current failures" }
         } else {
             _status.value = PrinterStatus.ERROR
-            android.util.Log.w(TAG, "⚠️ Print failed (${current}/$MAX_CONSECUTIVE_FAILURES): ${failure.message}")
+            log.e { "⚠️ Print failed (${current}/$MAX_CONSECUTIVE_FAILURES): ${failure.message}" }
         }
     }
 
