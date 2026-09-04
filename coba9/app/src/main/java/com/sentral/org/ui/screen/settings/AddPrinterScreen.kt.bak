@@ -67,7 +67,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.viewmodel.compose.viewModel
+import org.koin.androidx.compose.koinViewModel
 import com.sentral.org.data.entity.PrinterEntity
 import com.sentral.org.ui.navigation.PosRoute
 import com.sentral.org.ui.viewmodel.AddPrinterViewModel
@@ -80,7 +80,7 @@ fun AddPrinterScreen(
     onBack: () -> Unit,
     onSaved: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: AddPrinterViewModel = viewModel(),
+    viewModel: AddPrinterViewModel = koinVewModel(),
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) } // 0 = Bluetooth, 1 = WiFi
     var showTestDialog by remember { mutableStateOf(false) }
