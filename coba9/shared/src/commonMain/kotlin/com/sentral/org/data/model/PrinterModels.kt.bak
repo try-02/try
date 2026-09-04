@@ -45,8 +45,7 @@ data class StoreInfo(
     val nama: String,
     val alamat: String,
     val footer: String,
-    val logoUri: String? = null,
-    val cetakQr: Boolean = false,  // ← BARU: default false untuk kecepatan
+    val logoUri: String? = null,  // ← BARU: URI logo (content://, file://, atau null)
 )
 
 data class TransactionInfo(

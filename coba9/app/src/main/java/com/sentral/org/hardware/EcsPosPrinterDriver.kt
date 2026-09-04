@@ -61,20 +61,20 @@ class EscPosPrinterDriver(
 
         // ===== Printer constants =====
         private const val PRINTER_DPI = 203
-        private const val PRINTER_WIDTH_MM = 48f
-        private const val FEED_PAPER_MM = 15f
+        private const val PRINTER_WIDTH_MM = 80f
+        private const val FEED_PAPER_MM = 10f
         private const val TCP_TIMEOUT_MS = 5000
 
         // ===== Logo safety constants =====
         // Target width di pixels: 48mm × 203 DPI / 25.4 ≈ 384px
         private const val TARGET_LOGO_WIDTH = 384
-        private const val TARGET_LOGO_HEIGHT = 256  // Max height DantSu support
+        private const val TARGET_LOGO_HEIGHT = 128  // Max height DantSu support
         // Source gambar max: 4096×4096 (16MP). Di atas ini, skip.
         private const val MAX_SOURCE_DIMENSION = 4096
         // File size max: 10MB. Di atas ini, skip.
         private const val MAX_LOGO_FILE_SIZE_BYTES = 10L * 1024 * 1024
         // Timeout load logo: 5 detik
-        private const val LOGO_LOAD_TIMEOUT_MS = 5000L
+        private const val LOGO_LOAD_TIMEOUT_MS = 3000L
 
         private val CHARSET_UTF8 = EscPosCharsetEncoding("UTF-8", 28)
     }
@@ -102,16 +102,32 @@ class EscPosPrinterDriver(
         }
     }
     override suspend fun print(receipt: ReceiptData): PrintResult = withContext(Dispatchers.IO) {
+        // Timeout 30 detik untuk keseluruhan proses print
+        val result = withTimeoutOrNull(30000L) {
+            printInternal(receipt)
+        }
+        
+        result ?: PrintResult.Failure(
+            message = "Print timeout (>30 detik)",
+            isRetryable = true,
+        )
+    }
+    
+    /**
+     * Internal print logic (dipisah untuk timeout wrapper).
+     */
+    private suspend fun printInternal(receipt: ReceiptData): PrintResult {
         var handle: PrinterHandle? = null
         try {
-            android.util.Log.e("EscPosDriver", "🖨️ print() called for receipt: ${receipt.transaksi.nomor}")
+            Log.e(TAG, "🖨️ print() called for receipt: ${receipt.transaksi.nomor}")
+            
             handle = buildPrinterHandle()
-                ?: return@withContext PrintResult.Failure(
+                ?: return PrintResult.Failure(
                     "Tidak dapat terhubung ke printer (koneksi tidak dikonfigurasi)",
                     isRetryable = true,
                 )
-
-            android.util.Log.e("EscPosDriver", "🔌 Connected to printer: ${printerConfig.nama}")
+            
+            Log.e(TAG, "🔌 Connected to printer: ${printerConfig.nama}")
 
             // ===== TAHAP 1: Print logo (kalau ada) via raw bytes ke connection =====
             // Dilakukan SEBELUM printFormattedText agar logo muncul di paling atas struk.
@@ -119,16 +135,15 @@ class EscPosPrinterDriver(
             // tapi tidak menghapus bytes yang sudah tercetak di kertas → aman.
             val logoUri = receipt.toko.logoUri
             if (!logoUri.isNullOrBlank()) {
-                loadAndConvertLogo(logoUri)?.let { logoBytes ->
+                val logoBytes = loadAndConvertLogo(logoUri)
+                if (logoBytes != null) {
                     try {
+                        // Kirim logo + 1 line break dalam satu batch untuk kurangi overhead Bluetooth
                         handle.connection.write(logoBytes)
-                        handle.connection.send()
-                        // 2 line break agar logo terpisah dari teks
-                        handle.connection.write(byteArrayOf(0x0A, 0x0A))
+                        handle.connection.write(byteArrayOf(0x0A))
                         handle.connection.send()
                     } catch (e: EscPosConnectionException) {
-                        // Logo gagal dikirim, tapi jangan gagalkan cetak
-                        Log.e(TAG, "Failed to send logo: ${e.message}") // ini log w loh
+                        Log.e(TAG, "Failed to send logo: ${e.message}")
                     }
                 }
             }
@@ -136,35 +151,35 @@ class EscPosPrinterDriver(
             // ===== TAHAP 2: Print teks struk (auto feed + cut di akhir) =====
             val formattedText = buildFormattedReceipt(receipt, handle.printer.printerNbrCharactersPerLine)
             handle.printer.printFormattedTextAndCut(formattedText, FEED_PAPER_MM)
-
-            PrintResult.Success
+            
+            return PrintResult.Success
         } catch (e: EscPosConnectionException) {
-            PrintResult.Failure(
+            return PrintResult.Failure(
                 message = "Koneksi printer terputus: ${e.message}",
                 isRetryable = true,
             )
         } catch (e: EscPosEncodingException) {
-            PrintResult.Failure(
+            return PrintResult.Failure(
                 message = "Gagal encode teks struk: ${e.message}",
                 isRetryable = false,
             )
         } catch (e: EscPosParserException) {
-            PrintResult.Failure(
+            return PrintResult.Failure(
                 message = "Format struk tidak valid: ${e.message}",
                 isRetryable = false,
             )
         } catch (e: EscPosBarcodeException) {
-            PrintResult.Failure(
+            return PrintResult.Failure(
                 message = "Gagal render QR/barcode: ${e.message}",
                 isRetryable = false,
             )
         } catch (e: Exception) {
-            PrintResult.Failure(
+            return PrintResult.Failure(
                 message = e.message ?: "Error cetak tidak diketahui",
                 isRetryable = isRetryableError(e),
             )
         } finally {
-            android.util.Log.e("EscPosDriver", "🔌 Disconnecting printer")
+            Log.e(TAG, "🔌 Disconnecting printer")
             handle?.printer?.disconnectPrinter()
         }
     }
@@ -417,11 +432,13 @@ class EscPosPrinterDriver(
 
         sb.append("[L]\n")
 
-        // ===== QR CODE =====
-        val qrData = "TRX:${receipt.transaksi.nomor}|TOTAL:${receipt.transaksi.total}"
-        sb.append("[C]<qrcode size='120'>").append(escapeDantSuText(qrData)).append("</qrcode>\n")
-        sb.append("[C]<font size='small'>Scan untuk struk digital</font>\n")
-        sb.append("[L]\n")
+        // ===== QR CODE (OPSIONAL) =====
+        if (receipt.toko.cetakQr) {
+            val qrData = receipt.transaksi.nomor
+            sb.append("[C]<qrcode size='6'>")
+                .append(escapeDantSuText(qrData))
+                .append("</qrcode>\n")
+        }
 
         // ===== FOOTER =====
         sb.append("[C]<b>Terima kasih atas kunjungan Anda!</b>\n")

@@ -40,14 +40,13 @@ class PrinterService(
     private var activePrinter: PrinterEntity? = null
     private val initMutex = Mutex()
 
-    private val log = Logger.withTag("PrinterService")
-
     @Volatile
     private var isInitialized = false
 
     private companion object {
         const val MAX_CONSECUTIVE_FAILURES = 3
-        // const val TAG = "PrinterService"
+        const val TAG = "PrinterService"
+        val log = Logger.withTag(TAG)
     }
 
     data class PrintJob(

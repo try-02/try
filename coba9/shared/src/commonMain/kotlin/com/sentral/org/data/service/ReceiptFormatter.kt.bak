@@ -30,7 +30,6 @@ object ReceiptFormatter {
                 alamat = toko?.alamat ?: "",
                 footer = toko?.catatanFooter ?: "Terima kasih",
                 logoUri = toko?.logoUri,  // ← BARU
-                cetakQr = false,  // ← Default false, bisa di-enable nanti via Settings
             ),
             transaksi = TransactionInfo(
                 nomor = transaksi.nomorTransaksi,
