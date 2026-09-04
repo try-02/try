@@ -11,7 +11,9 @@ import com.sentral.org.ui.theme.PosTheme
 
 import com.sentral.org.ui.screen.settings.PrinterSettingsScreen
 import com.sentral.org.ui.screen.settings.AddPrinterScreen
-
+import com.sentral.org.data.service.PrinterService
+import org.koin.java.KoinJavaComponent.getKoin
+import androidx.lifecycle.lifecycleScope.launch
 
 @Composable
 fun PosNavHost(
@@ -59,7 +61,14 @@ fun PosNavHost(
             composable<PosRoute.AddPrinter> {
                 AddPrinterScreen(
                     onBack = { navController.popBackStack() },
-                    onSaved = { 
+                    onSaved = {
+                        // Reload PrinterService agar pakai printer baru
+                        val koin = getKoin()
+                        val printerService = koin.get(PrinterService::class.java)
+    
+                        launch {
+                            printerService.reloadPrinter()
+                        }
                         navController.popBackStack()
                     },
                 )

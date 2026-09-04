@@ -269,7 +269,7 @@ class AddPrinterViewModel(
                 }
                 
                 printerRepo.insert(printerToSave)
-                android.util.Log.e("AddPrinterVM", "💾 Printer saved: ${printerToSave.nama}, isDefault=${printerToSave.isDefault}")
+                android.util.Log.d("AddPrinterVM", "💾 Printer saved: ${printerToSave.nama}, isDefault=${printerToSave.isDefault}")
             }
         }
     }

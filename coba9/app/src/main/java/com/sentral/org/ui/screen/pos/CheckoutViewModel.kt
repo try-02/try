@@ -37,7 +37,7 @@ class CheckoutViewModel(
         android.util.Log.e("CheckoutVM", "🚀 checkout() called with cartId=${request.cartId}")
         
         if (_state.value is CheckoutUiState.Processing) {
-            android.util.Log.w("CheckoutVM", "⚠️ Already processing, ignoring")
+            android.util.Log.e("CheckoutVM", "⚠️ Already processing, ignoring") // ini log w loh
             return
         }
         

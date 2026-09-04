@@ -95,23 +95,21 @@ class EscPosPrinterDriver(
             handle.printer.printFormattedText("[C]TEST CONNECTION\n")
             true
         } catch (e: Exception) {
-            Log.e(TAG, "testConnection failed: ${e.message}") // ini log w loh
+            Log.w(TAG, "testConnection failed: ${e.message}")
             false
         } finally {
             handle?.printer?.disconnectPrinter()
         }
     }
+
     override suspend fun print(receipt: ReceiptData): PrintResult = withContext(Dispatchers.IO) {
         var handle: PrinterHandle? = null
         try {
-            android.util.Log.e("EscPosDriver", "🖨️ print() called for receipt: ${receipt.transaksi.nomor}")
             handle = buildPrinterHandle()
                 ?: return@withContext PrintResult.Failure(
                     "Tidak dapat terhubung ke printer (koneksi tidak dikonfigurasi)",
                     isRetryable = true,
                 )
-
-            android.util.Log.e("EscPosDriver", "🔌 Connected to printer: ${printerConfig.nama}")
 
             // ===== TAHAP 1: Print logo (kalau ada) via raw bytes ke connection =====
             // Dilakukan SEBELUM printFormattedText agar logo muncul di paling atas struk.
@@ -128,7 +126,7 @@ class EscPosPrinterDriver(
                         handle.connection.send()
                     } catch (e: EscPosConnectionException) {
                         // Logo gagal dikirim, tapi jangan gagalkan cetak
-                        Log.e(TAG, "Failed to send logo: ${e.message}") // ini log w loh
+                        Log.w(TAG, "Failed to send logo: ${e.message}")
                     }
                 }
             }
@@ -164,7 +162,6 @@ class EscPosPrinterDriver(
                 isRetryable = isRetryableError(e),
             )
         } finally {
-            android.util.Log.e("EscPosDriver", "🔌 Disconnecting printer")
             handle?.printer?.disconnectPrinter()
         }
     }
@@ -234,7 +231,7 @@ class EscPosPrinterDriver(
                     // ===== GUARD 1: Cek file size (jika tersedia) =====
                     val fileSize = getFileSize(uri)
                     if (fileSize != null && fileSize > MAX_LOGO_FILE_SIZE_BYTES) {
-                        Log.e(TAG, "Logo file too large: $fileSize bytes (max: $MAX_LOGO_FILE_SIZE_BYTES)") // ini log w loh
+                        Log.w(TAG, "Logo file too large: $fileSize bytes (max: $MAX_LOGO_FILE_SIZE_BYTES)")
                         return@withContext null
                     }
 
@@ -245,12 +242,12 @@ class EscPosPrinterDriver(
                     } ?: return@withContext null
 
                     if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
-                        Log.e(TAG, "Logo dimensions invalid: ${bounds.outWidth}x${bounds.outHeight}") // ini log w loh
+                        Log.w(TAG, "Logo dimensions invalid: ${bounds.outWidth}x${bounds.outHeight}")
                         return@withContext null
                     }
 
                     if (bounds.outWidth > MAX_SOURCE_DIMENSION || bounds.outHeight > MAX_SOURCE_DIMENSION) {
-                        Log.e(TAG, "Logo too large: ${bounds.outWidth}x${bounds.outHeight} (max: $MAX_SOURCE_DIMENSION)") // ini log w loh
+                        Log.w(TAG, "Logo too large: ${bounds.outWidth}x${bounds.outHeight} (max: $MAX_SOURCE_DIMENSION)")
                         return@withContext null
                     }
 
@@ -294,10 +291,10 @@ class EscPosPrinterDriver(
                     Log.e(TAG, "OOM loading logo: ${e.message}")
                     null
                 } catch (e: SecurityException) {
-                    Log.e(TAG, "No permission to read logo: ${e.message}") // ini log w loh
+                    Log.w(TAG, "No permission to read logo: ${e.message}")
                     null
                 } catch (e: Exception) {
-                    Log.e(TAG, "Failed to load logo: ${e.message}") // ini log w loh
+                    Log.w(TAG, "Failed to load logo: ${e.message}")
                     null
                 }
             }
@@ -322,7 +319,7 @@ class EscPosPrinterDriver(
                 else -> null
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Cannot get file size for $uri: ${e.message}") // ini log w loh
+            Log.w(TAG, "Cannot get file size for $uri: ${e.message}")
             null
         }
     }

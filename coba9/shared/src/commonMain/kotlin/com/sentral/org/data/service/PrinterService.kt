@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
  * Service yang mengelola antrian cetak dan health tracking printer.
  * 
  * DESAIN:
+ * - Auto-load default printer saat inisialisasi
  * - Queue berbasis Channel (unlimited buffer) agar tidak ada job yang hilang
  * - Proses sequential: satu job selesai baru lanjut berikutnya
  * - Health tracking: gagal 3x berturut-turut → printer dinonaktifkan otomatis
@@ -32,6 +33,7 @@ class PrinterService(
 
     private var activeDriver: PrinterDriver = NoOpPrinterDriver()
     private var activePrinter: PrinterEntity? = null
+    private var isInitialized = false
 
     /**
      * Ambang batas kegagalan sebelum printer dinonaktifkan otomatis.
@@ -46,15 +48,50 @@ class PrinterService(
     )
 
     init {
+        // ===== AUTO-LOAD: Load default printer saat service dibuat =====
+        scope.launch {
+            initializeDefaultPrinter()
+        }
+        
         // Mulai worker queue
         scope.launch { processQueue() }
+    }
+
+    /**
+     * Load printer default dari database dan set sebagai active driver.
+     * Dipanggil otomatis saat PrinterService diinisialisasi.
+     */
+    private suspend fun initializeDefaultPrinter() {
+        try {
+            val defaultPrinter = printerDao.getDefault()
+            if (defaultPrinter != null && !defaultPrinter.dinonaktifkanOtomatis) {
+                activeDriver = driverFactory(defaultPrinter)
+                activePrinter = defaultPrinter
+                _status.value = PrinterStatus.SIAP
+                android.util.Log.e("PrinterService", "✅ Initialized with printer: ${defaultPrinter.nama}")
+            } else {
+                android.util.Log.w("PrinterService", "⚠️ No default printer found, using NoOp driver")
+            }
+            isInitialized = true
+        } catch (e: Exception) {
+            android.util.Log.e("PrinterService", "❌ Failed to initialize printer: ${e.message}")
+            isInitialized = true
+        }
     }
 
     /**
      * Enqueue job cetak. Return immediately, tidak menunggu cetak selesai.
      */
     fun enqueue(receipt: ReceiptData, onResult: (PrintResult) -> Unit = {}) {
-        printQueue.trySend(PrintJob(receipt, onResult))
+        // Pastikan printer sudah di-initialize sebelum enqueue
+        if (!isInitialized) {
+            scope.launch {
+                initializeDefaultPrinter()
+                printQueue.trySend(PrintJob(receipt, onResult))
+            }
+        } else {
+            printQueue.trySend(PrintJob(receipt, onResult))
+        }
     }
 
     /**
@@ -68,6 +105,14 @@ class PrinterService(
         activeDriver = driverFactory(printer)
         activePrinter = printer
         _status.value = PrinterStatus.SIAP
+        android.util.Log.e("PrinterService", "🔄 Switched to printer: ${printer.nama}")
+    }
+
+    /**
+     * Reload printer dari database. Dipanggil setelah add/edit/delete printer.
+     */
+    suspend fun reloadPrinter() {
+        initializeDefaultPrinter()
     }
 
     /**
@@ -75,6 +120,11 @@ class PrinterService(
      */
     private suspend fun processQueue() {
         for (job in printQueue) {
+            // Tunggu sampai printer ter-initialize
+            while (!isInitialized) {
+                kotlinx.coroutines.delay(100)
+            }
+            
             _status.value = PrinterStatus.SIBUK
             
             val result = activeDriver.print(job.receipt)
@@ -116,9 +166,10 @@ class PrinterService(
         
         if (shouldDisable) {
             _status.value = PrinterStatus.DINONAKTIFKAN
-            // TODO: kirim event ke UI untuk tampilkan dialog "Printer bermasalah"
+            android.util.Log.e("PrinterService", "🚫 Printer disabled after $current failures")
         } else {
             _status.value = PrinterStatus.ERROR
+            android.util.Log.e("PrinterService", "⚠️ Print failed (${current}/$MAX_CONSECUTIVE_FAILURES): ${failure.message}") // ini log w loh
         }
     }
 
