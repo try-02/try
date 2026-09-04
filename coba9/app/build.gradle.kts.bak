@@ -150,7 +150,6 @@ dependencies {
     // 6. Dependency Injection (Koin) — Android bindings
     implementation(libs.koin.androidx.compose)
     implementation(libs.koin.android)
-    implementation(libs.koin.compose)
     implementation(libs.kotlinx.serialization.json)
 
     // 7. Hardware: Printer Termal
