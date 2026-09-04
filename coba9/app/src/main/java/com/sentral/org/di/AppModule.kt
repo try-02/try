@@ -89,13 +89,6 @@ val appModule = module {
         )
     }
 
-    // 5. Sesi & ViewModels
-    single<SesiKasirProvider> { DevSesiKasirProvider(get(), get()) }
-    viewModelOf(::CheckoutViewModel)
-    viewModelOf(::MainViewModel)
-    viewModelOf(::KasirViewModel)
-    viewModelOf(::AddPrinterViewModel)
-
     // 6. Printer & Hardware
     single {
         PrinterService(
@@ -106,4 +99,19 @@ val appModule = module {
             ),
         )
     }
+
+    // 5. Sesi & ViewModels
+    single<SesiKasirProvider> { DevSesiKasirProvider(get(), get()) }
+    viewModel {
+        CheckoutViewModel(
+            checkoutService = get(),
+            printerService = get(),
+            transaksiRepo = get(),
+            produkRepo = get(),
+            profilRepo = get(),
+        )
+    }
+    viewModelOf(::MainViewModel)
+    viewModelOf(::KasirViewModel)
+    viewModelOf(::AddPrinterViewModel)
 }

@@ -66,6 +66,8 @@ class CheckoutViewModel(
     private fun triggerAutoPrint(transactionId: Long) {
         viewModelScope.launch {
             try {
+                android.util.Log.d("CheckoutVM", "Auto-print triggered for transaction $transactionId")
+                
                 // Load semua data yang dibutuhkan untuk cetak struk
                 val transaksi = transaksiRepo.getById(transactionId)
                     ?: throw IllegalStateException("Transaksi tidak ditemukan setelah checkout")
@@ -73,6 +75,8 @@ class CheckoutViewModel(
                 val items = transaksiRepo.getItems(transactionId)
                 val payments = transaksiRepo.getPayments(transactionId)
                 val profilToko = profilRepo.get()
+
+                android.util.Log.d("CheckoutVM", "Loaded transaction data: ${items.size} items, ${payments.size} payments")
 
                 // Format menjadi ReceiptData
                 val receiptData = ReceiptFormatter.format(
@@ -82,23 +86,21 @@ class CheckoutViewModel(
                     payments = payments,
                 )
 
+                android.util.Log.d("CheckoutVM", "Formatted receipt data, enqueueing to printer service")
+
                 // Enqueue ke printer service (non-blocking)
                 printerService.enqueue(receiptData) { result ->
-                    // Callback saat cetak selesai (sukses/gagal)
-                    // Bisa dipakai untuk tampilkan snackbar "Cetak gagal" jika needed
                     when (result) {
                         is com.sentral.org.data.model.PrintResult.Success -> {
-                            // Log sukses (opsional)
+                            android.util.Log.d("CheckoutVM", "✅ Print success for transaction $transactionId")
                         }
                         is com.sentral.org.data.model.PrintResult.Failure -> {
-                            // TODO: Tampilkan snackbar "Cetak struk gagal, bisa cetak ulang di Riwayat"
+                            android.util.Log.e("CheckoutVM", "❌ Print failed for transaction $transactionId: ${result.message}")
                         }
                     }
                 }
             } catch (e: Exception) {
-                // Gagal load data untuk cetak, tapi checkout sudah sukses
-                // Log error tapi jangan gagalkan alur user
-                android.util.Log.e("CheckoutViewModel", "Auto-print failed: ${e.message}", e)
+                android.util.Log.e("CheckoutVM", "Auto-print failed for transaction $transactionId: ${e.message}", e)
             }
         }
     }

@@ -102,7 +102,8 @@ fun AddPrinterScreen(
         }
     }
 
-    // Check and request permissions on first launch
+    // Check permissions on launch, tapi JANGAN auto-scan
+    // Scan hanya akan dimulai saat user tap tombol Scan Ulang
     LaunchedEffect(Unit) {
         val requiredPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             arrayOf(
@@ -117,11 +118,11 @@ fun AddPrinterScreen(
             ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
         }
 
-        if (missingPermissions.isEmpty()) {
-            viewModel.startBluetoothScan()
-        } else {
+        if (missingPermissions.isNotEmpty()) {
+            // Hanya minta permission, JANGAN mulai scan
             permissionLauncher.launch(missingPermissions.toTypedArray())
         }
+        // JANGAN panggil viewModel.startBluetoothScan() di sini
     }
 
     // Cleanup on disposal
@@ -193,26 +194,28 @@ fun AddPrinterScreen(
                     devices = bluetoothDevices,
                     isScanning = isScanning,
                     scanProgress = scanProgress,
-                    onRescan = {
-                        val requiredPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                            arrayOf(
-                                Manifest.permission.BLUETOOTH_SCAN,
-                                Manifest.permission.BLUETOOTH_CONNECT,
-                            )
-                        } else {
-                            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
-                        }
+    onRescan = {
+        val requiredPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            arrayOf(
+                Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.BLUETOOTH_CONNECT,
+            )
+        } else {
+            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
 
-                        val missingPermissions = requiredPermissions.filter {
-                            ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
-                        }
+        val missingPermissions = requiredPermissions.filter {
+            ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
+        }
 
-                        if (missingPermissions.isEmpty()) {
-                            viewModel.startBluetoothScan()
-                        } else {
-                            permissionLauncher.launch(missingPermissions.toTypedArray())
-                        }
-                    },
+        if (missingPermissions.isNotEmpty()) {
+            // Minta permission dulu
+            permissionLauncher.launch(missingPermissions.toTypedArray())
+        } else {
+            // Permission sudah ada, langsung scan
+            viewModel.startBluetoothScan()
+        }
+    },
                     onDeviceSelected = { device ->
                         testResult = null
                         showTestDialog = true

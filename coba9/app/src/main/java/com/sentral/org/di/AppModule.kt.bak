@@ -1,33 +1,31 @@
 package com.sentral.org.di
 
-import com.sentral.org.data.seed.ProductSeeder
-import com.sentral.org.data.session.DevSessionBootstrap
+import android.app.Application
+import androidx.room3.Room
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.sentral.org.data.DatabaseWarmup
 import com.sentral.org.data.PosDatabase
 import com.sentral.org.data.createPosDatabase
 import com.sentral.org.data.repository.*
 import com.sentral.org.data.repository.impl.*
+import com.sentral.org.data.seed.ProductSeeder
 import com.sentral.org.data.service.*
 import com.sentral.org.data.session.DevSesiKasirProvider
+import com.sentral.org.data.session.DevSessionBootstrap
 import com.sentral.org.data.session.SesiKasirProvider
+import com.sentral.org.hardware.EscPosPrinterDriver
 import com.sentral.org.ui.MainViewModel
 import com.sentral.org.ui.screen.pos.CheckoutViewModel
 import com.sentral.org.ui.screen.pos.KasirViewModel
-import androidx.room3.Room
-import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import com.sentral.org.ui.viewmodel.AddPrinterViewModel
+import org.koin.android.ext.koin.androidApplication
 import org.koin.android.ext.koin.androidContext
+import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
-import com.sentral.org.data.service.PrinterService
-import com.sentral.org.hardware.EscPosPrinterDriver
-
-import com.sentral.org.ui.viewmodel.AddPrinterViewModel
-import android.app.Application
-
 val appModule = module {
-    // 1. Core & Database — builder dibuat di sini (Android entry) lalu dikonfigurasi
-    // di common lewat createPosDatabase(builder).
+    // 1. Core & Database
     single {
         createPosDatabase(
             Room.databaseBuilder<PosDatabase>(androidContext(), "pos.db")
@@ -35,9 +33,9 @@ val appModule = module {
         )
     }
     single<PosWriteService> { RoomTransactionRunner(get()) }
-    single { ProductSeeder(get()) }              // tambah baru
-    single { DevSessionBootstrap(get(), get(), get()) }   // ShiftService sudah ada sebagai factory
-    single { DatabaseWarmup(get(), get(), get()) }      // 3 dependensi
+    single { ProductSeeder(get()) }
+    single { DevSessionBootstrap(get(), get(), get()) }
+    single { DatabaseWarmup(get(), get(), get()) }
 
     // 2. DAOs
     single { get<PosDatabase>().produkDao() }
@@ -93,7 +91,15 @@ val appModule = module {
 
     // 5. Sesi & ViewModels
     single<SesiKasirProvider> { DevSesiKasirProvider(get(), get()) }
-    viewModelOf(::CheckoutViewModel)
+    viewModel {
+        CheckoutViewModel(
+            checkoutService = get(),
+            printerService = get(),
+            transaksiRepo = get(),
+            produkRepo = get(),
+            profilRepo = get(),
+        )
+    }
     viewModelOf(::MainViewModel)
     viewModelOf(::KasirViewModel)
     viewModelOf(::AddPrinterViewModel)

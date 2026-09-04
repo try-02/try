@@ -80,7 +80,7 @@ fun AddPrinterScreen(
     onBack: () -> Unit,
     onSaved: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: AddPrinterViewModel = koinVewModel(),
+    viewModel: AddPrinterViewModel = koinViewModel(),
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) } // 0 = Bluetooth, 1 = WiFi
     var showTestDialog by remember { mutableStateOf(false) }
