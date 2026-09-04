@@ -44,13 +44,17 @@ jobs:
       #  run: ./gradlew :shared:assemble --stacktrace
       - name: check
         run: ./gradlew check
-      - name: alltes shared dan testdebugunittes
-        run: ./gradlew :shared:allTests :app:testDebugUnitTest
+      # - name: alltes shared dan testdebugunittes
+      #  run: ./gradlew :shared:allTests :app:testDebugUnitTest
 
       - name: Upload Test Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: unit-test-report
-          path: coba9/app/build/
+          path: |
+            coba9/app/build/reports/
+            coba9/app/build/test-results/
+            coba9/app/build/stability/
+            coba9/shared/schemes
           retention-days: 1

@@ -52,5 +52,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: unit-test-report
-          path: coba9/app/build/
+          path: |
+            coba9/app/build/reports/
+            coba9/app/build/test-results/
+            coba9/app/build/stability/
+            coba9/shared/schemas/
           retention-days: 1
