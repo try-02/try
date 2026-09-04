@@ -34,20 +34,33 @@ class CheckoutViewModel(
     val state: StateFlow<CheckoutUiState> = _state.asStateFlow()
 
     fun checkout(request: CheckoutRequest) {
-        if (_state.value is CheckoutUiState.Processing) return
+        android.util.Log.d("CheckoutVM", "🚀 checkout() called with cartId=${request.cartId}")
+        
+        if (_state.value is CheckoutUiState.Processing) {
+            android.util.Log.w("CheckoutVM", "⚠️ Already processing, ignoring")
+            return
+        }
+        
         viewModelScope.launch {
             _state.value = CheckoutUiState.Processing
+            android.util.Log.d("CheckoutVM", "⏳ Calling checkoutService.checkout()")
+            
             val result = checkoutService.checkout(request)
+            
+            android.util.Log.d("CheckoutVM", "📥 checkoutService returned: ${if (result.isSuccess) "SUCCESS" else "FAILURE"}")
             
             result.fold(
                 onSuccess = { checkoutResult ->
+                    android.util.Log.d("CheckoutVM", "✅ Checkout success: transactionId=${checkoutResult.transactionId}")
+                    
                     // ===== AUTO-PRINT: Trigger cetak struk setelah checkout sukses =====
                     triggerAutoPrint(checkoutResult.transactionId)
                     
                     _state.value = CheckoutUiState.Success(checkoutResult)
                 },
-                onFailure = { 
-                    _state.value = CheckoutUiState.Error(it.message ?: "Checkout gagal") 
+                onFailure = { error ->
+                    android.util.Log.e("CheckoutVM", "❌ Checkout failed: ${error.message}", error)
+                    _state.value = CheckoutUiState.Error(error.message ?: "Checkout gagal") 
                 },
             )
         }

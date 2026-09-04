@@ -35,6 +35,7 @@ import kotlinx.coroutines.launch
 import com.sentral.org.data.service.PrinterService
 import com.sentral.org.data.model.PrinterStatus
 import com.sentral.org.data.model.PrinterStatus.SIAP
+import com.sentral.org.data.repository.TransaksiRepository
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class KasirViewModel(
@@ -46,6 +47,7 @@ class KasirViewModel(
     private val profilRepo: ProfilTokoRepository,
     private val sesi: SesiKasirProvider,
     private val printerService: PrinterService,
+    private val transaksiRepo: TransaksiRepository,  // ← BARU
 ) : ViewModel() {
 
     private val pilihanManual = MutableStateFlow<Long?>(null)
@@ -214,6 +216,61 @@ class KasirViewModel(
         }
     }
 
+    /**
+     * Trigger cetak struk otomatis setelah checkout sukses.
+     * 
+     * DESAIN:
+     * - Load data transaksi + items + payments + profil toko
+     * - Format menjadi ReceiptData
+     * - Enqueue ke PrinterService (non-blocking)
+     * - Jika gagal load data, log error tapi jangan gagalkan checkout
+     * - Cetak dilakukan async di background, tidak memblokir UI
+     */
+    private fun triggerAutoPrint(transactionId: Long) {
+        android.util.Log.d("KasirVM", "🖨️ Auto-print triggered for transaction $transactionId")
+        
+        viewModelScope.launch {
+            try {
+                // Load semua data yang dibutuhkan untuk cetak struk
+                val transaksi = transaksiRepo.getById(transactionId)
+                if (transaksi == null) {
+                    android.util.Log.e("KasirVM", "❌ Transaksi tidak ditemukan: $transactionId")
+                    return@launch
+                }
+                
+                val items = transaksiRepo.getItems(transactionId)
+                val payments = transaksiRepo.getPayments(transactionId)
+                val profilToko = profilRepo.get()
+
+                android.util.Log.d("KasirVM", "📋 Loaded: ${items.size} items, ${payments.size} payments")
+
+                // Format menjadi ReceiptData
+                val receiptData = com.sentral.org.data.service.ReceiptFormatter.format(
+                    toko = profilToko,
+                    transaksi = transaksi,
+                    items = items,
+                    payments = payments,
+                )
+
+                android.util.Log.d("KasirVM", "📝 Receipt formatted, enqueueing to printer")
+
+                // Enqueue ke printer service (non-blocking)
+                printerService.enqueue(receiptData) { result ->
+                    when (result) {
+                        is com.sentral.org.data.model.PrintResult.Success -> {
+                            android.util.Log.d("KasirVM", "✅ Print success for transaction $transactionId")
+                        }
+                        is com.sentral.org.data.model.PrintResult.Failure -> {
+                            android.util.Log.e("KasirVM", "❌ Print failed for transaction $transactionId: ${result.message}")
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("KasirVM", "❌ Auto-print exception: ${e.message}", e)
+            }
+        }
+    }
+
     // ---------- Intent: pembayaran ----------
 
     fun bayarCash(uangDiterima: Long) {
@@ -246,6 +303,9 @@ class KasirViewModel(
         if (state.baris.isEmpty()) {
             kirim("Keranjang kosong", KasirEvent.Pesan.Jenis.GALAT); return
         }
+        
+        android.util.Log.d("KasirVM", "🛒 eksekusiBayar() called with ${payments.size} payments")
+        
         viewModelScope.launch {
             sedangProses.value = true
             try {
@@ -253,6 +313,9 @@ class KasirViewModel(
                     kirim("Buka shift kasir terlebih dahulu", KasirEvent.Pesan.Jenis.GALAT); return@launch
                 }
                 val now = System.currentTimeMillis()
+                
+                android.util.Log.d("KasirVM", "⏳ Calling checkoutService.checkout()")
+                
                 checkoutService.checkout(
                     CheckoutRequest(
                         cartId = cartId,
@@ -264,9 +327,17 @@ class KasirViewModel(
                     )
                 ).fold(
                     onSuccess = { r ->
+                        android.util.Log.d("KasirVM", "✅ Checkout success: txId=${r.transactionId}, number=${r.transactionNumber}")
+                        
+                        // ===== AUTO-PRINT: Trigger cetak struk =====
+                        triggerAutoPrint(r.transactionId)
+                        
                         _event.send(KasirEvent.CheckoutBerhasil(r.transactionNumber, r.change))
                     },
-                    onFailure = { kirim(it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT) },
+                    onFailure = { error ->
+                        android.util.Log.e("KasirVM", "❌ Checkout failed: ${error.message}", error)
+                        kirim(error.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT)
+                    },
                 )
             } finally {
                 sedangProses.value = false

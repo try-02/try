@@ -227,7 +227,7 @@ class KasirViewModel(
      * - Cetak dilakukan async di background, tidak memblokir UI
      */
     private fun triggerAutoPrint(transactionId: Long) {
-        android.util.Log.d("KasirVM", "🖨️ Auto-print triggered for transaction $transactionId")
+        android.util.Log.e("KasirVM", "🖨️ Auto-print triggered for transaction $transactionId")
         
         viewModelScope.launch {
             try {
@@ -242,7 +242,7 @@ class KasirViewModel(
                 val payments = transaksiRepo.getPayments(transactionId)
                 val profilToko = profilRepo.get()
 
-                android.util.Log.d("KasirVM", "📋 Loaded: ${items.size} items, ${payments.size} payments")
+                android.util.Log.e("KasirVM", "📋 Loaded: ${items.size} items, ${payments.size} payments")
 
                 // Format menjadi ReceiptData
                 val receiptData = com.sentral.org.data.service.ReceiptFormatter.format(
@@ -252,13 +252,13 @@ class KasirViewModel(
                     payments = payments,
                 )
 
-                android.util.Log.d("KasirVM", "📝 Receipt formatted, enqueueing to printer")
+                android.util.Log.e("KasirVM", "📝 Receipt formatted, enqueueing to printer")
 
                 // Enqueue ke printer service (non-blocking)
                 printerService.enqueue(receiptData) { result ->
                     when (result) {
                         is com.sentral.org.data.model.PrintResult.Success -> {
-                            android.util.Log.d("KasirVM", "✅ Print success for transaction $transactionId")
+                            android.util.Log.e("KasirVM", "✅ Print success for transaction $transactionId")
                         }
                         is com.sentral.org.data.model.PrintResult.Failure -> {
                             android.util.Log.e("KasirVM", "❌ Print failed for transaction $transactionId: ${result.message}")
@@ -304,7 +304,7 @@ class KasirViewModel(
             kirim("Keranjang kosong", KasirEvent.Pesan.Jenis.GALAT); return
         }
         
-        android.util.Log.d("KasirVM", "🛒 eksekusiBayar() called with ${payments.size} payments")
+        android.util.Log.e("KasirVM", "🛒 eksekusiBayar() called with ${payments.size} payments")
         
         viewModelScope.launch {
             sedangProses.value = true
@@ -314,7 +314,7 @@ class KasirViewModel(
                 }
                 val now = System.currentTimeMillis()
                 
-                android.util.Log.d("KasirVM", "⏳ Calling checkoutService.checkout()")
+                android.util.Log.e("KasirVM", "⏳ Calling checkoutService.checkout()")
                 
                 checkoutService.checkout(
                     CheckoutRequest(
@@ -327,7 +327,7 @@ class KasirViewModel(
                     )
                 ).fold(
                     onSuccess = { r ->
-                        android.util.Log.d("KasirVM", "✅ Checkout success: txId=${r.transactionId}, number=${r.transactionNumber}")
+                        android.util.Log.e("KasirVM", "✅ Checkout success: txId=${r.transactionId}, number=${r.transactionNumber}")
                         
                         // ===== AUTO-PRINT: Trigger cetak struk =====
                         triggerAutoPrint(r.transactionId)

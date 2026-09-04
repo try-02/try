@@ -582,7 +582,7 @@ LaunchedEffect(Unit) {
                 viewModel.bayarCash(diterima)
             },
             onKonfirmasiQris = {
-                android.util.Log.e("PosUtama", "📱 onKonfirmasiQris called")
+                android.util.Log.d("PosUtama", "📱 onKonfirmasiQris called")
                 dialogBayarTerbuka = false
                 viewModel.bayarQris()
             },

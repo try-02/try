@@ -246,7 +246,6 @@ fun DialogPembayaran(
                         // Tombol aktif hanya jika total valid DAN (QRIS ATAU tunai cukup)
                         enabled = !sedangProses && totalValid && (metode == 1 || cukup),
                         onClick = {
-                            android.util.Log.e("PosDialog", "🔘 Button Selesaikan clicked! metode=$metode, diterima=$diterima")
                             if (metode == 1) onKonfirmasiQris() else onKonfirmasiTunai(diterima)
                         },
                     ) {

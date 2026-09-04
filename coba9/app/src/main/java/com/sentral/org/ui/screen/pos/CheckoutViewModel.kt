@@ -34,7 +34,7 @@ class CheckoutViewModel(
     val state: StateFlow<CheckoutUiState> = _state.asStateFlow()
 
     fun checkout(request: CheckoutRequest) {
-        android.util.Log.d("CheckoutVM", "🚀 checkout() called with cartId=${request.cartId}")
+        android.util.Log.e("CheckoutVM", "🚀 checkout() called with cartId=${request.cartId}")
         
         if (_state.value is CheckoutUiState.Processing) {
             android.util.Log.w("CheckoutVM", "⚠️ Already processing, ignoring")
@@ -43,15 +43,15 @@ class CheckoutViewModel(
         
         viewModelScope.launch {
             _state.value = CheckoutUiState.Processing
-            android.util.Log.d("CheckoutVM", "⏳ Calling checkoutService.checkout()")
+            android.util.Log.e("CheckoutVM", "⏳ Calling checkoutService.checkout()")
             
             val result = checkoutService.checkout(request)
             
-            android.util.Log.d("CheckoutVM", "📥 checkoutService returned: ${if (result.isSuccess) "SUCCESS" else "FAILURE"}")
+            android.util.Log.e("CheckoutVM", "📥 checkoutService returned: ${if (result.isSuccess) "SUCCESS" else "FAILURE"}")
             
             result.fold(
                 onSuccess = { checkoutResult ->
-                    android.util.Log.d("CheckoutVM", "✅ Checkout success: transactionId=${checkoutResult.transactionId}")
+                    android.util.Log.e("CheckoutVM", "✅ Checkout success: transactionId=${checkoutResult.transactionId}")
                     
                     // ===== AUTO-PRINT: Trigger cetak struk setelah checkout sukses =====
                     triggerAutoPrint(checkoutResult.transactionId)
@@ -79,7 +79,7 @@ class CheckoutViewModel(
     private fun triggerAutoPrint(transactionId: Long) {
         viewModelScope.launch {
             try {
-                android.util.Log.d("CheckoutVM", "Auto-print triggered for transaction $transactionId")
+                android.util.Log.e("CheckoutVM", "Auto-print triggered for transaction $transactionId")
                 
                 // Load semua data yang dibutuhkan untuk cetak struk
                 val transaksi = transaksiRepo.getById(transactionId)
@@ -89,7 +89,7 @@ class CheckoutViewModel(
                 val payments = transaksiRepo.getPayments(transactionId)
                 val profilToko = profilRepo.get()
 
-                android.util.Log.d("CheckoutVM", "Loaded transaction data: ${items.size} items, ${payments.size} payments")
+                android.util.Log.e("CheckoutVM", "Loaded transaction data: ${items.size} items, ${payments.size} payments")
 
                 // Format menjadi ReceiptData
                 val receiptData = ReceiptFormatter.format(
@@ -99,13 +99,13 @@ class CheckoutViewModel(
                     payments = payments,
                 )
 
-                android.util.Log.d("CheckoutVM", "Formatted receipt data, enqueueing to printer service")
+                android.util.Log.e("CheckoutVM", "Formatted receipt data, enqueueing to printer service")
 
                 // Enqueue ke printer service (non-blocking)
                 printerService.enqueue(receiptData) { result ->
                     when (result) {
                         is com.sentral.org.data.model.PrintResult.Success -> {
-                            android.util.Log.d("CheckoutVM", "✅ Print success for transaction $transactionId")
+                            android.util.Log.e("CheckoutVM", "✅ Print success for transaction $transactionId")
                         }
                         is com.sentral.org.data.model.PrintResult.Failure -> {
                             android.util.Log.e("CheckoutVM", "❌ Print failed for transaction $transactionId: ${result.message}")
