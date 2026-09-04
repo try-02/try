@@ -79,6 +79,7 @@ import com.sentral.org.ui.viewmodel.PrinterTestResult
 fun AddPrinterScreen(
     onBack: () -> Unit,
     onSaved: () -> Unit,
+    modifier: Modifier = Modifier,
     viewModel: AddPrinterViewModel = viewModel(),
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) } // 0 = Bluetooth, 1 = WiFi
@@ -130,6 +131,7 @@ fun AddPrinterScreen(
     }
 
     Scaffold(
+        modifier = modifier,
         topBar = {
             TopAppBar(
                 title = {
