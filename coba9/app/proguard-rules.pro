@@ -72,7 +72,6 @@
     public static int i(...);
     public static int w(...);
     public static int d(...);
-    public static int e(...);
 }
 
 # HANYA dontwarn untuk API Java SE yang memang tidak ada di Android (Aman)
