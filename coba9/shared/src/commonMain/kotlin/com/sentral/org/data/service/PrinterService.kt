@@ -95,7 +95,7 @@ class PrinterService(
                     log.e { "⚠️ No default printer found, using NoOp driver" }
                 }
             } catch (e: Exception) {
-                log.e { "❌ Failed to initialize printer: ${e.message}", e }
+                log.e { "❌ Failed to initialize printer: ${e.message}"; e }
                 activeDriver = NoOpPrinterDriver()
                 activePrinter = null
             } finally {
@@ -161,7 +161,7 @@ class PrinterService(
             val result = try {
                 activeDriver.print(job.receipt)
             } catch (e: Exception) {
-                log.e { "❌ Print exception: ${e.message}", e }
+                log.e { "❌ Print exception: ${e.message}"; e }
                 PrintResult.Failure(e.message ?: "Unknown error", isRetryable = true)
             }
             

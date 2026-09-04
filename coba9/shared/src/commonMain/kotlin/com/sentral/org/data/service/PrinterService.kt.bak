@@ -17,6 +17,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 import kotlin.concurrent.Volatile
+import co.touchlab.kermit.Logger
 
 /**
  * Service yang mengelola antrian cetak dan health tracking printer.
