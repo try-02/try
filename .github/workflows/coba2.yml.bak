@@ -38,6 +38,7 @@ jobs:
           ./gradlew :app:analyzeReleaseR8Config --no-daemon --stacktrace
 
       - name: Upload R8 Analyzer Report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: r8-config-analyzer-report-${{ github.run_number }}
