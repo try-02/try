@@ -44,9 +44,6 @@ mockk = "1.14.11"
 androidxTestExt = "1.3.0"
 androidxTestRunner = "1.7.0"
 
-# Log
-kermit = "2.1.0"
-
 [libraries]
 # Core
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -113,9 +110,6 @@ androidx-room3-testing = { group = "androidx.room3", name = "room-testing", vers
 androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestExt" }
 androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidxTestRunner" }
 room3-testing = { group = "androidx.room3", name = "room3-testing-android", version.ref = "room3" }
-
-# Log
-kermit-log = { group = "co.touchlab", name = "kermit", version.ref = "kermit" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

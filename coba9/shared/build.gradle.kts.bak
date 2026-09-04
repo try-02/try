@@ -44,7 +44,7 @@ kotlin {
             // implementation(libs.koin.compose)
             // Serialization
             implementation(libs.kotlinx.serialization.json)
-            implementation(libs.kermit.log)
+            implementation(libs.
         }
         androidMain.dependencies {
             implementation(libs.room3.runtime)
