@@ -44,8 +44,8 @@ jobs:
       #  run: ./gradlew :shared:assemble --stacktrace
       - name: check
         run: ./gradlew check
-      - name: alltes shared dan testdebugunittes
-        run: ./gradlew :shared:allTests :app:testDebugUnitTest
+      # - name: alltes shared dan testdebugunittes
+      #  run: ./gradlew :shared:allTests :app:testDebugUnitTest
 
       - name: Upload Test Report
         if: always()
