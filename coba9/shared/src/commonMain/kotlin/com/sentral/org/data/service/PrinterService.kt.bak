@@ -16,6 +16,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
+import kotlin.concurrent.Volatile
+
 /**
  * Service yang mengelola antrian cetak dan health tracking printer.
  * 
@@ -36,14 +38,15 @@ class PrinterService(
     private var activeDriver: PrinterDriver = NoOpPrinterDriver()
     private var activePrinter: PrinterEntity? = null
     private val initMutex = Mutex()
-    
+
+    private val log = Logger.withTag("PrinterService")
+
     @Volatile
     private var isInitialized = false
 
     private companion object {
         const val MAX_CONSECUTIVE_FAILURES = 3
         // const val TAG = "PrinterService"
-        const val log = Logger.withTag("PrinterService")
     }
 
     data class PrintJob(
