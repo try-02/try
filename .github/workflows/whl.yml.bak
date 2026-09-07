@@ -1,0 +1,39 @@
+name: Build Termux Wheel
+
+on:
+  workflow_dispatch:
+    inputs:
+      package_name:
+        description: 'Nama paket Python di PyPI'
+        required: true
+        default: 'firecrawl-anydoc'
+
+jobs:
+  build:
+    # Gunakan ubuntu-24.04-arm jika repo Public (native ARM64).
+    # Jika repo Private, ganti ke ubuntu-latest dan pasang docker/setup-qemu-action.
+    runs-on: ubuntu-24.04-arm
+
+    steps:
+      - name: Siapkan folder output
+        run: mkdir -p dist
+
+      - name: Build Wheel di dalam Docker Termux
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}/dist:/dist \
+            termux/termux-docker:aarch64 \
+            sh -c "
+              set -e
+              pkg update -y
+              pkg install -y python python-pip rust clang make binutils
+              pip install --upgrade pip maturin
+              export RUSTFLAGS='-C lto=off'
+              pip wheel --no-deps -w /dist '${{ inputs.package_name }}'
+            "
+
+      - name: Upload Artifact (*.whl)
+        uses: actions/upload-artifact@v4
+        with:
+          name: termux-wheels
+          path: dist/*.whl

@@ -10,30 +10,69 @@ on:
 
 jobs:
   build:
-    # Gunakan ubuntu-24.04-arm jika repo Public (native ARM64).
-    # Jika repo Private, ganti ke ubuntu-latest dan pasang docker/setup-qemu-action.
     runs-on: ubuntu-24.04-arm
 
     steps:
-      - name: Siapkan folder output
-        run: mkdir -p dist
+      # 1. Cek apakah image Docker Termux Builder sudah ada di cache
+      - name: Cache Termux Builder Image
+        id: cache-docker
+        uses: actions/cache@v4
+        with:
+          path: /tmp/termux-builder.tar
+          key: termux-builder-image-v24
 
-      - name: Build Wheel di dalam Docker Termux
+      # 2. Jika belum ada di cache, build image dan install semua tools (hanya run pertama)
+      - name: Siapkan Environment Termux Builder
+        run: |
+          if [ -f /tmp/termux-builder.tar ]; then
+            echo "✅ Memuat Docker Termux dari cache (~5 detik)..."
+            docker load -i /tmp/termux-builder.tar
+          else
+            echo "⚙️ Membangun image Docker Termux baru (hanya berjalan sekali)..."
+            docker build -t termux-builder:latest - << 'EOF'
+            FROM termux/termux-docker:aarch64
+            ENV ANDROID_API_LEVEL=24
+            ENV RUSTFLAGS="-C lto=off"
+            RUN pkg update -y && \
+                pkg install -y python python-pip rust clang make binutils && \
+                pip install --upgrade pip setuptools wheel maturin
+          EOF
+            echo "💾 Menyimpan image ke cache..."
+            docker save termux-builder:latest -o /tmp/termux-builder.tar
+          fi
+
+      # 3. Siapkan folder output dan folder cache untuk dependensi Cargo/Pip
+      - name: Siapkan folder
+        run: mkdir -p dist cargo-cache pip-cache
+
+      - name: Cache Rust Crates & Pip Downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            cargo-cache
+            pip-cache
+          key: cargo-pip-cache-${{ inputs.package_name }}
+          restore-keys: |
+            cargo-pip-cache-
+
+      # 4. Kompilasi Wheel (Langsung eksekusi tanpa install ulang tools)
+      - name: Build Wheel
         run: |
           docker run --rm \
+            -e ANDROID_API_LEVEL=24 \
+            -e RUSTFLAGS="-C lto=off" \
             -v ${{ github.workspace }}/dist:/dist \
-            termux/termux-docker:aarch64 \
+            -v ${{ github.workspace }}/cargo-cache:/data/data/com.termux/files/home/.cargo \
+            -v ${{ github.workspace }}/pip-cache:/data/data/com.termux/files/home/.cache/pip \
+            termux-builder:latest \
             sh -c "
               set -e
-              pkg update -y
-              pkg install -y python python-pip rust clang make binutils
-              pip install --upgrade pip maturin
-              export RUSTFLAGS='-C lto=off'
               pip wheel --no-deps -w /dist '${{ inputs.package_name }}'
             "
 
+      # 5. Upload hasil .whl
       - name: Upload Artifact (*.whl)
         uses: actions/upload-artifact@v4
         with:
-          name: termux-wheels
+          name: termux-${{ inputs.package_name }}-wheel
           path: dist/*.whl
