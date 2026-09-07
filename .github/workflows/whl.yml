@@ -30,20 +30,13 @@ jobs:
           else
             echo "⚙️ Membangun image Docker Termux baru..."
             docker build -t termux-builder:latest - << 'EOF'
-            FROM termux/termux-docker:latest
-            
-            # Ganti ke user termux agar pkg/apt berjalan normal tanpa perlu /entrypoint.sh
-            USER termux
-            WORKDIR /data/data/com.termux/files/home
-            
+            FROM termux/termux-docker:aarch64
             ENV ANDROID_API_LEVEL=24
             ENV RUSTFLAGS="-C lto=off"
             ENV CARGO_HOME=/data/data/com.termux/files/home/.cargo
-            
-            # Jalankan perintah instalasi sebagai user termux bawaan kontainer
-            RUN pkg update -y && \
-                pkg install -y python python-pip rust clang make binutils && \
-                pip install --upgrade pip setuptools wheel maturin
+            RUN /entrypoint.sh pkg update -y && \
+                /entrypoint.sh pkg install -y python python-pip rust clang make binutils && \
+                /entrypoint.sh pip install --upgrade pip setuptools wheel maturin
           EOF
             echo "💾 Menyimpan image ke cache..."
             docker save termux-builder:latest -o /tmp/termux-builder.tar
@@ -72,9 +65,7 @@ jobs:
           # Pastikan izin tetap terbuka setelah cache di-restore
           chmod -R 777 dist cargo-cache pip-cache
 
-          # Menjalankan kontainer sebagai user 'termux' (UID 1000) agar sinkron dengan permission folder
           docker run --rm \
-            -u 1000:1000 \
             -e ANDROID_API_LEVEL=24 \
             -e RUSTFLAGS="-C lto=off" \
             -e CARGO_HOME=/data/data/com.termux/files/home/.cargo \
@@ -82,7 +73,7 @@ jobs:
             -v ${{ github.workspace }}/cargo-cache:/data/data/com.termux/files/home/.cargo \
             -v ${{ github.workspace }}/pip-cache:/data/data/com.termux/files/home/.cache/pip \
             termux-builder:latest \
-            sh -c "
+            /entrypoint.sh sh -c "
               set -e
               pip wheel --no-build-isolation --no-deps -w /dist '${{ inputs.package_name }}'
             "
