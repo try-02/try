@@ -33,9 +33,9 @@ jobs:
             FROM termux/termux-docker:aarch64
             ENV ANDROID_API_LEVEL=24
             ENV RUSTFLAGS="-C lto=off"
-            RUN pkg update -y && \
-                pkg install -y python python-pip rust clang make binutils && \
-                pip install --upgrade pip setuptools wheel maturin
+            RUN /entrypoint.sh pkg update -y && \
+                /entrypoint.sh pkg install -y python python-pip rust clang make binutils && \
+                /entrypoint.sh pip install --upgrade pip setuptools wheel maturin
           EOF
             echo "💾 Menyimpan image ke cache..."
             docker save termux-builder:latest -o /tmp/termux-builder.tar
