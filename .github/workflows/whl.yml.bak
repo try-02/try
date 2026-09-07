@@ -34,9 +34,9 @@ jobs:
             ENV ANDROID_API_LEVEL=24
             ENV RUSTFLAGS="-C lto=off"
             ENV CARGO_HOME=/data/data/com.termux/files/home/.cargo
-            RUN pkg update -y && \
-                pkg install -y python python-pip rust clang make binutils && \
-                pip install --upgrade pip setuptools wheel maturin
+            RUN /entrypoint.sh pkg update -y && \
+                /entrypoint.sh pkg install -y python python-pip rust clang make binutils && \
+                /entrypoint.sh pip install --upgrade pip setuptools wheel maturin
           EOF
             echo "💾 Menyimpan image ke cache..."
             docker save termux-builder:latest -o /tmp/termux-builder.tar
@@ -73,7 +73,7 @@ jobs:
             -v ${{ github.workspace }}/cargo-cache:/data/data/com.termux/files/home/.cargo \
             -v ${{ github.workspace }}/pip-cache:/data/data/com.termux/files/home/.cache/pip \
             termux-builder:latest \
-            sh -c "
+            /entrypoint.sh sh -c "
               set -e
               pip wheel --no-build-isolation --no-deps -w /dist '${{ inputs.package_name }}'
             "

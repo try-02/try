@@ -73,7 +73,7 @@ jobs:
             -v ${{ github.workspace }}/cargo-cache:/data/data/com.termux/files/home/.cargo \
             -v ${{ github.workspace }}/pip-cache:/data/data/com.termux/files/home/.cache/pip \
             termux-builder:latest \
-            /entrypoint.sh sh -c "
+            sh -c "
               set -e
               pip wheel --no-build-isolation --no-deps -w /dist '${{ inputs.package_name }}'
             "
