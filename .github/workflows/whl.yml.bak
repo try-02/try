@@ -13,26 +13,27 @@ jobs:
     runs-on: ubuntu-24.04-arm
 
     steps:
-      # 1. Cek apakah image Docker Termux Builder sudah ada di cache
+      # 1. Cek Docker Image dari Cache
       - name: Cache Termux Builder Image
         id: cache-docker
         uses: actions/cache@v4
         with:
           path: /tmp/termux-builder.tar
-          key: termux-builder-image-v24
+          key: termux-builder-image-v25
 
-      # 2. Jika belum ada di cache, build image dan install semua tools (hanya run pertama)
+      # 2. Build Image jika belum ada di cache
       - name: Siapkan Environment Termux Builder
         run: |
           if [ -f /tmp/termux-builder.tar ]; then
-            echo "✅ Memuat Docker Termux dari cache (~5 detik)..."
+            echo "✅ Memuat Docker Termux dari cache..."
             docker load -i /tmp/termux-builder.tar
           else
-            echo "⚙️ Membangun image Docker Termux baru (hanya berjalan sekali)..."
+            echo "⚙️ Membangun image Docker Termux baru..."
             docker build -t termux-builder:latest - << 'EOF'
             FROM termux/termux-docker:aarch64
             ENV ANDROID_API_LEVEL=24
             ENV RUSTFLAGS="-C lto=off"
+            ENV CARGO_HOME=/data/data/com.termux/files/home/.cargo
             RUN pkg update -y && \
                 pkg install -y python python-pip rust clang make binutils && \
                 pip install --upgrade pip setuptools wheel maturin
@@ -41,10 +42,13 @@ jobs:
             docker save termux-builder:latest -o /tmp/termux-builder.tar
           fi
 
-      # 3. Siapkan folder output dan folder cache untuk dependensi Cargo/Pip
-      - name: Siapkan folder
-        run: mkdir -p dist cargo-cache pip-cache
+      # 3. Siapkan folder dan buka izin akses (chmod 777 agar bebas Permission Denied)
+      - name: Siapkan folder & izin akses
+        run: |
+          mkdir -p dist cargo-cache pip-cache
+          chmod -R 777 dist cargo-cache pip-cache
 
+      # 4. Cache untuk crate Rust & Pip
       - name: Cache Rust Crates & Pip Downloads
         uses: actions/cache@v4
         with:
@@ -55,22 +59,26 @@ jobs:
           restore-keys: |
             cargo-pip-cache-
 
-      # 4. Kompilasi Wheel (Langsung eksekusi tanpa install ulang tools)
+      # 5. Build Wheel dengan --no-build-isolation
       - name: Build Wheel
         run: |
+          # Pastikan izin tetap terbuka setelah cache di-restore
+          chmod -R 777 dist cargo-cache pip-cache
+
           docker run --rm \
             -e ANDROID_API_LEVEL=24 \
             -e RUSTFLAGS="-C lto=off" \
+            -e CARGO_HOME=/data/data/com.termux/files/home/.cargo \
             -v ${{ github.workspace }}/dist:/dist \
             -v ${{ github.workspace }}/cargo-cache:/data/data/com.termux/files/home/.cargo \
             -v ${{ github.workspace }}/pip-cache:/data/data/com.termux/files/home/.cache/pip \
             termux-builder:latest \
             sh -c "
               set -e
-              pip wheel --no-deps -w /dist '${{ inputs.package_name }}'
+              pip wheel --no-build-isolation --no-deps -w /dist '${{ inputs.package_name }}'
             "
 
-      # 5. Upload hasil .whl
+      # 6. Upload hasil *.whl
       - name: Upload Artifact (*.whl)
         uses: actions/upload-artifact@v4
         with:
