@@ -19,36 +19,43 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /tmp/termux-builder.tar
-          key: termux-builder-image-v25
+          key: termux-builder-image-v26
 
-      # 2. Build Image jika belum ada di cache
+      # 2. Setup tools menggunakan /entrypoint.sh lalu commit ke image baru
       - name: Siapkan Environment Termux Builder
         run: |
           if [ -f /tmp/termux-builder.tar ]; then
             echo "✅ Memuat Docker Termux dari cache..."
             docker load -i /tmp/termux-builder.tar
           else
-            echo "⚙️ Membangun image Docker Termux baru..."
-            docker build -t termux-builder:latest - << 'EOF'
-            FROM termux/termux-docker:aarch64
-            ENV ANDROID_API_LEVEL=24
-            ENV RUSTFLAGS="-C lto=off"
-            ENV CARGO_HOME=/data/data/com.termux/files/home/.cargo
-            RUN /entrypoint.sh pkg update -y && \
-                /entrypoint.sh pkg install -y python python-pip rust clang make binutils && \
-                /entrypoint.sh pip install --upgrade pip setuptools wheel maturin
-          EOF
-            echo "💾 Menyimpan image ke cache..."
+            echo "⚙️ Menyiapkan tools di Termux lewat /entrypoint.sh (hanya run pertama)..."
+            
+            # Jalankan container pertama kali lewat /entrypoint.sh agar pkg diizinkan
+            docker run --name setup-termux \
+              termux/termux-docker:aarch64 \
+              /entrypoint.sh sh -c "
+                set -e
+                pkg update -y
+                pkg upgrade -y
+                pkg install -y python python-pip rust clang make binutils
+                pip install --upgrade pip setuptools wheel maturin
+              "
+
+            echo "💾 Menyimpan container yang sudah terisi tools ke image baru..."
+            docker commit setup-termux termux-builder:latest
+            docker rm setup-termux
+
+            echo "📦 Menyimpan image ke file tar untuk di-cache GitHub..."
             docker save termux-builder:latest -o /tmp/termux-builder.tar
           fi
 
-      # 3. Siapkan folder dan buka izin akses (chmod 777 agar bebas Permission Denied)
+      # 3. Siapkan folder output & izin akses folder
       - name: Siapkan folder & izin akses
         run: |
           mkdir -p dist cargo-cache pip-cache
           chmod -R 777 dist cargo-cache pip-cache
 
-      # 4. Cache untuk crate Rust & Pip
+      # 4. Cache untuk crate Rust & Pip downloads
       - name: Cache Rust Crates & Pip Downloads
         uses: actions/cache@v4
         with:
@@ -59,22 +66,25 @@ jobs:
           restore-keys: |
             cargo-pip-cache-
 
-      # 5. Build Wheel dengan --no-build-isolation
+      # 5. Build Wheel menggunakan /entrypoint.sh
       - name: Build Wheel
         run: |
-          # Pastikan izin tetap terbuka setelah cache di-restore
+          # Pastikan izin tetap 777 setelah restore cache
           chmod -R 777 dist cargo-cache pip-cache
 
           docker run --rm \
-            -e ANDROID_API_LEVEL=24 \
-            -e RUSTFLAGS="-C lto=off" \
-            -e CARGO_HOME=/data/data/com.termux/files/home/.cargo \
             -v ${{ github.workspace }}/dist:/dist \
             -v ${{ github.workspace }}/cargo-cache:/data/data/com.termux/files/home/.cargo \
             -v ${{ github.workspace }}/pip-cache:/data/data/com.termux/files/home/.cache/pip \
             termux-builder:latest \
-            sh -c "
+            /entrypoint.sh sh -c "
               set -e
+              export ANDROID_API_LEVEL=24
+              export CARGO_BUILD_TARGET=aarch64-linux-android
+              export RUSTFLAGS='-C lto=off'
+              export CARGO_HOME=/data/data/com.termux/files/home/.cargo
+
+              echo \"Memulai build untuk: ${{ inputs.package_name }} dengan Android API: \$ANDROID_API_LEVEL\"
               pip wheel --no-build-isolation --no-deps -w /dist '${{ inputs.package_name }}'
             "
 
