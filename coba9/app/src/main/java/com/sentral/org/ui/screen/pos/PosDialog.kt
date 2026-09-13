@@ -44,14 +44,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.sentral.org.ui.screen.pos.formatRupiah
 
-/** Fungsi pembantu sederhana untuk format Rupiah jika belum tersedia secara global
-private fun formatRupiah(amount: Long): String {
-    return "Rp %,d".format(amount).replace(',', '.')
-}
-*/
 // ============================================================
-// Kumpulan dialog layar kasir. Semua memakai bentuk extraLarge
-// (28.dp) sesuai design system M3 Expressive.
+// Kumpulan dialog layar kasir — Compact Edition.
+// Semua dialog dipadatkan untuk smartphone: spacing lebih rapat,
+// font lebih kecil, ikon lebih kecil, height dikurangi.
 // ============================================================
 
 /** Dialog konfirmasi generik untuk aksi destruktif ringan. */
@@ -66,22 +62,30 @@ fun DialogKonfirmasi(
 ) {
     AlertDialog(
         onDismissRequest = onTutup,
+        shape = MaterialTheme.shapes.medium,
         icon = if (ikonHapus) {
             {
                 Icon(
                     Icons.Filled.Delete,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(24.dp),
                 )
             }
         } else {
             null
         },
-        title = { Text(judul, fontWeight = FontWeight.Bold) },
+        title = {
+            Text(
+                judul,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+        },
         text = {
             Text(
                 deskripsi,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         },
@@ -91,21 +95,25 @@ fun DialogKonfirmasi(
                     onKonfirmasi()
                     onTutup()
                 },
+                shape = MaterialTheme.shapes.small,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.error,
                 ),
-            ) { Text(teksKonfirmasi) }
+            ) {
+                Text(teksKonfirmasi, style = MaterialTheme.typography.labelLarge)
+            }
         },
         dismissButton = {
-            TextButton(onClick = onTutup) { Text("Kembali") }
+            TextButton(onClick = onTutup) {
+                Text("Kembali", style = MaterialTheme.typography.labelLarge)
+            }
         },
     )
 }
 
 /**
- * Dialog pembayaran (spek 4.3): pilih metode via SplitButton (Tunai/QRIS)
- * (domain hanya punya TUNAI & QRIS), numpad besar untuk nominal tunai,
- * kembalian dihitung real-time.
+ * Dialog pembayaran compact: pilih metode via SplitButton (Tunai/QRIS),
+ * numpad padat untuk nominal tunai, kembalian dihitung real-time.
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -122,7 +130,6 @@ fun DialogPembayaran(
     val diterima = teksInput.filter(Char::isDigit).toLongOrNull() ?: 0L
     val selisih = diterima - total
     val cukup = total > 0 && diterima >= total
-    // QRIS tetap butuh total > 0 agar tidak bisa dikonfirmasi saat keranjang kosong/nol.
     val totalValid = total > 0
 
     fun tekan(tombol: String) {
@@ -135,43 +142,45 @@ fun DialogPembayaran(
 
     AlertDialog(
         onDismissRequest = onTutup,
+        shape = MaterialTheme.shapes.medium,
         title = {
             Column {
-                Text("Pembayaran", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 Text(
-                    "Total belanja ${formatRupiah(total)}",
-                    style = MaterialTheme.typography.bodyMedium,
+                    "Pembayaran",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    "Total: ${formatRupiah(total)}",
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         },
         text = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                // Metode pembayaran dipilih lewat SplitButton di confirmButton di bawah.
-                Spacer(Modifier.height(12.dp))
-
                 when (metode) {
                     1 -> {
-                        // --- Panel QRIS ---
+                        // --- Panel QRIS (compact) ---
                         Surface(
-                            shape = MaterialTheme.shapes.medium,
+                            shape = MaterialTheme.shapes.small,
                             color = MaterialTheme.colorScheme.secondaryContainer,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.padding(vertical = 22.dp),
+                                modifier = Modifier.padding(vertical = 12.dp, horizontal = 12.dp),
                             ) {
                                 Icon(
                                     Icons.Filled.QrCode2,
                                     contentDescription = null,
-                                    modifier = Modifier.size(64.dp),
+                                    modifier = Modifier.size(44.dp),
                                     tint = MaterialTheme.colorScheme.onSecondaryContainer,
                                 )
-                                Spacer(Modifier.height(8.dp))
+                                Spacer(Modifier.height(6.dp))
                                 Text(
                                     formatRupiah(total),
-                                    style = MaterialTheme.typography.headlineSmall,
+                                    style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                                 )
@@ -188,33 +197,33 @@ fun DialogPembayaran(
                     else -> {
                         // --- Panel tunai: input + chip nominal + numpad ---
                         Surface(
-                            shape = MaterialTheme.shapes.medium,
+                            shape = MaterialTheme.shapes.small,
                             color = MaterialTheme.colorScheme.surfaceVariant,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                            Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                                 Text(
                                     "Uang diterima",
-                                    style = MaterialTheme.typography.labelMedium,
+                                    style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 Text(
                                     if (teksInput.isBlank()) "Rp 0" else formatRupiah(diterima),
                                     textAlign = TextAlign.End,
-                                    style = MaterialTheme.typography.headlineMedium,
+                                    style = MaterialTheme.typography.titleLarge,
                                     color = if (cukup) MaterialTheme.colorScheme.secondary
                                     else MaterialTheme.colorScheme.onSurface,
                                     fontWeight = FontWeight.Bold,
                                     modifier = Modifier.fillMaxWidth(),
                                 )
                                 if (diterima > 0) {
-                                    Spacer(Modifier.height(4.dp))
+                                    Spacer(Modifier.height(2.dp))
                                     Text(
                                         if (cukup) "Kembalian: ${formatRupiah(selisih)}"
                                         else "Kurang ${formatRupiah(-selisih)}",
                                         color = if (cukup) MaterialTheme.colorScheme.secondary
                                         else MaterialTheme.colorScheme.error,
-                                        style = MaterialTheme.typography.titleSmall,
+                                        style = MaterialTheme.typography.labelMedium,
                                         fontWeight = FontWeight.SemiBold,
                                         modifier = Modifier.fillMaxWidth(),
                                         textAlign = TextAlign.End,
@@ -223,8 +232,8 @@ fun DialogPembayaran(
                             }
                         }
 
-                        Spacer(Modifier.height(10.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Spacer(Modifier.height(6.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             ChipNominal("Pas", dipilih = cukup && diterima == total) {
                                 teksInput = total.toString()
                             }
@@ -233,7 +242,7 @@ fun DialogPembayaran(
                             ChipNominal("200rb", dipilih = diterima == 200_000L) { teksInput = "200000" }
                         }
 
-                        Spacer(Modifier.height(10.dp))
+                        Spacer(Modifier.height(6.dp))
                         Numpad(onTekan = ::tekan)
                     }
                 }
@@ -243,10 +252,8 @@ fun DialogPembayaran(
             SplitButtonLayout(
                 leadingButton = {
                     SplitButtonDefaults.LeadingButton(
-                        // Tombol aktif hanya jika total valid DAN (QRIS ATAU tunai cukup)
                         enabled = !sedangProses && totalValid && (metode == 1 || cukup),
                         onClick = {
-                            android.util.Log.e("PosDialog", "🔘 Button Selesaikan clicked! metode=$metode, diterima=$diterima")
                             if (metode == 1) onKonfirmasiQris() else onKonfirmasiTunai(diterima)
                         },
                     ) {
@@ -262,7 +269,8 @@ fun DialogPembayaran(
                             )
                             Spacer(Modifier.size(ButtonDefaults.IconSpacing))
                             Text(
-                                "Selesaikan • ${if (metode == 1) "QRIS" else "Tunai"}",
+                                "Selesaikan",
+                                style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Bold,
                             )
                         }
@@ -283,12 +291,14 @@ fun DialogPembayaran(
             )
         },
         dismissButton = {
-            TextButton(onClick = onTutup) { Text("Batal") }
+            TextButton(onClick = onTutup) {
+                Text("Batal", style = MaterialTheme.typography.labelLarge)
+            }
         },
     )
 }
 
-/** Chip nominal cepat fully-rounded. */
+/** Chip nominal cepat compact. */
 @Composable
 private fun ChipNominal(label: String, dipilih: Boolean, onClick: () -> Unit) {
     Surface(
@@ -299,11 +309,11 @@ private fun ChipNominal(label: String, dipilih: Boolean, onClick: () -> Unit) {
     ) {
         Text(
             label,
-            style = MaterialTheme.typography.labelLarge,
+            style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.SemiBold,
             color = if (dipilih) MaterialTheme.colorScheme.onPrimaryContainer
             else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
         )
     }
 }
@@ -316,9 +326,9 @@ private fun Numpad(onTekan: (String) -> Unit) {
         listOf("1", "2", "3"),
         listOf("C", "0", "⌫"),
     )
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         tombol.forEach { barisTombol ->
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 barisTombol.forEach { t ->
                     val aksiHapus = t == "C" || t == "⌫"
                     Surface(
@@ -327,7 +337,7 @@ private fun Numpad(onTekan: (String) -> Unit) {
                         else MaterialTheme.colorScheme.surfaceVariant,
                         modifier = Modifier
                             .weight(1f)
-                            .height(50.dp)
+                            .height(44.dp)
                             .clickable(onClick = { onTekan(t) }),
                     ) {
                         Box(contentAlignment = Alignment.Center) {
@@ -336,11 +346,12 @@ private fun Numpad(onTekan: (String) -> Unit) {
                                     Icons.AutoMirrored.Filled.Backspace,
                                     contentDescription = "Hapus satu angka",
                                     tint = MaterialTheme.colorScheme.onErrorContainer,
+                                    modifier = Modifier.size(20.dp),
                                 )
                             } else {
                                 Text(
                                     t,
-                                    style = MaterialTheme.typography.titleMedium,
+                                    style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = if (aksiHapus) MaterialTheme.colorScheme.onErrorContainer
                                     else MaterialTheme.colorScheme.onSurface,
@@ -354,7 +365,7 @@ private fun Numpad(onTekan: (String) -> Unit) {
     }
 }
 
-/** Dialog sukses setelah checkout: nomor transaksi + kembalian. */
+/** Dialog sukses setelah checkout: nomor transaksi + kembalian (compact). */
 @Composable
 fun DialogCheckoutBerhasil(
     nomorTransaksi: String,
@@ -363,12 +374,13 @@ fun DialogCheckoutBerhasil(
 ) {
     AlertDialog(
         onDismissRequest = onTutup,
+        shape = MaterialTheme.shapes.medium,
         icon = {
             Icon(
                 Icons.Filled.CheckCircle,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.size(56.dp),
+                modifier = Modifier.size(44.dp),
             )
         },
         title = {
@@ -376,6 +388,7 @@ fun DialogCheckoutBerhasil(
                 "Transaksi Berhasil",
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(),
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
         },
@@ -390,19 +403,19 @@ fun DialogCheckoutBerhasil(
                 ) {
                     Text(
                         nomorTransaksi,
-                        style = MaterialTheme.typography.titleSmall,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                     )
                 }
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(8.dp))
                 Text(
                     "Kembalian",
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
                     formatRupiah(kembalian),
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
                 )
@@ -411,10 +424,10 @@ fun DialogCheckoutBerhasil(
         confirmButton = {
             Button(
                 onClick = onTutup,
-                modifier = Modifier.fillMaxWidth().height(48.dp),
-                shape = MaterialTheme.shapes.large,
+                modifier = Modifier.fillMaxWidth().height(40.dp),
+                shape = MaterialTheme.shapes.medium,
             ) {
-                Text("Selesai", style = MaterialTheme.typography.titleMedium)
+                Text("Selesai", style = MaterialTheme.typography.labelLarge)
             }
         },
     )

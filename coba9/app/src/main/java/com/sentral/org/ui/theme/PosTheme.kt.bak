@@ -15,29 +15,30 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 // ============================================================
-// DESIGN SYSTEM — Material 3 Expressive (Compact POS Edition)
-// Palet brand tetap. Bentuk (shapes) diperkecil untuk tampilan
-// yang lebih padat, profesional, dan hemat ruang di smartphone.
+// DESIGN SYSTEM — Material 3 Expressive
+// Palet brand tetap (dynamicColor sengaja tidak dipakai agar
+// tampilan kasir stabil & konsisten sepanjang jam operasional).
+// Referensi nuansa: Toast / Square / Shopify POS.
 // ============================================================
 
 // ---------- Light ----------
-private val Indigo600 = Color(0xFF4F46E5)        // Primary
+private val Indigo600 = Color(0xFF4F46E5)        // Primary — aksi utama
 private val OnIndigo = Color(0xFFFFFFFF)
 private val Indigo100 = Color(0xFFE0E7FF)        // primaryContainer
 private val Indigo900 = Color(0xFF1E1B4B)        // onPrimaryContainer
-private val Teal600 = Color(0xFF0D9488)          // Secondary
+private val Teal600 = Color(0xFF0D9488)          // Secondary — sukses/QRIS
 private val OnTeal = Color(0xFFFFFFFF)
-private val Teal100 = Color(0xFFCCFBF1)          // secondaryContainer
+private val Teal100 = Color(0xFFCCFBF1)          // secondaryContainer (chip aksen)
 private val Teal900 = Color(0xFF134E4A)
-private val Amber500 = Color(0xFFF59E0B)         // Tertiary
+private val Amber500 = Color(0xFFF59E0B)         // Tertiary — promo/poin
 private val Amber100 = Color(0xFFFEF3C7)
 private val Amber900 = Color(0xFF78350F)
-private val RedVivid = Color(0xFFD32F2F)         // Error
+private val RedVivid = Color(0xFFD32F2F)         // Error void/batal (spek brand)
 private val RedContainer = Color(0xFFFCE8E6)
 private val OnRedContainer = Color(0xFF601410)
 
 private val LightBackground = Color(0xFFF4F5FB)
-private val LightSurface = Color(0xFFFBFBFB)
+private val LightSurface = Color(0xFFFBFBFB)     // Spek: surface netral terang
 private val LightSurfaceVariant = Color(0xFFEAECF5)
 private val LightOnSurface = Color(0xFF171A2B)
 private val LightOnSurfaceVariant = Color(0xFF5A6072)
@@ -58,13 +59,15 @@ private val RedContainerDark = Color(0xFF7F1D1D)
 private val OnRedContainerDark = Color(0xFFFECACA)
 
 private val DarkBackground = Color(0xFF101122)
-private val DarkSurface = Color(0xFF1C1C1E)
+private val DarkSurface = Color(0xFF1C1C1E)      // Spek: surface gelap iOS-esque
 private val DarkSurfaceVariant = Color(0xFF232644)
 private val DarkOnSurface = Color(0xFFE4E6F5)
 private val DarkOnSurfaceVariant = Color(0xFFA9ADC2)
 private val DarkOutline = Color(0xFF8B90A6)
 private val DarkOutlineVariant = Color(0xFF34385A)
 
+// Base: expressive scheme (aktifkan expressive color roles + shape/typography
+// default M3 Expressive), lalu override dengan palet brand POS agar konsisten.
 private val LightColors = lightColorScheme().copy(
     primary = Indigo600,
     onPrimary = OnIndigo,
@@ -120,23 +123,28 @@ private val DarkColors = darkColorScheme().copy(
 )
 
 /**
- * Bentuk Compact POS:
- * Sudut lebih kecil (4-20dp) agar komponen lebih rapat, hemat ruang,
- * dan terlihat lebih utilitarian/profesional untuk smartphone.
+ * Bentuk M3 Expressive (spek desain):
+ * - Kartu produk & tombol aksi : large  = 20.dp
+ * - Sheet/dialog               : extraLarge = 28.dp
+ * - Elemen kecil               : 10–16.dp bertingkat
  */
 private val PosShapes = Shapes(
-    extraSmall = RoundedCornerShape(4.dp),
-    small = RoundedCornerShape(8.dp),
-    medium = RoundedCornerShape(12.dp),
-    large = RoundedCornerShape(16.dp),
-    extraLarge = RoundedCornerShape(20.dp),
+    extraSmall = RoundedCornerShape(10.dp),
+    small = RoundedCornerShape(12.dp),
+    medium = RoundedCornerShape(16.dp),
+    large = RoundedCornerShape(20.dp),
+    extraLarge = RoundedCornerShape(28.dp),
 )
 
+/** Type scale sans-serif modern (Inter-like via system sans-serif). */
 private val BaseTypography = Typography()
 
 private val PosTypography = BaseTypography.copy(
     displaySmall = BaseTypography.displaySmall.copy(fontWeight = FontWeight.Bold),
-    headlineMedium = BaseTypography.headlineMedium.copy(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold),
+    headlineMedium = BaseTypography.headlineMedium.copy(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Bold,
+    ),
     headlineSmall = BaseTypography.headlineSmall.copy(fontWeight = FontWeight.Bold),
     titleLarge = BaseTypography.titleLarge.copy(fontWeight = FontWeight.Bold),
     titleMedium = BaseTypography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
@@ -145,6 +153,13 @@ private val PosTypography = BaseTypography.copy(
     labelMedium = BaseTypography.labelMedium.copy(fontWeight = FontWeight.Medium),
 )
 
+/**
+ * Tema aplikasi POS dengan Material 3 Expressive.
+ * Base color scheme pakai expressive scheme (aktifkan expressive color roles),
+ * lalu di-override dengan palet brand agar tampilan kasir stabil & konsisten.
+ * Typography & shapes ekspresif sudah diset di PosTypography/PosShapes.
+ * Mengikuti dark mode sistem secara otomatis.
+ */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun PosTheme(
