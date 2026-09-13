@@ -73,6 +73,8 @@ import com.sentral.org.ui.navigation.PosRoute
 import com.sentral.org.ui.viewmodel.AddPrinterViewModel
 import com.sentral.org.ui.viewmodel.BluetoothDeviceUi
 import com.sentral.org.ui.viewmodel.PrinterTestResult
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -134,6 +136,7 @@ fun AddPrinterScreen(
     Scaffold(
         modifier = modifier,
         topBar = {
+            windowInsets = WindowInsets.statusBars,
             TopAppBar(
                 title = {
                     Text(

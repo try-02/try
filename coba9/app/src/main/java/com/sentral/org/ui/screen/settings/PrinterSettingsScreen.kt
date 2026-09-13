@@ -45,6 +45,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sentral.org.data.entity.PrinterEntity
 import com.sentral.org.data.repository.PrinterRepository
 import org.koin.compose.koinInject
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -60,6 +62,7 @@ fun PrinterSettingsScreen(
         modifier = modifier, // <-- TAMBAHKAN INI pada Scaffold
         topBar = {
             TopAppBar(
+                windowInsets = WindowInsets.statusBars,
                 title = { 
                     Text(
                         "Pengaturan Printer",

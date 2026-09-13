@@ -102,6 +102,8 @@ import com.sentral.org.data.entity.ProdukEntity
 import com.sentral.org.data.model.QUANTITY_SCALE
 import com.sentral.org.data.model.StatusKeranjang
 import org.koin.androidx.compose.koinViewModel
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
 
 import com.sentral.org.data.model.PrinterStatus.SIBUK
 import com.sentral.org.data.model.PrinterStatus.ERROR
@@ -186,6 +188,7 @@ fun PosUtamaScreen(
             Column {
                 // TopAppBar ultra-compact (48dp height)
                 Row(
+                    windowInsets = WindowInsets.statusBars,
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .fillMaxWidth()
