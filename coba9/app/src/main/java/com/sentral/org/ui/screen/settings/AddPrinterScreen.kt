@@ -136,7 +136,6 @@ fun AddPrinterScreen(
     Scaffold(
         modifier = modifier,
         topBar = {
-            windowInsets = WindowInsets.statusBars,
             TopAppBar(
                 title = {
                     Text(
@@ -150,6 +149,7 @@ fun AddPrinterScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
                     }
                 },
+                windowInsets = WindowInsets.statusBars,
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                 ),

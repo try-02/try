@@ -59,7 +59,7 @@ fun PrinterSettingsScreen(
     val printers by printerRepo.observeAll().collectAsStateWithLifecycle(initialValue = emptyList())
 
     Scaffold(
-        modifier = modifier, // <-- TAMBAHKAN INI pada Scaffold
+        modifier = modifier,
         topBar = {
             TopAppBar(
                 windowInsets = WindowInsets.statusBars,
