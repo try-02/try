@@ -714,24 +714,26 @@ private fun KartuProdukSpotify(
             modifier = Modifier.padding(12.dp),
         ) {
             // Avatar dengan gradient (Spotify-style)
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                brush = Brush.linearGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.primary,
-                        MaterialTheme.colorScheme.tertiary,
-                    )
-                ),
-                modifier = Modifier.size(64.dp),
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .background(
+                        brush = Brush.linearGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primary,
+                                MaterialTheme.colorScheme.tertiary,
+                            )
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                    ),
+                contentAlignment = Alignment.Center,
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        nama.trim().take(1).uppercase().ifBlank { "?" },
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Black,
-                        color = Color.White,
-                    )
-                }
+                Text(
+                    nama.trim().take(1).uppercase().ifBlank { "?" },
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Black,
+                    color = Color.White,
+                )
             }
             Spacer(Modifier.width(16.dp))
             

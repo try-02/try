@@ -1,5 +1,6 @@
 package com.sentral.org.ui.screen.pos
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -173,15 +174,18 @@ fun DialogPembayaran(
                 when (metode) {
                     1 -> {
                         // --- Panel QRIS (expressif dengan gradient) ---
-                        Surface(
-                            shape = MaterialTheme.shapes.large,
-                            brush = Brush.linearGradient(
-                                colors = listOf(
-                                    MaterialTheme.colorScheme.secondaryContainer,
-                                    MaterialTheme.colorScheme.primaryContainer,
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    brush = Brush.linearGradient(
+                                        colors = listOf(
+                                            MaterialTheme.colorScheme.secondaryContainer,
+                                            MaterialTheme.colorScheme.primaryContainer,
+                                        )
+                                    ),
+                                    shape = MaterialTheme.shapes.large,
                                 )
-                            ),
-                            modifier = Modifier.fillMaxWidth(),
                         ) {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -331,7 +335,7 @@ private fun ChipNominal(label: String, dipilih: Boolean, onClick: () -> Unit) {
         color = if (dipilih) MaterialTheme.colorScheme.primaryContainer
         else MaterialTheme.colorScheme.surfaceVariant,
         modifier = Modifier
-            .weight(1f)
+            .fillMaxWidth()
             .clickable(onClick = onClick),
     ) {
         Text(
@@ -404,24 +408,26 @@ fun DialogCheckoutBerhasil(
         onDismissRequest = onTutup,
         shape = MaterialTheme.shapes.extraLarge,
         icon = {
-            Surface(
-                shape = CircleShape,
-                brush = Brush.linearGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.secondary,
-                        MaterialTheme.colorScheme.primary,
-                    )
-                ),
-                modifier = Modifier.size(72.dp),
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .background(
+                        brush = Brush.linearGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.secondary,
+                                MaterialTheme.colorScheme.primary,
+                            )
+                        ),
+                        shape = CircleShape,
+                    ),
+                contentAlignment = Alignment.Center,
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        Icons.Filled.CheckCircle,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(36.dp),
-                    )
-                }
+                Icon(
+                    Icons.Filled.CheckCircle,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(36.dp),
+                )
             }
         },
         title = {
