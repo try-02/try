@@ -1,0 +1,30 @@
+name: Fast Cross-Build RTK (NDK)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout RTK
+        uses: actions/checkout@v7
+        with:
+          repository: rtk-ai/rtk
+
+      - name: Setup Rust & Target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk
+
+      - name: Build for Android ARM64
+        run: cargo ndk -t arm64-v8a build --release
+
+      - name: Upload Binary Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rtk-aarch64-termux
+          path: target/aarch64-linux-android/release/rtk
