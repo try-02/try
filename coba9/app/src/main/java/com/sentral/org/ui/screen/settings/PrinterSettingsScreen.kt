@@ -35,17 +35,22 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.Switch
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sentral.org.data.entity.PrinterEntity
+import com.sentral.org.data.entity.ProfilTokoEntity
 import com.sentral.org.data.repository.PrinterRepository
+import com.sentral.org.data.repository.ProfilTokoRepository
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -55,8 +60,11 @@ fun PrinterSettingsScreen(
     onAddPrinter: () -> Unit,
     modifier: Modifier = Modifier,
     printerRepo: PrinterRepository = koinInject(),
+    profilRepo: ProfilTokoRepository = koinInject(),
 ) {
     val printers by printerRepo.observeAll().collectAsStateWithLifecycle(initialValue = emptyList())
+    val profilToko by profilRepo.observe().collectAsStateWithLifecycle(initialValue = null)
+    val scope = rememberCoroutineScope()
 
     Scaffold(
         modifier = modifier,
@@ -97,56 +105,113 @@ fun PrinterSettingsScreen(
             )
         },
     ) { padding ->
-        if (printers.isEmpty()) {
-            Box(
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+        ) {
+            // Kartu Setelan Auto-Print
+            Surface(
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.surfaceVariant,
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center,
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Surface(
-                        shape = RoundedCornerShape(24.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        modifier = Modifier.size(128.dp),
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                Icons.Filled.Print,
-                                contentDescription = null,
-                                modifier = Modifier.size(64.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(16.dp),
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Cetak Struk Otomatis",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "Cetak struk secara otomatis setiap kali pembayaran selesai",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
-                    Spacer(Modifier.height(28.dp))
-                    Text(
-                        "Belum ada printer",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        "Tap tombol di bawah untuk menambahkan printer",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    Spacer(Modifier.width(16.dp))
+                    Switch(
+                        checked = profilToko?.cetakOtomatis ?: true,
+                        onCheckedChange = { aktif ->
+                            scope.launch {
+                                val current = profilToko ?: ProfilTokoEntity(
+                                    id = 1,
+                                    namaToko = "Toko POS",
+                                    alamat = "",
+                                    catatanFooter = "",
+                                    logoUri = null,
+                                    cetakOtomatis = aktif,
+                                )
+                                profilRepo.save(current.copy(cetakOtomatis = aktif))
+                            }
+                        },
                     )
                 }
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentPadding = PaddingValues(20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                items(printers, key = { it.id }) { printer ->
-                    PrinterCard(
-                        printer = printer,
-                        onClick = { /* TODO: Edit/Delete printer */ },
-                    )
+
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+            )
+
+            // Konten: Kosong atau Daftar Printer
+            if (printers.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Surface(
+                            shape = RoundedCornerShape(24.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier.size(128.dp),
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Filled.Print,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(64.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(28.dp))
+                        Text(
+                            "Belum ada printer",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            "Tap tombol di bawah untuk menambahkan printer",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    items(printers, key = { it.id }) { printer ->
+                        PrinterCard(
+                            printer = printer,
+                            onClick = { /* TODO: Edit/Delete printer */ },
+                        )
+                    }
                 }
             }
         }

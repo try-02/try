@@ -9,7 +9,6 @@ import androidx.room3.Transaction
 import androidx.room3.paging.PagingSourceDaoReturnTypeConverter
 import com.sentral.org.data.entity.TransaksiDenganDetail
 import com.sentral.org.data.entity.TransaksiEntity
-import com.sentral.org.data.model.StatusTransaksi
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -62,35 +61,4 @@ interface TransaksiDao {
         now: Long,
         reason: String
     ): Int
-
-        @Query("""
-        SELECT * FROM transaksi
-        WHERE (:query = '' OR nomor_transaksi LIKE :query || '%')
-          AND (:status IS NULL OR status = :status)
-          AND (:startDate IS NULL OR dibuat_pada >= :startDate)
-          AND (:endDate IS NULL OR dibuat_pada <= :endDate)
-        ORDER BY dibuat_pada DESC, id DESC
-    """)
-    fun observeFilteredPaged(
-        query: String,
-        status: StatusTransaksi?,
-        startDate: Long?,
-        endDate: Long?,
-    ): PagingSource<Int, TransaksiEntity>
-
-    @Transaction
-    @Query("""
-        SELECT * FROM transaksi
-        WHERE (:query = '' OR nomor_transaksi LIKE :query || '%')
-          AND (:status IS NULL OR status = :status)
-          AND (:startDate IS NULL OR dibuat_pada >= :startDate)
-          AND (:endDate IS NULL OR dibuat_pada <= :endDate)
-        ORDER BY dibuat_pada DESC, id DESC
-    """)
-    suspend fun getFilteredForExport(
-        query: String,
-        status: StatusTransaksi?,
-        startDate: Long?,
-        endDate: Long?,
-    ): List<TransaksiDenganDetail>
 }

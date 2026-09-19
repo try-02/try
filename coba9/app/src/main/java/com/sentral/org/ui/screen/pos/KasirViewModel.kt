@@ -245,6 +245,13 @@ class KasirViewModel(
         
         viewModelScope.launch {
             try {
+                // Load profil toko terlebih dahulu untuk memeriksa konfigurasi
+                val profilToko = profilRepo.get()
+                if (profilToko?.cetakOtomatis == false) {
+                    android.util.Log.e("KasirVM", "ℹ️ Auto-print dilewati karena fitur cetak otomatis dinonaktifkan")
+                    return@launch
+                }
+
                 // Load semua data yang dibutuhkan untuk cetak struk
                 val transaksi = transaksiRepo.getById(transactionId)
                 if (transaksi == null) {
@@ -254,7 +261,6 @@ class KasirViewModel(
                 
                 val items = transaksiRepo.getItems(transactionId)
                 val payments = transaksiRepo.getPayments(transactionId)
-                val profilToko = profilRepo.get()
 
                 android.util.Log.e("KasirVM", "📋 Loaded: ${items.size} items, ${payments.size} payments")
 

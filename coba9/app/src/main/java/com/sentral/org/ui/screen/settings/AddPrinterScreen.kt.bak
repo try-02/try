@@ -28,7 +28,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
@@ -460,7 +459,7 @@ private fun BluetoothDeviceCard(
             }
 
             Icon(
-                Icons.AutoMirrored.Filled.ArrowForward,
+                Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Pilih",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )

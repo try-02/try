@@ -23,23 +23,14 @@ object ReceiptFormatter {
         transaksi: TransaksiEntity,
         items: List<ItemTransaksiEntity>,
         payments: List<PembayaranEntity>,
-        isReprint: Boolean = false,
     ): ReceiptData {
-        val baseFooter = toko?.catatanFooter ?: "Terima kasih"
-        val finalFooter = if (isReprint) {
-            if (baseFooter.isNotBlank()) "$baseFooter\n[C]<b>*** SALINAN / REPRINT ***</b>"
-            else "[C]<b>*** SALINAN / REPRINT ***</b>"
-        } else {
-            baseFooter
-        }
-
         return ReceiptData(
             toko = StoreInfo(
                 nama = toko?.namaToko ?: "Toko",
                 alamat = toko?.alamat ?: "",
-                footer = finalFooter,
-                logoUri = toko?.logoUri,
-                cetakQr = false,
+                footer = toko?.catatanFooter ?: "Terima kasih",
+                logoUri = toko?.logoUri,  // ← BARU
+                cetakQr = false,  // ← Default false, bisa di-enable nanti via Settings
             ),
             transaksi = TransactionInfo(
                 nomor = transaksi.nomorTransaksi,
@@ -66,7 +57,7 @@ object ReceiptFormatter {
                     kembalian = p.kembalian,
                 )
             },
-            footer = finalFooter,
+            footer = toko?.catatanFooter ?: "Terima kasih",
         )
     }
 

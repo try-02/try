@@ -13,12 +13,7 @@ import com.sentral.org.data.model.StatusTransaksi
     ForeignKey(entity = ShiftEntity::class, parentColumns = ["id"], childColumns = ["shift_id"], onDelete = ForeignKey.RESTRICT),
 ], indices = [
     Index(value = ["nomor_transaksi"], unique = true, name = "unik_transaksi_nomor"),
-    Index("kasir_id"), 
-    Index("shift_id"), 
-    Index("dibuat_pada"), 
-    Index("status"),
-    Index(value = ["dibuat_pada", "id"], name = "indeks_transaksi_waktu_id"),
-    Index(value = ["status", "dibuat_pada", "id"], name = "indeks_transaksi_status_waktu_id"),
+    Index("kasir_id"), Index("shift_id"), Index("dibuat_pada"), Index("status"),
 ])
 data class TransaksiEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
