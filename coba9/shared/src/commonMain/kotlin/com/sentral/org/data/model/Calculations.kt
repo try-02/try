@@ -34,6 +34,7 @@ object MoneyMath {
     fun allocateProportional(weights: List<Long>, amount: Long): List<Long> {
         require(amount >= 0) { "Nilai alokasi tidak boleh negatif" }
         if (weights.isEmpty()) return emptyList()
+        require(weights.all { it >= 0 }) { "Bobot tidak boleh negatif" }
         if (amount == 0L) return List(weights.size) { 0L }
         val total = sumExact(weights)
         require(total > 0) { "Total bobot harus > 0 bila alokasi > 0" }
@@ -57,8 +58,9 @@ object MoneyMath {
     }
 
     // Caller menjamin dividend >= 0, sehingga formula ini aman.
+    // addExact mencegah silent overflow bila komputasi bernilai sangat besar.
     private fun divideHalfUp(dividend: Long, divisor: Long): Long =
-        (dividend + divisor / 2) / divisor
+        addExact(dividend, divisor / 2) / divisor
 }
 
 /** Menjumlahkan 2 Long dengan exception saat overflow (KMP replacement untuk Math.addExact). */
@@ -75,7 +77,7 @@ internal fun multiplyExact(x: Long, y: Long): Long {
     val r = x * y
     val ax = if (x < 0) -x else x
     val ay = if (y < 0) -y else y
-    if (ax or ay ushr 31 != 0L) {
+    if (((ax or ay) ushr 31) != 0L) {
         if ((y != 0L && r / y != x) || (x == Long.MIN_VALUE && y == -1L)) {
             throw ArithmeticException("Long overflow: $x * $y")
         }

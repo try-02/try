@@ -36,6 +36,9 @@ import com.sentral.org.data.service.PrinterService
 import com.sentral.org.data.model.PrinterStatus
 import com.sentral.org.data.model.PrinterStatus.SIAP
 import com.sentral.org.data.repository.TransaksiRepository
+import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class KasirViewModel(
@@ -50,6 +53,7 @@ class KasirViewModel(
     private val transaksiRepo: TransaksiRepository,  // ← BARU
 ) : ViewModel() {
 
+    private val keranjangMutex = Mutex()
     private val pilihanManual = MutableStateFlow<Long?>(null)
     private val sedangProses = MutableStateFlow(false)
     private val _event = Channel<KasirEvent>(Channel.BUFFERED)
@@ -69,14 +73,18 @@ class KasirViewModel(
         printerService.status
             .stateIn(viewModelScope, SharingStarted.Eagerly, SIAP)
 
-    val uiState: StateFlow<KasirUiState> = combine(
+    private data class DetilKeranjang(
+        val produk: List<com.sentral.org.data.entity.ProdukEntity>,
+        val carts: List<com.sentral.org.data.entity.KeranjangEntity>,
+        val manual: Long?,
+    )
+
+    private val dataKeranjangFlow = combine(
         produkRepo.observeAktif(),
         cartRepo.observeOpen(),
         pilihanManual,
-        sedangProses,
-    ) { produk, carts, manual, proses -> Detil(produk, carts, manual, proses) }
+    ) { produk, carts, manual -> DetilKeranjang(produk, carts, manual) }
         .flatMapLatest { d ->
-            // Auto-pilih: keranjang pilihan user bila masih terbuka, else keranjang teratas.
             val efektif = d.manual?.takeIf { id -> d.carts.any { it.id == id } }
                 ?: d.carts.firstOrNull()?.id
             val itemsFlow = if (efektif == null) {
@@ -95,17 +103,23 @@ class KasirViewModel(
                         totalBaris = MoneyMath.lineTotal(it.hargaMaster, it.item.jumlah),
                     )
                 }
-                KasirUiState(
-                    produk = d.produk,
-                    keranjangTerbuka = d.carts,
-                    keranjangAktifId = efektif,
-                    baris = baris,
-                    subtotal = MoneyMath.sumExact(baris.map { it.totalBaris }),
-                    sedangProses = d.proses,
-                )
+                Triple(d, efektif, baris)
             }
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), KasirUiState())
+
+    val uiState: StateFlow<KasirUiState> = combine(
+        dataKeranjangFlow,
+        sedangProses,
+    ) { (d, efektif, baris), proses ->
+        KasirUiState(
+            produk = d.produk,
+            keranjangTerbuka = d.carts,
+            keranjangAktifId = efektif,
+            baris = baris,
+            subtotal = MoneyMath.sumExact(baris.map { it.totalBaris }),
+            sedangProses = proses,
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), KasirUiState())
 
     // ---------- Intent: keranjang ----------
 
@@ -262,6 +276,7 @@ class KasirViewModel(
                         }
                         is com.sentral.org.data.model.PrintResult.Failure -> {
                             android.util.Log.e("KasirVM", "❌ Print failed for transaction $transactionId: ${result.message}")
+                            kirim("Struk gagal dicetak: ${result.message}", KasirEvent.Pesan.Jenis.GALAT)
                         }
                     }
                 }
@@ -345,21 +360,28 @@ class KasirViewModel(
         }
     }
 
-    private suspend fun pastikanKeranjangAktif(): Long? {
+    private suspend fun pastikanKeranjangAktif(): Long? = keranjangMutex.withLock {
         uiState.value.keranjangAktifId?.let { return it }
         val s = sesi.sesiAktif() ?: run {
-            kirim("Buka shift kasir terlebih dahulu", KasirEvent.Pesan.Jenis.GALAT); return null
+            kirim("Buka shift kasir terlebih dahulu", KasirEvent.Pesan.Jenis.GALAT)
+            return null
         }
         return cartService.buatKeranjang(s.kasirId, System.currentTimeMillis()).fold(
-            onSuccess = { id -> pilihanManual.value = id; id },
-            onFailure = { e -> kirim(e.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT); null },
+            onSuccess = { id ->
+                pilihanManual.value = id
+                id
+            },
+            onFailure = { e ->
+                kirim(e.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT)
+                null
+            },
         )
     }
 
     private fun kirim(teks: String, jenis: KasirEvent.Pesan.Jenis) {
         viewModelScope.launch { _event.send(KasirEvent.Pesan(teks, jenis)) }
     }
-
+/**
     private data class Detil(
         val produk: List<com.sentral.org.data.entity.ProdukEntity>,
         val carts: List<com.sentral.org.data.entity.KeranjangEntity>,
@@ -367,11 +389,15 @@ class KasirViewModel(
         val proses: Boolean,
     )
 }
-
+*/
 /** Nomor transaksi unik-praktis; unique index DB adalah pengaman pamungkas. */
 object NomorTransaksiGenerator {
+    private val counter = AtomicInteger(0)
+
     fun buat(now: Long): String {
         val stamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.ROOT).format(Date(now))
-        return "TRX-$stamp-${(100..999).random()}"
+        val seq = (counter.incrementAndGet() % 1000).let { if (it < 0) it + 1000 else it }
+        val randomSuffix = (10..99).random()
+        return "TRX-$stamp-${seq.toString().padStart(3, '0')}-$randomSuffix"
     }
 }

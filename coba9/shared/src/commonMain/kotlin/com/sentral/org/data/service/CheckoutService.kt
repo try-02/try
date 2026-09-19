@@ -188,6 +188,15 @@ class CheckoutService(
         total: Long,
         currentPaymentTimestamp: Long,
     ): PaymentCalculation {
+        // Transaksi Rp 0 (misal tukar garansi atau diskon 100%) sah tanpa pembayaran
+        if (total == 0L) {
+            if (inputs.isNotEmpty()) {
+                val sum = MoneyMath.sumExact(inputs.map { it.amount })
+                if (sum != 0L) throw PosDataException.Validation("Transaksi Rp 0 tidak membutuhkan pembayaran")
+            }
+            return PaymentCalculation(rows = emptyList(), paid = 0L, change = 0L)
+        }
+
         if (inputs.isEmpty()) throw PosDataException.Validation("Pembayaran kosong")
         if (inputs.any { it.amount <= 0 }) throw PosDataException.Validation("Jumlah pembayaran harus > 0")
         val sum = MoneyMath.sumExact(inputs.map { it.amount })

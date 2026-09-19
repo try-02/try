@@ -6,15 +6,16 @@ import com.sentral.org.data.model.PrintResult
 import com.sentral.org.data.model.PrinterStatus
 import com.sentral.org.data.model.ReceiptData
 import com.sentral.org.data.model.suspendRunCatching
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 
 import kotlin.concurrent.Volatile
 import co.touchlab.kermit.Logger
@@ -39,6 +40,7 @@ class PrinterService(
     private var activeDriver: PrinterDriver = NoOpPrinterDriver()
     private var activePrinter: PrinterEntity? = null
     private val initMutex = Mutex()
+    private val initSignal = CompletableDeferred<Unit>()
 
     @Volatile
     private var isInitialized = false
@@ -99,6 +101,7 @@ class PrinterService(
                 activePrinter = null
             } finally {
                 isInitialized = true
+                initSignal.complete(Unit)
             }
         }
     }
@@ -117,14 +120,12 @@ class PrinterService(
      */
     fun enqueue(receipt: ReceiptData, onResult: (PrintResult) -> Unit = {}) {
         scope.launch {
-            // Tunggu sampai printer ter-initialize
-            var waitCount = 0
-            while (!isInitialized && waitCount < 50) {
-                delay(100)
-                waitCount++
+            // Tunggu sinyal inisialisasi selesai (maksimal 5 detik), tanpa busy-loop
+            val initializedInTime = withTimeoutOrNull(5000L) {
+                initSignal.await()
             }
             
-            if (!isInitialized) {
+            if (initializedInTime == null && !isInitialized) {
                 log.e { "⚠️ Printer not initialized after 5s, using current driver" }
             }
             

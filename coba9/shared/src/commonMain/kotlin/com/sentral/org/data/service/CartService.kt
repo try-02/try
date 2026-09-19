@@ -73,7 +73,9 @@ class CartService(
         pastikanAktif(cartId)
         val product = products.getById(productId)
             ?: throw PosDataException.NotFound("Produk tidak ditemukan")
-        if (!product.aktif) throw PosDataException.Validation("Produk tidak aktif")
+        // Hanya tolak penambahan unit baru bila produk nonaktif.
+        // Pengurangan/penghapusan (delta < 0) tetap diizinkan agar kasir tidak terjebak.
+        if (delta > 0 && !product.aktif) throw PosDataException.Validation("Produk tidak aktif")
 
         val updated = items.changeQuantity(cartId, productId, delta, now)
         if (updated == 0) {

@@ -270,7 +270,12 @@ class EscPosPrinterDriver(
                     }
 
                     // ===== GUARD 3: Hitung sample size untuk hemat memory saat decode =====
-                    val sampleSize = calculateSampleSize(bounds.outWidth, bounds.outHeight, TARGET_LOGO_WIDTH)
+                    val sampleSize = calculateSampleSize(
+                        bounds.outWidth,
+                        bounds.outHeight,
+                        TARGET_LOGO_WIDTH,
+                        TARGET_LOGO_HEIGHT,
+                    )
                     val decodeOptions = BitmapFactory.Options().apply {
                         inSampleSize = sampleSize
                         inPreferredConfig = Bitmap.Config.ARGB_8888
@@ -280,15 +285,17 @@ class EscPosPrinterDriver(
                         BitmapFactory.decodeStream(stream, null, decodeOptions)
                     } ?: return@withContext null
 
-                    // ===== GUARD 4: Resize ke target (aspect ratio preserved) =====
-                    val aspectRatio = original.height.toFloat() / original.width.toFloat()
-                    val targetHeight = (TARGET_LOGO_WIDTH * aspectRatio)
-                        .roundToInt()
-                        .coerceIn(1, TARGET_LOGO_HEIGHT)
+                    // ===== GUARD 4: Resize ke target (skala proporsional dua dimensi) =====
+                    val scale = minOf(
+                        TARGET_LOGO_WIDTH.toFloat() / original.width,
+                        TARGET_LOGO_HEIGHT.toFloat() / original.height,
+                    )
+                    val targetWidth = (original.width * scale).roundToInt().coerceAtLeast(1)
+                    val targetHeight = (original.height * scale).roundToInt().coerceAtLeast(1)
 
                     val resized = Bitmap.createScaledBitmap(
                         original,
-                        TARGET_LOGO_WIDTH,
+                        targetWidth,
                         targetHeight,
                         true,  // filter = true untuk quality lebih baik
                     )
@@ -344,13 +351,14 @@ class EscPosPrinterDriver(
 
     /**
      * Hitung sample size untuk BitmapFactory.decodeStream.
-     * Sample size = 2^n yang membuat dimensi hasil >= target.
+     * Sample size = 2^n yang membuat dimensi hasil (lebar dan tinggi) aman di memori.
      */
-    private fun calculateSampleSize(width: Int, height: Int, targetWidth: Int): Int {
+    private fun calculateSampleSize(width: Int, height: Int, targetWidth: Int, targetHeight: Int): Int {
         var sampleSize = 1
-        if (width > targetWidth) {
+        if (width > targetWidth || height > targetHeight) {
             val halfWidth = width / 2
-            while ((halfWidth / sampleSize) >= targetWidth) {
+            val halfHeight = height / 2
+            while ((halfWidth / sampleSize) >= targetWidth && (halfHeight / sampleSize) >= targetHeight) {
                 sampleSize *= 2
             }
         }

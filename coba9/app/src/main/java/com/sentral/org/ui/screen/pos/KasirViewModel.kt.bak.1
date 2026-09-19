@@ -1,9 +1,7 @@
 package com.sentral.org.ui.screen.pos
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.sentral.org.R
 import com.sentral.org.data.model.CheckoutRequest
 import com.sentral.org.data.model.MetodePembayaran
 import com.sentral.org.data.model.MoneyMath
@@ -35,14 +33,12 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 import com.sentral.org.data.service.PrinterService
-import com.sentral.org.data.usecase.AutoPrintUseCase
 import com.sentral.org.data.model.PrinterStatus
 import com.sentral.org.data.model.PrinterStatus.SIAP
-import co.touchlab.kermit.Logger
+import com.sentral.org.data.repository.TransaksiRepository
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class KasirViewModel(
-    application: Application,
     private val cartService: CartService,
     private val checkoutService: CheckoutService,
     private val produkRepo: ProdukRepository,
@@ -51,12 +47,8 @@ class KasirViewModel(
     private val profilRepo: ProfilTokoRepository,
     private val sesi: SesiKasirProvider,
     private val printerService: PrinterService,
-    private val autoPrintUseCase: AutoPrintUseCase,
-) : AndroidViewModel(application) {
-
-    private companion object {
-        val log = Logger.withTag("KasirVM")
-    }
+    private val transaksiRepo: TransaksiRepository,  // ← BARU
+) : ViewModel() {
 
     private val pilihanManual = MutableStateFlow<Long?>(null)
     private val sedangProses = MutableStateFlow(false)
@@ -117,21 +109,53 @@ class KasirViewModel(
 
     // ---------- Intent: keranjang ----------
 
-    fun pilihKeranjang(id: Long) { pilihanManual.update { id } }
+    fun pilihKeranjang(id: Long) { pilihanManual.value = id }
 
     fun keranjangBaru() {
         viewModelScope.launch {
             val s = sesi.sesiAktif() ?: run {
-                kirim(getString(R.string.err_shift_not_open), KasirEvent.Pesan.Jenis.GALAT); return@launch
+                kirim("Buka shift kasir terlebih dahulu", KasirEvent.Pesan.Jenis.GALAT); return@launch
             }
-            cartService.buatKeranjang(s.kasirId, System.currentTimeMillis())
-                .onSuccess { id ->
-                    pilihanManual.update { id }
-                    kirim(getString(R.string.info_cart_created), KasirEvent.Pesan.Jenis.INFO)
-                }
-                .onFailure { kirim(it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT) }
+            cartService.buatKeranjang(s.kasirId, System.currentTimeMillis()).fold(
+                onSuccess = { id ->
+                    pilihanManual.value = id
+                    kirim("Keranjang baru dibuat", KasirEvent.Pesan.Jenis.INFO)
+                },
+                onFailure = { kirim(it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT) },
+            )
         }
     }
+
+    fun tahanKeranjang() {
+        viewModelScope.launch {
+            val cartId = uiState.value.keranjangAktifId ?: return@launch
+            cartService.hold(cartId, System.currentTimeMillis()).fold(
+                onSuccess = { pilihanManual.value = null; kirim("Keranjang ditahan", KasirEvent.Pesan.Jenis.INFO) },
+                onFailure = { kirim(it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT) },
+            )
+        }
+    }
+
+    fun batalkanKeranjang() {
+        viewModelScope.launch {
+            val cartId = uiState.value.keranjangAktifId ?: return@launch
+            cartService.cancel(cartId, System.currentTimeMillis()).fold(
+                onSuccess = { pilihanManual.value = null; kirim("Keranjang dibatalkan", KasirEvent.Pesan.Jenis.INFO) },
+                onFailure = { kirim(it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT) },
+            )
+        }
+    }
+
+    fun lanjutkanKeranjang(id: Long) {
+        viewModelScope.launch {
+            cartService.resume(id, System.currentTimeMillis()).fold(
+                onSuccess = { pilihanManual.value = id },
+                onFailure = { kirim(it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT) },
+            )
+        }
+    }
+
+    // ---------- Intent: item ----------
 
     fun tambahProduk(produkId: Long) {
         viewModelScope.launch {
@@ -141,34 +165,49 @@ class KasirViewModel(
         }
     }
 
-    fun tambahJumlah(produkId: Long) {
-        viewModelScope.launch {
-            val cartId = uiState.value.keranjangAktifId ?: return@launch
-            cartService.ubahJumlah(cartId, produkId, quantityOf(1), System.currentTimeMillis())
-                .onFailure { kirim(it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT) }
-        }
-    }
-
-    fun kurangJumlah(produkId: Long) {
-        viewModelScope.launch {
-            val cartId = uiState.value.keranjangAktifId ?: return@launch
-            cartService.ubahJumlah(cartId, produkId, quantityOf(-1), System.currentTimeMillis())
-                .onFailure { kirim(it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT) }
-        }
-    }
+    fun tambahSatuan(produkId: Long) = ubah(produkId, quantityOf(1))
+    fun kurangiSatuan(produkId: Long) = ubah(produkId, -quantityOf(1))
 
     fun hapusBaris(produkId: Long) {
         viewModelScope.launch {
             val cartId = uiState.value.keranjangAktifId ?: return@launch
-            cartService.hapusProduk(cartId, produkId)
+            cartService.hapusBaris(cartId, produkId, System.currentTimeMillis())
                 .onFailure { kirim(it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT) }
         }
     }
 
-    fun undoHapusBaris(produkId: Long, jumlahScaled: Long) {
+    /**
+     * Hapus baris dengan konfirmasi lembut: pesan sukses + tombol UNDO.
+     * Dipakai SwipeToDismiss di keranjang — swipe tanpa dialog, masih bisa dibatalkan.
+     * Event HapusBaris kini membawa produkId + jumlahScaled agar UNDO kembalikan qty tepat.
+     */
+    fun batalkanBarisDenganUndo(produkId: Long) {
+        val baris = uiState.value.baris.firstOrNull { it.produkId == produkId } ?: return
+        viewModelScope.launch {
+            val cartId = uiState.value.keranjangAktifId ?: return@launch
+            cartService.hapusBaris(cartId, produkId, System.currentTimeMillis()).fold(
+                onSuccess = {
+                    _event.send(
+                        KasirEvent.HapusBaris(
+                            nama = baris.nama,
+                            produkId = produkId,
+                            jumlahScaled = baris.jumlahScaled,
+                        )
+                    )
+                },
+                onFailure = { kirim(it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT) },
+            )
+        }
+    }
+
+    /**
+     * Dipanggil saat user tap UNDO di snackbar hapus baris.
+     * Menambahkan ulang produk dengan jumlah asli (scaled) ke keranjang aktif.
+     */
+    fun restoreBaris(produkId: Long, jumlahScaled: Long) {
         viewModelScope.launch {
             val cartId = uiState.value.keranjangAktifId ?: run {
-                kirim(getString(R.string.err_cart_already_gone), KasirEvent.Pesan.Jenis.GALAT)
+                kirim("Keranjang aktif sudah hilang, undo tidak bisa dilakukan", KasirEvent.Pesan.Jenis.GALAT)
                 return@launch
             }
             if (jumlahScaled <= 0) return@launch
@@ -179,9 +218,57 @@ class KasirViewModel(
 
     /**
      * Trigger cetak struk otomatis setelah checkout sukses.
+     * 
+     * DESAIN:
+     * - Load data transaksi + items + payments + profil toko
+     * - Format menjadi ReceiptData
+     * - Enqueue ke PrinterService (non-blocking)
+     * - Jika gagal load data, log error tapi jangan gagalkan checkout
+     * - Cetak dilakukan async di background, tidak memblokir UI
      */
     private fun triggerAutoPrint(transactionId: Long) {
-        viewModelScope.launch { autoPrintUseCase(transactionId) }
+        android.util.Log.e("KasirVM", "🖨️ Auto-print triggered for transaction $transactionId")
+        
+        viewModelScope.launch {
+            try {
+                // Load semua data yang dibutuhkan untuk cetak struk
+                val transaksi = transaksiRepo.getById(transactionId)
+                if (transaksi == null) {
+                    android.util.Log.e("KasirVM", "❌ Transaksi tidak ditemukan: $transactionId")
+                    return@launch
+                }
+                
+                val items = transaksiRepo.getItems(transactionId)
+                val payments = transaksiRepo.getPayments(transactionId)
+                val profilToko = profilRepo.get()
+
+                android.util.Log.e("KasirVM", "📋 Loaded: ${items.size} items, ${payments.size} payments")
+
+                // Format menjadi ReceiptData
+                val receiptData = com.sentral.org.data.service.ReceiptFormatter.format(
+                    toko = profilToko,
+                    transaksi = transaksi,
+                    items = items,
+                    payments = payments,
+                )
+
+                android.util.Log.e("KasirVM", "📝 Receipt formatted, enqueueing to printer")
+
+                // Enqueue ke printer service (non-blocking)
+                printerService.enqueue(receiptData) { result ->
+                    when (result) {
+                        is com.sentral.org.data.model.PrintResult.Success -> {
+                            android.util.Log.e("KasirVM", "✅ Print success for transaction $transactionId")
+                        }
+                        is com.sentral.org.data.model.PrintResult.Failure -> {
+                            android.util.Log.e("KasirVM", "❌ Print failed for transaction $transactionId: ${result.message}")
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("KasirVM", "❌ Auto-print exception: ${e.message}", e)
+            }
+        }
     }
 
     // ---------- Intent: pembayaran ----------
@@ -189,7 +276,7 @@ class KasirViewModel(
     fun bayarCash(uangDiterima: Long) {
         val total = uiState.value.subtotal
         if (uangDiterima < total) {
-            kirim(getString(R.string.err_insufficient_payment), KasirEvent.Pesan.Jenis.GALAT); return
+            kirim("Uang diterima kurang dari total", KasirEvent.Pesan.Jenis.GALAT); return
         }
         eksekusiBayar(listOf(PaymentRequest(MetodePembayaran.CASH, total, received = uangDiterima)))
     }
@@ -211,23 +298,23 @@ class KasirViewModel(
     private fun eksekusiBayar(payments: List<PaymentRequest>) {
         val state = uiState.value
         val cartId = state.keranjangAktifId ?: run {
-            kirim(getString(R.string.err_no_active_cart), KasirEvent.Pesan.Jenis.GALAT); return
+            kirim("Tidak ada keranjang aktif", KasirEvent.Pesan.Jenis.GALAT); return
         }
         if (state.baris.isEmpty()) {
-            kirim(getString(R.string.err_cart_empty), KasirEvent.Pesan.Jenis.GALAT); return
+            kirim("Keranjang kosong", KasirEvent.Pesan.Jenis.GALAT); return
         }
         
-        log.d { "🛒 eksekusiBayar() called with ${payments.size} payments" }
+        android.util.Log.e("KasirVM", "🛒 eksekusiBayar() called with ${payments.size} payments")
         
         viewModelScope.launch {
-            sedangProses.update { true }
+            sedangProses.value = true
             try {
                 val s = sesi.sesiAktif() ?: run {
-                    kirim(getString(R.string.err_shift_not_open), KasirEvent.Pesan.Jenis.GALAT); return@launch
+                    kirim("Buka shift kasir terlebih dahulu", KasirEvent.Pesan.Jenis.GALAT); return@launch
                 }
                 val now = System.currentTimeMillis()
                 
-                log.d { "⏳ Calling checkoutService.checkout()" }
+                android.util.Log.e("KasirVM", "⏳ Calling checkoutService.checkout()")
                 
                 checkoutService.checkout(
                     CheckoutRequest(
@@ -240,7 +327,7 @@ class KasirViewModel(
                     )
                 ).fold(
                     onSuccess = { r ->
-                        log.i { "✅ Checkout success: txId=${r.transactionId}, number=${r.transactionNumber}" }
+                        android.util.Log.e("KasirVM", "✅ Checkout success: txId=${r.transactionId}, number=${r.transactionNumber}")
                         
                         // ===== AUTO-PRINT: Trigger cetak struk =====
                         triggerAutoPrint(r.transactionId)
@@ -248,12 +335,12 @@ class KasirViewModel(
                         _event.send(KasirEvent.CheckoutBerhasil(r.transactionNumber, r.change))
                     },
                     onFailure = { error ->
-                        log.e(error) { "❌ Checkout failed: ${error.message}" }
+                        android.util.Log.e("KasirVM", "❌ Checkout failed: ${error.message}", error)
                         kirim(error.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT)
                     },
                 )
             } finally {
-                sedangProses.update { false }
+                sedangProses.value = false
             }
         }
     }
@@ -261,10 +348,10 @@ class KasirViewModel(
     private suspend fun pastikanKeranjangAktif(): Long? {
         uiState.value.keranjangAktifId?.let { return it }
         val s = sesi.sesiAktif() ?: run {
-            kirim(getString(R.string.err_shift_not_open), KasirEvent.Pesan.Jenis.GALAT); return null
+            kirim("Buka shift kasir terlebih dahulu", KasirEvent.Pesan.Jenis.GALAT); return null
         }
         return cartService.buatKeranjang(s.kasirId, System.currentTimeMillis()).fold(
-            onSuccess = { id -> pilihanManual.update { id }; id },
+            onSuccess = { id -> pilihanManual.value = id; id },
             onFailure = { e -> kirim(e.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT); null },
         )
     }
@@ -272,8 +359,6 @@ class KasirViewModel(
     private fun kirim(teks: String, jenis: KasirEvent.Pesan.Jenis) {
         viewModelScope.launch { _event.send(KasirEvent.Pesan(teks, jenis)) }
     }
-
-    private fun getString(resId: Int): String = getApplication<Application>().getString(resId)
 
     private data class Detil(
         val produk: List<com.sentral.org.data.entity.ProdukEntity>,
