@@ -4,6 +4,7 @@ import com.sentral.org.data.entity.PergerakanPersediaanEntity
 import com.sentral.org.data.entity.PersediaanEntity
 import com.sentral.org.data.entity.ProdukEntity
 import com.sentral.org.data.model.JenisPergerakanPersediaan
+import com.sentral.org.data.model.QUANTITY_SCALE
 
 data class SeedItem(
     val nama: String,
@@ -42,29 +43,36 @@ object SeedProduct {
 
     fun toPersediaanEntities(produkIdByIndex: List<Long>, items: List<SeedItem>, waktu: Long): List<PersediaanEntity> =
         items.mapIndexed { i, item ->
+            val stokScaled = item.stokAwal * QUANTITY_SCALE
+            val rusakScaled = item.rusakAwal * QUANTITY_SCALE
             PersediaanEntity(
                 produkId = produkIdByIndex[i],
-                jumlah = item.stokAwal,
-                jumlahRusak = item.rusakAwal,
+                jumlah = stokScaled,
+                jumlahRusak = rusakScaled,
                 diperbaruiPada = waktu,
             )
         }
 
     /**
-     * Ledger "stok awal" per produk.
-     * TODO: ganti JenisPergerakanPersediaan.MASUK jika enum Anda punya nilai khusus mis. STOK_AWAL.
+     * Ledger "stok awal" per produk dengan saldo ter-skala QUANTITY_SCALE konsisten.
      */
     fun toPergerakanEntities(produkIdByIndex: List<Long>, items: List<SeedItem>, waktu: Long): List<PergerakanPersediaanEntity> =
         items.mapIndexed { i, item ->
+            val stokScaled = item.stokAwal * QUANTITY_SCALE
+            val rusakScaled = item.rusakAwal * QUANTITY_SCALE
             PergerakanPersediaanEntity(
                 produkId = produkIdByIndex[i],
                 jenis = JenisPergerakanPersediaan.STOK_AWAL,
-                perubahanJumlah = item.stokAwal,
-                perubahanJumlahRusak = item.rusakAwal,
-                saldoJumlahSebelum = 0, saldoJumlahSetelah = item.stokAwal,
-                saldoRusakSebelum = 0,  saldoRusakSetelah = item.rusakAwal,
-                transaksiId = null, itemTransaksiId = null,
-                pengembalianId = null, itemPengembalianId = null,
+                perubahanJumlah = stokScaled,
+                perubahanJumlahRusak = rusakScaled,
+                saldoJumlahSebelum = 0L,
+                saldoJumlahSetelah = stokScaled,
+                saldoRusakSebelum = 0L,
+                saldoRusakSetelah = rusakScaled,
+                transaksiId = null,
+                itemTransaksiId = null,
+                pengembalianId = null,
+                itemPengembalianId = null,
                 shiftId = null,
                 keterangan = "Stok awal",
                 dibuatPada = waktu,
