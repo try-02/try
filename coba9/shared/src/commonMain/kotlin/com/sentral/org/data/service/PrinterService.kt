@@ -178,6 +178,7 @@ class PrinterService(
 
     private suspend fun onPrintSuccess() {
         val printer = activePrinter ?: return
+        activePrinter = printer.copy(gagalStatusBerturut = 0, dinonaktifkanOtomatis = false)
         printerDao.updateHealth(printer.id, failures = 0, disabled = false)
     }
 
@@ -186,6 +187,11 @@ class PrinterService(
         
         val current = printer.gagalStatusBerturut + 1
         val shouldDisable = current >= MAX_CONSECUTIVE_FAILURES
+        
+        activePrinter = printer.copy(
+            gagalStatusBerturut = current,
+            dinonaktifkanOtomatis = shouldDisable,
+        )
         
         printerDao.updateHealth(
             id = printer.id,

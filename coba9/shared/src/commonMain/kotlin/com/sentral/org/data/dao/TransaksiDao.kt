@@ -86,11 +86,14 @@ interface TransaksiDao {
           AND (:startDate IS NULL OR dibuat_pada >= :startDate)
           AND (:endDate IS NULL OR dibuat_pada <= :endDate)
         ORDER BY dibuat_pada DESC, id DESC
+        LIMIT :limit OFFSET :offset
     """)
-    suspend fun getFilteredForExport(
+    suspend fun getFilteredForExportPaged(
         query: String,
         status: StatusTransaksi?,
         startDate: Long?,
         endDate: Long?,
+        limit: Int,
+        offset: Int,
     ): List<TransaksiDenganDetail>
 }

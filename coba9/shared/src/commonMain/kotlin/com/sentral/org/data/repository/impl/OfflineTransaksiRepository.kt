@@ -48,12 +48,18 @@ class OfflineTransaksiRepository(
 
     override suspend fun getPayments(id: Long): List<PembayaranEntity> = payments.getByTransaction(id)
 
-    override suspend fun getTransaksiForExport(filter: TransaksiFilter): List<TransaksiDenganDetail> {
-        return transactions.getFilteredForExport(
+    override suspend fun getTransaksiForExportPaged(
+        filter: TransaksiFilter,
+        limit: Int,
+        offset: Int,
+    ): List<TransaksiDenganDetail> {
+        return transactions.getFilteredForExportPaged(
             query = filter.query.trim(),
             status = filter.status,
             startDate = filter.startDate,
             endDate = filter.endDate,
+            limit = limit,
+            offset = offset,
         )
     }
 }

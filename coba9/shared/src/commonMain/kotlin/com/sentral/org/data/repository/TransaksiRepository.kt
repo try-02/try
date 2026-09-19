@@ -15,5 +15,9 @@ interface TransaksiRepository {
     suspend fun getDetailById(id: Long): TransaksiDenganDetail?
     suspend fun getItems(id: Long): List<ItemTransaksiEntity>
     suspend fun getPayments(id: Long): List<PembayaranEntity>
-    suspend fun getTransaksiForExport(filter: TransaksiFilter): List<TransaksiDenganDetail>
+    suspend fun getTransaksiForExportPaged(
+        filter: TransaksiFilter,
+        limit: Int,
+        offset: Int,
+    ): List<TransaksiDenganDetail>
 }

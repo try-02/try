@@ -9,10 +9,8 @@ class TransaksiExportUseCase(
     private val excelExporter: ExcelReportExporter,
 ) {
     suspend fun exportToExcel(filter: TransaksiFilter): Result<Uri> = runCatching {
-        val data = transaksiRepo.getTransaksiForExport(filter)
-        if (data.isEmpty()) {
-            throw IllegalStateException("Tidak ada transaksi untuk diekspor pada filter ini")
+        excelExporter.exportTransaksiStreaming { limit, offset ->
+            transaksiRepo.getTransaksiForExportPaged(filter, limit, offset)
         }
-        excelExporter.exportTransaksi(data)
     }
 }
