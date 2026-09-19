@@ -28,9 +28,7 @@ class VoidService(
             val cashier = cashiers.getById(request.cashierId)
                 ?: throw PosDataException.NotFound("Kasir tidak ditemukan")
             if (!cashier.aktif) throw PosDataException.Validation("Kasir tidak aktif")
-            val shift = request.shiftId?.let {
-                shifts.getById(it) ?: throw PosDataException.NotFound("Shift tidak ditemukan")
-            }
+            val shift = request.shiftId?.let { shifts.getById(it) }
             if (shift != null && (shift.status != StatusShift.TERBUKA || shift.kasirId != cashier.id)) {
                 throw PosDataException.InvalidState("Shift tidak aktif atau bukan milik kasir")
             }

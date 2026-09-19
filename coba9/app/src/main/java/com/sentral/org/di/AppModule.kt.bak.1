@@ -125,11 +125,11 @@ val appModule = module {
             transaksiRepo = get(),  // ← BARU
         )
     }
-    viewModel {
+    viewModel { (application: Application) ->
         AddPrinterViewModel(
-            application = androidApplication(),
+            application = application,
             printerRepo = get(),
-            printerService = get(),
+            printerService = get(),  // ← TAMBAH
         )
     }
 }

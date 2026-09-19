@@ -65,20 +65,14 @@ class ReturService(
                 // neto bila baris diretur bertahap; klem terhadap sisa budget.
                 val netLine = item.totalBaris - item.diskonItem
                 val budget = netLine - returns.getRefundTotal(item.id)
-
-                if (netLine > 0L && budget <= 0L) {
+                if (budget <= 0) {
                     throw PosDataException.InvalidState("Nilai retur untuk item ini sudah habis")
                 }
-
-                val refund = when {
-                    netLine == 0L -> 0L
-                    line.quantity == remaining -> budget // Retur tuntas: ambil sisa budget penuh agar tidak ada selisih sen
-                    else -> MoneyMath.proportional(
-                        part = line.quantity,
-                        total = item.jumlah,
-                        amount = netLine,
-                    ).coerceAtMost(budget)
-                }
+                val refund = MoneyMath.proportional(
+                    part = line.quantity,
+                    total = item.jumlah,
+                    amount = netLine,
+                ).coerceAtMost(budget)
 
                 PreparedLine(item, line, refund)
             }
@@ -116,36 +110,30 @@ class ReturService(
             )
 
             processed.forEachIndexed { index, p ->
+                val productId = p.item.produkId
+                    ?: throw PosDataException.Validation("Produk historical tidak tersedia untuk mutasi stok")
                 when (p.line.destination) {
-                    TujuanStokPengembalian.NORMAL -> {
-                        val productId = p.item.produkId
-                            ?: throw PosDataException.Validation("Produk historical tidak tersedia untuk mutasi stok")
-                        inventory.mutateNormal(
-                            productId = productId,
-                            normalDelta = p.line.quantity,
-                            type = JenisPergerakanPersediaan.PENGEMBALIAN_NORMAL,
-                            returnId = returnId,
-                            returnItemId = returnItemIds[index],
-                            shiftId = shift?.id,
-                            note = "Retur transaksi ${transaction.nomorTransaksi}",
-                            now = request.now,
-                        )
-                    }
-                    TujuanStokPengembalian.RUSAK -> {
-                        val productId = p.item.produkId
-                            ?: throw PosDataException.Validation("Produk historical tidak tersedia untuk mutasi stok")
-                        inventory.mutateNormal(
-                            productId = productId,
-                            normalDelta = 0,
-                            damagedDelta = p.line.quantity,
-                            type = JenisPergerakanPersediaan.PENGEMBALIAN_RUSAK,
-                            returnId = returnId,
-                            returnItemId = returnItemIds[index],
-                            shiftId = shift?.id,
-                            note = "Retur rusak transaksi ${transaction.nomorTransaksi}",
-                            now = request.now,
-                        )
-                    }
+                    TujuanStokPengembalian.NORMAL -> inventory.mutateNormal(
+                        productId = productId,
+                        normalDelta = p.line.quantity,
+                        type = JenisPergerakanPersediaan.PENGEMBALIAN_NORMAL,
+                        returnId = returnId,
+                        returnItemId = returnItemIds[index],
+                        shiftId = shift?.id,
+                        note = "Retur transaksi ${transaction.nomorTransaksi}",
+                        now = request.now,
+                    )
+                    TujuanStokPengembalian.RUSAK -> inventory.mutateNormal(
+                        productId = productId,
+                        normalDelta = 0,
+                        damagedDelta = p.line.quantity,
+                        type = JenisPergerakanPersediaan.PENGEMBALIAN_RUSAK,
+                        returnId = returnId,
+                        returnItemId = returnItemIds[index],
+                        shiftId = shift?.id,
+                        note = "Retur rusak transaksi ${transaction.nomorTransaksi}",
+                        now = request.now,
+                    )
                     TujuanStokPengembalian.TIDAK_DIKEMBALIKAN -> Unit
                 }
             }

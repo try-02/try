@@ -262,16 +262,13 @@ fun DialogPembayaran(
                         }
 
                         Spacer(Modifier.height(12.dp))
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            ChipNominal("Pas", dipilih = cukup && diterima == total, modifier = Modifier.weight(1f)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            ChipNominal("Pas", dipilih = cukup && diterima == total) {
                                 teksInput = total.toString()
                             }
-                            ChipNominal("50rb", dipilih = diterima == 50_000L, modifier = Modifier.weight(1f)) { teksInput = "50000" }
-                            ChipNominal("100rb", dipilih = diterima == 100_000L, modifier = Modifier.weight(1f)) { teksInput = "100000" }
-                            ChipNominal("200rb", dipilih = diterima == 200_000L, modifier = Modifier.weight(1f)) { teksInput = "200000" }
+                            ChipNominal("50rb", dipilih = diterima == 50_000L) { teksInput = "50000" }
+                            ChipNominal("100rb", dipilih = diterima == 100_000L) { teksInput = "100000" }
+                            ChipNominal("200rb", dipilih = diterima == 200_000L) { teksInput = "200000" }
                         }
 
                         Spacer(Modifier.height(12.dp))
@@ -332,17 +329,14 @@ fun DialogPembayaran(
 
 /** Chip nominal cepat expressif dengan shape yang lebih bold. */
 @Composable
-private fun ChipNominal(
-    label: String,
-    dipilih: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-) {
+private fun ChipNominal(label: String, dipilih: Boolean, onClick: () -> Unit) {
     Surface(
         shape = MaterialTheme.shapes.medium,
         color = if (dipilih) MaterialTheme.colorScheme.primaryContainer
         else MaterialTheme.colorScheme.surfaceVariant,
-        modifier = modifier.clickable(onClick = onClick),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
     ) {
         Text(
             label,

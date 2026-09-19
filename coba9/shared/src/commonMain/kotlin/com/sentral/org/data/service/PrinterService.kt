@@ -137,9 +137,7 @@ class PrinterService(
      * Ganti printer aktif berdasarkan ID.
      */
     suspend fun setActivePrinter(printerId: Long): Result<Unit> = suspendRunCatching {
-        // Query by ID untuk memilih printer spesifik
-        // Jika DAO belum punya getById, gunakan getDefault sebagai fallback
-        val printer = printerDao.getDefault()
+        val printer = printerDao.getById(printerId)
             ?: throw IllegalArgumentException("Printer dengan ID $printerId tidak ditemukan")
         
         initMutex.withLock {
