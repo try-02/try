@@ -23,13 +23,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import android.content.Intent
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -50,7 +53,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.SheetValue
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -87,12 +91,21 @@ fun RiwayatTransaksiScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val pagedTransaksi: LazyPagingItems<TransaksiEntity> = viewModel.pagedTransaksi.collectAsLazyPagingItems()
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         viewModel.event.collect { event ->
             when (event) {
                 is RiwayatEvent.Pesan -> snackbarHostState.showSnackbar(event.teks)
                 is RiwayatEvent.ReprintSukses -> snackbarHostState.showSnackbar("Salinan struk ${event.nomorTransaksi} berhasil dicetak")
+                is RiwayatEvent.FileSiapDibagikan -> {
+                    val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = event.mimeType
+                        putExtra(Intent.EXTRA_STREAM, event.uri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    context.startActivity(Intent.createChooser(sendIntent, "Bagikan Laporan Transaksi"))
+                }
             }
         }
     }
@@ -113,6 +126,24 @@ fun RiwayatTransaksiScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
+                    }
+                },
+                actions = {
+                    if (uiState.sedangEkspor) {
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .padding(end = 16.dp),
+                            strokeWidth = 2.dp,
+                        )
+                    } else {
+                        IconButton(onClick = { viewModel.eksporLaporanExcel() }) {
+                            Icon(
+                                Icons.Filled.FileDownload,
+                                contentDescription = "Ekspor Laporan Excel",
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -405,10 +436,13 @@ private fun SheetDetailTransaksi(
 ) {
     val dateFormat = remember { SimpleDateFormat("dd MMMM yyyy, HH:mm", Locale.getDefault()) }
     val waktuFormatted = remember(detail.transaksi.dibuatPada) { dateFormat.format(Date(detail.transaksi.dibuatPada)) }
+    val sheetState = rememberBottomSheetState(
+        initialValue = SheetValue.Hidden
+    )
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        sheetState = sheetState,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         containerColor = MaterialTheme.colorScheme.surface,
     ) {

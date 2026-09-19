@@ -19,6 +19,8 @@ import com.sentral.org.ui.screen.pos.CheckoutViewModel
 import com.sentral.org.ui.screen.pos.KasirViewModel
 import com.sentral.org.ui.screen.riwayat.RiwayatViewModel
 import com.sentral.org.ui.viewmodel.AddPrinterViewModel
+import com.sentral.org.export.ExcelReportExporter
+import com.sentral.org.export.TransaksiExportUseCase
 import org.koin.android.ext.koin.androidApplication
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
@@ -133,11 +135,14 @@ val appModule = module {
             printerService = get(),
         )
     }
+    single { ExcelReportExporter(androidContext()) }
+    factory { TransaksiExportUseCase(transaksiRepo = get(), excelExporter = get()) }
     viewModel {
         RiwayatViewModel(
             transaksiRepo = get(),
             profilRepo = get(),
             printerService = get(),
+            exportUseCase = get(),
         )
     }
 }

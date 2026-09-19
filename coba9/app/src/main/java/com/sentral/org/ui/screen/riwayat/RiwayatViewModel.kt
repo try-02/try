@@ -27,11 +27,14 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+import com.sentral.org.export.TransaksiExportUseCase
+
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 class RiwayatViewModel(
     private val transaksiRepo: TransaksiRepository,
     private val profilRepo: ProfilTokoRepository,
     private val printerService: PrinterService,
+    private val exportUseCase: TransaksiExportUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RiwayatUiState())
@@ -144,6 +147,31 @@ class RiwayatViewModel(
                 _uiState.update { it.copy(sedangReprint = false) }
                 _event.send(RiwayatEvent.Pesan(e.message ?: "Terjadi kesalahan cetak ulang", RiwayatEvent.Pesan.Jenis.GALAT))
             }
+        }
+    }
+
+    // ---------- Intent: Ekspor Laporan Excel ----------
+
+    fun eksporLaporanExcel() {
+        if (_uiState.value.sedangEkspor) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(sedangEkspor = true) }
+            exportUseCase.exportToExcel(_uiState.value.filter).fold(
+                onSuccess = { uri ->
+                    _uiState.update { it.copy(sedangEkspor = false) }
+                    _event.send(RiwayatEvent.FileSiapDibagikan(uri))
+                },
+                onFailure = { error ->
+                    _uiState.update { it.copy(sedangEkspor = false) }
+                    _event.send(
+                        RiwayatEvent.Pesan(
+                            error.message ?: "Gagal mengekspor laporan transaksi",
+                            RiwayatEvent.Pesan.Jenis.GALAT,
+                        )
+                    )
+                },
+            )
         }
     }
 }
