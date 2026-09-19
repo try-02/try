@@ -29,6 +29,7 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import android.bluetooth.BluetoothManager
 
 /**
  * Implementasi PrinterDriver untuk Android menggunakan library DantSu ESC/POS v3.4.0.
@@ -199,7 +200,8 @@ class EscPosPrinterDriver(
         val connection: DeviceConnection = when (connectionType) {
             PrinterConnectionType.BLUETOOTH -> {
                 val address = printerConfig.alamatBluetooth ?: return null
-                val adapter = android.bluetooth.BluetoothAdapter.getDefaultAdapter() ?: return null
+                val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager ?: return null
+                val adapter = bluetoothManager.adapter ?: return null
                 val device = adapter.getRemoteDevice(address)
                 BluetoothConnection(device)
             }

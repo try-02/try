@@ -77,7 +77,8 @@ import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.SheetValue
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -398,7 +399,10 @@ fun PosUtamaScreen(
             if (sheetKeranjangTerbuka) {
                 ModalBottomSheet(
                     onDismissRequest = { sheetKeranjangTerbuka = false },
-                    sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+                    sheetState = rememberBottomSheetState(
+                        initialValue = SheetValue.Hidden,
+                        skipPartiallyExpanded = true,
+                    ),
                     shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
                     containerColor = MaterialTheme.colorScheme.surface,
                 ) {
@@ -864,16 +868,13 @@ private fun PanelKeranjang(
             ) {
                 itemsIndexed(state.baris, key = { _, b -> b.itemId }) { _, baris ->
                     val dismissState = rememberSwipeToDismissBoxState(
-                        confirmValueChange = { value ->
-                            if (value == SwipeToDismissBoxValue.EndToStart) {
-                                onHapusBaris(baris.produkId)
-                                true
-                            } else {
-                                false
-                            }
-                        },
                         positionalThreshold = { distance -> distance * 0.5f },
                     )
+                    LaunchedEffect(dismissState.currentValue) {
+                        if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
+                            onHapusBaris(baris.produkId)
+                        }
+                    }
                     SwipeToDismissBox(
                         state = dismissState,
                         enableDismissFromStartToEnd = false,
