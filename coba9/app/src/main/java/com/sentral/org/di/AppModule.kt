@@ -17,6 +17,7 @@ import com.sentral.org.hardware.EscPosPrinterDriver
 import com.sentral.org.ui.MainViewModel
 import com.sentral.org.ui.screen.pos.CheckoutViewModel
 import com.sentral.org.ui.screen.pos.KasirViewModel
+import com.sentral.org.ui.screen.riwayat.RiwayatViewModel
 import com.sentral.org.ui.viewmodel.AddPrinterViewModel
 import org.koin.android.ext.koin.androidApplication
 import org.koin.android.ext.koin.androidContext
@@ -129,6 +130,13 @@ val appModule = module {
         AddPrinterViewModel(
             application = androidApplication(),
             printerRepo = get(),
+            printerService = get(),
+        )
+    }
+    viewModel {
+        RiwayatViewModel(
+            transaksiRepo = get(),
+            profilRepo = get(),
             printerService = get(),
         )
     }
