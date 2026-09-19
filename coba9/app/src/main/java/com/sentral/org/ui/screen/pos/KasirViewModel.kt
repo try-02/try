@@ -387,9 +387,8 @@ class KasirViewModel(
         val carts: List<com.sentral.org.data.entity.KeranjangEntity>,
         val manual: Long?,
         val proses: Boolean,
-    )
+    ) */
 }
-*/
 /** Nomor transaksi unik-praktis; unique index DB adalah pengaman pamungkas. */
 object NomorTransaksiGenerator {
     private val counter = AtomicInteger(0)
