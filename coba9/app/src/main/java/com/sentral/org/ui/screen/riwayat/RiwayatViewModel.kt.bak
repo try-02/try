@@ -4,9 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
-import androidx.paging.map
 import com.sentral.org.data.dao.ReturDao
 import com.sentral.org.data.entity.TransaksiDenganDetail
+import com.sentral.org.data.entity.TransaksiEntity
 import com.sentral.org.data.model.MetodePembayaran
 import com.sentral.org.data.model.PrintResult
 import com.sentral.org.data.model.QUANTITY_SCALE
@@ -51,8 +51,6 @@ class RiwayatViewModel(
     private val sessionProvider: ActiveSesiKasirProvider,
 ) : ViewModel() {
 
-    private var rawDetailTerpilih: TransaksiDenganDetail? = null
-
     private val _uiState = MutableStateFlow(RiwayatUiState())
     val uiState: StateFlow<RiwayatUiState> = _uiState.asStateFlow()
 
@@ -61,13 +59,11 @@ class RiwayatViewModel(
 
     private val _filterFlow = MutableStateFlow(TransaksiFilter())
 
-    val pagedTransaksi: Flow<PagingData<TransaksiItemUi>> = _filterFlow
+    val pagedTransaksi: Flow<PagingData<TransaksiEntity>> = _filterFlow
         .debounce(300L)
         .distinctUntilChanged()
         .flatMapLatest { filter ->
-            transaksiRepo.getRiwayatPaged(filter).map { pagingData ->
-                pagingData.map { it.toUiModel() }
-            }
+            transaksiRepo.getRiwayatPaged(filter)
         }
         .cachedIn(viewModelScope)
 
@@ -99,8 +95,7 @@ class RiwayatViewModel(
             try {
                 val detail = transaksiRepo.getDetailById(transaksiId)
                 if (detail != null) {
-                    rawDetailTerpilih = detail
-                    _uiState.update { it.copy(detailTerpilih = detail.toUiModel(), sedangMemuatDetail = false) }
+                    _uiState.update { it.copy(detailTerpilih = detail, sedangMemuatDetail = false) }
                 } else {
                     _uiState.update { it.copy(sedangMemuatDetail = false) }
                     _event.send(RiwayatEvent.Pesan("Data transaksi tidak ditemukan", RiwayatEvent.Pesan.Jenis.GALAT))
@@ -113,14 +108,12 @@ class RiwayatViewModel(
     }
 
     fun tutupDetailTransaksi() {
-        rawDetailTerpilih = null
         _uiState.update { it.copy(detailTerpilih = null, dialogVoidTerbuka = false, dialogReturTerbuka = false) }
     }
 
     // ---------- Intent: Cetak Ulang Struk ----------
 
-    fun cetakUlangStruk() {
-        val detail = rawDetailTerpilih ?: return
+    fun cetakUlangStruk(detail: TransaksiDenganDetail) {
         if (_uiState.value.sedangReprint) return
 
         viewModelScope.launch {
@@ -190,7 +183,7 @@ class RiwayatViewModel(
     }
 
     fun konfirmasiVoid() {
-        val detail = rawDetailTerpilih ?: return
+        val detail = _uiState.value.detailTerpilih ?: return
         val alasan = _uiState.value.alasanVoidInput.trim()
         if (alasan.isBlank()) {
             viewModelScope.launch { _event.send(RiwayatEvent.Pesan("Alasan pembatalan wajib diisi", RiwayatEvent.Pesan.Jenis.GALAT)) }
@@ -228,12 +221,11 @@ class RiwayatViewModel(
 
                     // Refresh detail transaksi
                     val updatedDetail = transaksiRepo.getDetailById(detail.transaksi.id)
-                    rawDetailTerpilih = updatedDetail
                     _uiState.update {
                         it.copy(
                             sedangMemprosesAksi = false,
                             dialogVoidTerbuka = false,
-                            detailTerpilih = updatedDetail?.toUiModel(),
+                            detailTerpilih = updatedDetail,
                         )
                     }
                     _filterFlow.value = _uiState.value.filter // Memicu refresh Paging
@@ -250,15 +242,14 @@ class RiwayatViewModel(
     // ---------- Intent: Pengembalian Barang (Retur) ----------
 
     fun bukaDialogRetur() {
-        val detail = rawDetailTerpilih ?: return
+        val detail = _uiState.value.detailTerpilih ?: return
         viewModelScope.launch {
             _uiState.update { it.copy(sedangMemprosesAksi = true) }
             val returRows = detail.items.map { item ->
                 val alreadyReturned = returDao.getReturnedQuantity(item.id)
                 val remaining = (item.jumlah - alreadyReturned).coerceAtLeast(0L)
                 ItemReturUi(
-                    itemId = item.id,
-                    namaProduk = item.namaProduk,
+                    item = item,
                     sisaQtyScaled = remaining,
                     qtyPilihanScaled = 0L,
                     tujuan = TujuanStokPengembalian.NORMAL,
@@ -282,7 +273,7 @@ class RiwayatViewModel(
     fun ubahQtyRetur(itemId: Long, deltaUnit: Long) {
         _uiState.update { state ->
             val updated = state.daftarItemRetur.map { row ->
-                if (row.itemId == itemId) {
+                if (row.item.id == itemId) {
                     val currentUnit = row.qtyPilihanScaled / QUANTITY_SCALE
                     val maxUnit = row.sisaQtyScaled / QUANTITY_SCALE
                     val newUnit = (currentUnit + deltaUnit).coerceIn(0L, maxUnit)
@@ -296,7 +287,7 @@ class RiwayatViewModel(
     fun ubahTujuanRetur(itemId: Long, tujuan: TujuanStokPengembalian) {
         _uiState.update { state ->
             val updated = state.daftarItemRetur.map { row ->
-                if (row.itemId == itemId) row.copy(tujuan = tujuan) else row
+                if (row.item.id == itemId) row.copy(tujuan = tujuan) else row
             }
             state.copy(daftarItemRetur = updated)
         }
@@ -311,7 +302,7 @@ class RiwayatViewModel(
     }
 
     fun konfirmasiRetur() {
-        val detail = rawDetailTerpilih ?: return
+        val detail = _uiState.value.detailTerpilih ?: return
         val returItems = _uiState.value.daftarItemRetur.filter { it.qtyPilihanScaled > 0 }
 
         if (returItems.isEmpty()) {
@@ -326,7 +317,7 @@ class RiwayatViewModel(
 
             val lines = returItems.map {
                 ReturnLineRequest(
-                    transactionItemId = it.itemId,
+                    transactionItemId = it.item.id,
                     quantity = it.qtyPilihanScaled,
                     destination = it.tujuan,
                 )
@@ -347,10 +338,7 @@ class RiwayatViewModel(
                     // Cetak struk bukti Retur
                     try {
                         val toko = profilRepo.get()
-                        val itemMap = detail.items.associateBy { it.id }
-                        val printItems = returItems.mapNotNull { returItem ->
-                            itemMap[returItem.itemId]?.let { it to returItem.qtyPilihanScaled }
-                        }
+                        val printItems = returItems.map { it.item to it.qtyPilihanScaled }
                         val receiptData = ReceiptFormatter.formatReturn(
                             toko = toko,
                             transaksi = detail.transaksi,

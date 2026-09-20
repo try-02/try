@@ -1,15 +1,78 @@
 package com.sentral.org.ui.screen.riwayat
 
 import android.net.Uri
-import com.sentral.org.data.entity.ItemTransaksiEntity
 import com.sentral.org.data.entity.TransaksiDenganDetail
+import com.sentral.org.data.entity.TransaksiEntity
 import com.sentral.org.data.model.MetodePembayaran
+import com.sentral.org.data.model.StatusTransaksi
 import com.sentral.org.data.model.TransaksiFilter
 import com.sentral.org.data.model.TujuanStokPengembalian
 
+/** Model kartu riwayat transaksi (LazyColumn item) */
+data class TransaksiItemUi(
+    val id: Long,
+    val nomorTransaksi: String,
+    val namaKasir: String,
+    val dibuatPada: Long,
+    val total: Long,
+    val status: StatusTransaksi,
+)
+
+fun TransaksiEntity.toUiModel() = TransaksiItemUi(
+    id = id,
+    nomorTransaksi = nomorTransaksi,
+    namaKasir = namaKasir,
+    dibuatPada = dibuatPada,
+    total = total,
+    status = status,
+)
+
+/** Model item rincian transaksi untuk Sheet Detail */
+data class ItemTransaksiDetailUi(
+    val id: Long,
+    val namaProduk: String,
+    val jumlah: Long,
+    val hargaSatuan: Long,
+    val diskonItem: Long,
+    val totalBaris: Long,
+)
+
+/** Model agregat transaksi untuk Sheet Detail */
+data class TransaksiDetailUi(
+    val id: Long,
+    val nomorTransaksi: String,
+    val namaKasir: String,
+    val dibuatPada: Long,
+    val total: Long,
+    val status: StatusTransaksi,
+    val alasanPembatalan: String?,
+    val items: List<ItemTransaksiDetailUi>,
+)
+
+fun TransaksiDenganDetail.toUiModel() = TransaksiDetailUi(
+    id = transaksi.id,
+    nomorTransaksi = transaksi.nomorTransaksi,
+    namaKasir = transaksi.namaKasir,
+    dibuatPada = transaksi.dibuatPada,
+    total = transaksi.total,
+    status = transaksi.status,
+    alasanPembatalan = transaksi.alasanPembatalan,
+    items = items.map {
+        ItemTransaksiDetailUi(
+            id = it.id,
+            namaProduk = it.namaProduk,
+            jumlah = it.jumlah,
+            hargaSatuan = it.hargaSatuan,
+            diskonItem = it.diskonItem,
+            totalBaris = it.totalBaris,
+        )
+    },
+)
+
 /** Model baris item untuk form input retur */
 data class ItemReturUi(
-    val item: ItemTransaksiEntity,
+    val itemId: Long,
+    val namaProduk: String,
     val sisaQtyScaled: Long,
     val qtyPilihanScaled: Long = 0L,
     val tujuan: TujuanStokPengembalian = TujuanStokPengembalian.NORMAL,
@@ -18,7 +81,7 @@ data class ItemReturUi(
 /** State UI untuk layar Riwayat Transaksi. */
 data class RiwayatUiState(
     val filter: TransaksiFilter = TransaksiFilter(),
-    val detailTerpilih: TransaksiDenganDetail? = null,
+    val detailTerpilih: TransaksiDetailUi? = null,
     val sedangMemuatDetail: Boolean = false,
     val sedangReprint: Boolean = false,
     val sedangEkspor: Boolean = false,
