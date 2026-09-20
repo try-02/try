@@ -295,7 +295,7 @@ private fun DialogTambahKasir(
 
 @Composable
 private fun KartuAkunKasir(
-    kasir: KasirItemUi,
+    kasir: KasirEntity,
     isSelected: Boolean,
     onClick: () -> Unit,
 ) {

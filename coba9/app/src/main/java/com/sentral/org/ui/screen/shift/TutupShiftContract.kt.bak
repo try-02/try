@@ -1,17 +1,10 @@
 package com.sentral.org.ui.screen.shift
 
-data class ShiftSummaryUi(
-    val kasAwal: Long,
-    val totalPenjualanTunai: Long,
-    val totalReturTunai: Long,
-    val kasDiharapkan: Long,
-    val kasAktual: Long?,
-    val selisihKas: Long?,
-)
+import com.sentral.org.data.model.ShiftSummary
 
 enum class TutupShiftStep {
-    BLIND_COUNT,
-    REKONSILIASI,
+    BLIND_COUNT,      // Tahap 1: Input uang fisik tanpa melihat sistem
+    REKONSILIASI,     // Tahap 2: Tampilkan perbandingan sistem vs fisik + selisih
 }
 
 data class TutupShiftUiState(
@@ -21,7 +14,7 @@ data class TutupShiftUiState(
     val dimulaiPada: Long = 0L,
     val kasAktualInput: String = "",
     val catatan: String = "",
-    val summary: ShiftSummaryUi? = null,
+    val summary: ShiftSummary? = null,
     val sedangMemproses: Boolean = false,
     val sedangCetak: Boolean = false,
     val pesanError: String? = null,

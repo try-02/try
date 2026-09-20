@@ -152,7 +152,6 @@ val appModule = module {
             printerService = get(),
         )
     }
-    viewModelOf(::PrinterSettingsViewModel)
     single { ExcelReportExporter(androidContext()) }
     factory { TransaksiExportUseCase(transaksiRepo = get(), excelExporter = get()) }
     viewModel {

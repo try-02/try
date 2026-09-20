@@ -1,13 +1,10 @@
 package com.sentral.org.ui.screen.auth
 
-data class KasirItemUi(
-    val id: Long,
-    val nama: String,
-)
+import com.sentral.org.data.entity.KasirEntity
 
 data class LoginKasirUiState(
-    val daftarKasir: List<KasirItemUi> = emptyList(),
-    val kasirTerpilih: KasirItemUi? = null,
+    val daftarKasir: List<KasirEntity> = emptyList(),
+    val kasirTerpilih: KasirEntity? = null,
     val pinInput: String = "",
     val sedangMemproses: Boolean = false,
     val pesanError: String? = null,

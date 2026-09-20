@@ -53,7 +53,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-/** import com.sentral.org.data.model.ShiftSummary */
+import com.sentral.org.data.model.ShiftSummary
 import com.sentral.org.ui.screen.pos.formatRupiah
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -280,7 +280,7 @@ private fun ColumnScope.PanelBlindCount(
 
 @Composable
 private fun ColumnScope.PanelRekonsiliasi(
-    summary: ShiftSummaryUi,
+    summary: ShiftSummary,
     catatan: String,
     onCatatanChange: (String) -> Unit,
     sedangMemproses: Boolean,
