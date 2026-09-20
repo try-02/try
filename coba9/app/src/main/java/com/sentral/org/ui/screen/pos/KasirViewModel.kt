@@ -184,6 +184,25 @@ class KasirViewModel(
         }
     }
 
+    /**
+     * Memindai barcode atau SKU, memvalidasi produk, dan memasukkan 1 unit ke keranjang aktif.
+     * Mengembalikan nama produk jika berhasil, atau null jika tidak ditemukan/gagal.
+     */
+    suspend fun scanBarcodeTambahProduk(code: String): String? {
+        val cleanCode = code.trim()
+        val produk = produkRepo.getByBarcode(cleanCode)
+            ?: produkRepo.getBySku(cleanCode)
+            ?: return null
+
+        if (!produk.aktif) {
+            kirim("Produk '${produk.nama}' sedang tidak aktif", KasirEvent.Pesan.Jenis.GALAT)
+            return null
+        }
+        val cartId = pastikanKeranjangAktif() ?: return null
+        val result = cartService.addProduct(cartId, produk.id, quantityOf(1), System.currentTimeMillis())
+        return if (result.isSuccess) produk.nama else null
+    }
+
     fun tambahSatuan(produkId: Long) = ubah(produkId, quantityOf(1))
     fun kurangiSatuan(produkId: Long) = ubah(produkId, -quantityOf(1))
 
@@ -393,7 +412,7 @@ class KasirViewModel(
     private fun kirim(teks: String, jenis: KasirEvent.Pesan.Jenis) {
         viewModelScope.launch { _event.send(KasirEvent.Pesan(teks, jenis)) }
     }
-
+/**
     suspend fun scanBarcodeTambahProduk(barcode: String): String? {
         val produk = produkRepo.getByBarcode(barcode.trim()) ?: return null
         if (!produk.aktif) {
@@ -404,7 +423,7 @@ class KasirViewModel(
         val result = cartService.addProduct(cartId, produk.id, quantityOf(1), System.currentTimeMillis())
         return if (result.isSuccess) produk.nama else null
     }
-/**
+
     private data class Detil(
         val produk: List<com.sentral.org.data.entity.ProdukEntity>,
         val carts: List<com.sentral.org.data.entity.KeranjangEntity>,
