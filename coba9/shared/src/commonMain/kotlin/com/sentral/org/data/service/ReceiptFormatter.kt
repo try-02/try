@@ -5,6 +5,7 @@ import com.sentral.org.data.entity.PembayaranEntity
 import com.sentral.org.data.entity.ProfilTokoEntity
 import com.sentral.org.data.entity.TransaksiEntity
 import com.sentral.org.data.model.CheckoutResult
+import com.sentral.org.data.model.MetodePembayaran
 import com.sentral.org.data.model.PaymentInfo
 import com.sentral.org.data.model.ReceiptData
 import com.sentral.org.data.model.ReceiptItem
