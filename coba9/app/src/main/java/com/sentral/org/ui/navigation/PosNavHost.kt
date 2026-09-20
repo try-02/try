@@ -31,9 +31,19 @@ fun PosNavHost(
             modifier = modifier
         ) {
 
-            // Rute LoginKasir bisa kamu siapkan nanti
             composable<PosRoute.LoginKasir> {
-                // LoginScreen(...)
+                com.sentral.org.ui.screen.auth.LoginKasirScreen(
+                    onLoginSuksesKePos = {
+                        navController.navigate(PosRoute.PosUtama) {
+                            popUpTo(PosRoute.LoginKasir) { inclusive = true }
+                        }
+                    },
+                    onLoginSuksesKeBukaShift = { kasirId, namaKasir ->
+                        navController.navigate(PosRoute.BukaShift) {
+                            popUpTo(PosRoute.LoginKasir) { inclusive = true }
+                        }
+                    },
+                )
             }
 
             composable<PosRoute.PosUtama> {

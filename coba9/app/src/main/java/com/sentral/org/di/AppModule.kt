@@ -16,6 +16,8 @@ import com.sentral.org.data.security.createPinHasher
 import com.sentral.org.data.session.ActiveSesiKasirProvider
 import com.sentral.org.data.session.DevSessionBootstrap
 import com.sentral.org.data.session.SesiKasirProvider
+import com.sentral.org.data.service.AuthService
+import com.sentral.org.ui.screen.auth.LoginKasirViewModel
 import com.sentral.org.hardware.EscPosPrinterDriver
 import com.sentral.org.ui.MainViewModel
 import com.sentral.org.ui.screen.pos.CheckoutViewModel
@@ -75,6 +77,15 @@ val appModule = module {
     factory { PersediaanService(write = get(), products = get(), stock = get(), ledger = get()) }
     factory { CartService(write = get(), carts = get(), items = get(), products = get(), cashiers = get()) }
     factory { ShiftService(write = get(), cashiers = get(), shifts = get(), cashLedger = get()) }
+    single {
+        AuthService(
+            kasirDao = get(),
+            shiftDao = get(),
+            pinHasher = get(),
+            rateLimiter = get(),
+            sessionProvider = get(),
+        )
+    }
     factory {
         CheckoutService(
             write = get(), products = get(), carts = get(), cartItems = get(),
@@ -149,6 +160,12 @@ val appModule = module {
             profilRepo = get(),
             printerService = get(),
             exportUseCase = get(),
+        )
+    }
+    viewModel {
+        LoginKasirViewModel(
+            kasirDao = get(),
+            authService = get(),
         )
     }
 }
