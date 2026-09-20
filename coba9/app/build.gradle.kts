@@ -71,6 +71,13 @@ android {
 //        }
 //    }
 
+    testOptions {
+        unitTests {
+            // Ubah menjadi true agar resource Android diikutkan
+            isIncludeAndroidResources = true
+        }
+    }
+
     packaging {
         resources {
             excludes += setOf(
