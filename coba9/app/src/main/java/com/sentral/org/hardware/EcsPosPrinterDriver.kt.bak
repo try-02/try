@@ -4,9 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
-import androidx.core.graphics.scale
-import androidx.core.net.toUri
-import co.touchlab.kermit.Logger
+import android.util.Log
 import com.dantsu.escposprinter.EscPosCharsetEncoding
 import com.dantsu.escposprinter.EscPosPrinter
 import com.dantsu.escposprinter.EscPosPrinterCommands
@@ -61,7 +59,6 @@ class EscPosPrinterDriver(
 
     companion object {
         private const val TAG = "EscPosPrinterDriver"
-        private val log = Logger.withTag(TAG)
 
         // ===== Printer constants =====
         private const val PRINTER_DPI = 203
@@ -99,7 +96,7 @@ class EscPosPrinterDriver(
             handle.printer.printFormattedText("[C]TEST CONNECTION\n")
             true
         } catch (e: Exception) {
-            log.e(e) { "testConnection failed: ${e.message}" }
+            Log.e(TAG, "testConnection failed: ${e.message}") // ini log w loh
             false
         } finally {
             handle?.printer?.disconnectPrinter()
@@ -123,7 +120,7 @@ class EscPosPrinterDriver(
     private suspend fun printInternal(receipt: ReceiptData): PrintResult {
         var handle: PrinterHandle? = null
         try {
-            log.i { "🖨️ print() called for receipt: ${receipt.transaksi.nomor}" }
+            Log.e(TAG, "🖨️ print() called for receipt: ${receipt.transaksi.nomor}")
             
             handle = buildPrinterHandle()
                 ?: return PrintResult.Failure(
@@ -131,7 +128,7 @@ class EscPosPrinterDriver(
                     isRetryable = true,
                 )
             
-            log.i { "🔌 Connected to printer: ${printerConfig.nama}" }
+            Log.e(TAG, "🔌 Connected to printer: ${printerConfig.nama}")
 
             // ===== TAHAP 1: Print logo (kalau ada) via raw bytes ke connection =====
             // Dilakukan SEBELUM printFormattedText agar logo muncul di paling atas struk.
@@ -147,7 +144,7 @@ class EscPosPrinterDriver(
                         handle.connection.write(byteArrayOf(0x0A))
                         handle.connection.send()
                     } catch (e: EscPosConnectionException) {
-                        log.e(e) { "Failed to send logo: ${e.message}" }
+                        Log.e(TAG, "Failed to send logo: ${e.message}")
                     }
                 }
             }
@@ -183,7 +180,7 @@ class EscPosPrinterDriver(
                 isRetryable = isRetryableError(e),
             )
         } finally {
-            log.i { "🔌 Disconnecting printer" }
+            Log.e(TAG, "🔌 Disconnecting printer")
             handle?.printer?.disconnectPrinter()
         }
     }
@@ -249,12 +246,12 @@ class EscPosPrinterDriver(
         return withTimeoutOrNull(LOGO_LOAD_TIMEOUT_MS) {
             withContext(Dispatchers.IO) {
                 try {
-                    val uri = uriString.toUri()
+                    val uri = Uri.parse(uriString)
 
                     // ===== GUARD 1: Cek file size (jika tersedia) =====
                     val fileSize = getFileSize(uri)
                     if (fileSize != null && fileSize > MAX_LOGO_FILE_SIZE_BYTES) {
-                        log.w { "Logo file too large: $fileSize bytes (max: $MAX_LOGO_FILE_SIZE_BYTES)" }
+                        Log.e(TAG, "Logo file too large: $fileSize bytes (max: $MAX_LOGO_FILE_SIZE_BYTES)") // ini log w loh
                         return@withContext null
                     }
 
@@ -265,12 +262,12 @@ class EscPosPrinterDriver(
                     } ?: return@withContext null
 
                     if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
-                        log.w { "Logo dimensions invalid: ${bounds.outWidth}x${bounds.outHeight}" }
+                        Log.e(TAG, "Logo dimensions invalid: ${bounds.outWidth}x${bounds.outHeight}") // ini log w loh
                         return@withContext null
                     }
 
                     if (bounds.outWidth > MAX_SOURCE_DIMENSION || bounds.outHeight > MAX_SOURCE_DIMENSION) {
-                        log.w { "Logo too large: ${bounds.outWidth}x${bounds.outHeight} (max: $MAX_SOURCE_DIMENSION)" }
+                        Log.e(TAG, "Logo too large: ${bounds.outWidth}x${bounds.outHeight} (max: $MAX_SOURCE_DIMENSION)") // ini log w loh
                         return@withContext null
                     }
 
@@ -298,7 +295,12 @@ class EscPosPrinterDriver(
                     val targetWidth = (original.width * scale).roundToInt().coerceAtLeast(1)
                     val targetHeight = (original.height * scale).roundToInt().coerceAtLeast(1)
 
-                    val resized = original.scale(targetWidth, targetHeight, filter = true)
+                    val resized = Bitmap.createScaledBitmap(
+                        original,
+                        targetWidth,
+                        targetHeight,
+                        true,  // filter = true untuk quality lebih baik
+                    )
 
                     // ===== GUARD 5: Recycle original kalau resized adalah bitmap baru =====
                     if (resized !== original) {
@@ -313,13 +315,13 @@ class EscPosPrinterDriver(
 
                     bytes
                 } catch (e: OutOfMemoryError) {
-                    log.e(e) { "OOM loading logo: ${e.message}" }
+                    Log.e(TAG, "OOM loading logo: ${e.message}")
                     null
                 } catch (e: SecurityException) {
-                    log.e(e) { "No permission to read logo: ${e.message}" }
+                    Log.e(TAG, "No permission to read logo: ${e.message}") // ini log w loh
                     null
                 } catch (e: Exception) {
-                    log.e(e) { "Failed to load logo: ${e.message}" }
+                    Log.e(TAG, "Failed to load logo: ${e.message}") // ini log w loh
                     null
                 }
             }
@@ -344,7 +346,7 @@ class EscPosPrinterDriver(
                 else -> null
             }
         } catch (e: Exception) {
-            log.e(e) { "Cannot get file size for $uri: ${e.message}" }
+            Log.e(TAG, "Cannot get file size for $uri: ${e.message}") // ini log w loh
             null
         }
     }
