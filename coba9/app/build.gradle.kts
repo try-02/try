@@ -116,6 +116,12 @@ kotlin {
     }
 }
 
+androidComponents {
+    beforeVariants(selector().withBuildType("release")) { variant ->
+        variant.enableUnitTest = true
+    }
+}
+
 dependencies {
     // Shared KMP module (Room3, Koin core, dsb ada di dalamnya)
     implementation(project(":shared"))
