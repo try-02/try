@@ -18,6 +18,7 @@ import com.sentral.org.data.session.DevSessionBootstrap
 import com.sentral.org.data.session.SesiKasirProvider
 import com.sentral.org.data.service.AuthService
 import com.sentral.org.ui.screen.auth.LoginKasirViewModel
+import com.sentral.org.ui.screen.shift.BukaShiftViewModel
 import com.sentral.org.hardware.EscPosPrinterDriver
 import com.sentral.org.ui.MainViewModel
 import com.sentral.org.ui.screen.pos.CheckoutViewModel
@@ -166,6 +167,13 @@ val appModule = module {
         LoginKasirViewModel(
             kasirDao = get(),
             authService = get(),
+        )
+    }
+    viewModel {
+        BukaShiftViewModel(
+            shiftService = get(),
+            kasirDao = get(),
+            sessionProvider = get(),
         )
     }
 }

@@ -46,6 +46,21 @@ fun PosNavHost(
                 )
             }
 
+            composable<PosRoute.BukaShift> {
+                com.sentral.org.ui.screen.shift.BukaShiftScreen(
+                    onShiftBerhasil = {
+                        navController.navigate(PosRoute.PosUtama) {
+                            popUpTo(PosRoute.BukaShift) { inclusive = true }
+                        }
+                    },
+                    onGantiKasir = {
+                        navController.navigate(PosRoute.LoginKasir) {
+                            popUpTo(PosRoute.BukaShift) { inclusive = true }
+                        }
+                    },
+                )
+            }
+
             composable<PosRoute.PosUtama> {
                 PosUtamaScreen(
                     onNavigateToRiwayat = { 
