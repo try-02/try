@@ -1,8 +1,8 @@
 package com.sentral.org.data.security
 
 import com.sentral.org.shared.currentTimeMillis
-import kotlinx.atomicfu.locks.SynchronizedObject
-import kotlinx.atomicfu.locks.synchronized
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 sealed interface PinCheckResult {
     data object Success : PinCheckResult
@@ -10,9 +10,10 @@ sealed interface PinCheckResult {
     data class Locked(val sisaDetikTerkunci: Long) : PinCheckResult
 }
 
-class PinRateLimiter : SynchronizedObject() {
+class PinRateLimiter {
     private val failedAttempts = mutableMapOf<Long, Int>()
     private val lockoutUntil = mutableMapOf<Long, Long>()
+    private val mutex = Mutex()
 
     companion object {
         const val MAX_FAILED_ATTEMPTS = 5
@@ -20,9 +21,9 @@ class PinRateLimiter : SynchronizedObject() {
     }
 
     /** Memeriksa apakah kasir sedang dalam masa terkunci */
-    fun cekStatus(kasirId: Long): Long? = synchronized(this) {
+    suspend fun cekStatus(kasirId: Long): Long? = mutex.withLock {
         val now = currentTimeMillis()
-        val lockedUntil = lockoutUntil[kasirId] ?: return null
+        val lockedUntil = lockoutUntil[kasirId] ?: return@withLock null
         if (now < lockedUntil) {
             (lockedUntil - now) / 1000L
         } else {
@@ -33,7 +34,7 @@ class PinRateLimiter : SynchronizedObject() {
     }
 
     /** Catat kegagalan input PIN */
-    fun catatGagal(kasirId: Long): PinCheckResult = synchronized(this) {
+    suspend fun catatGagal(kasirId: Long): PinCheckResult = mutex.withLock {
         val now = currentTimeMillis()
         val current = (failedAttempts[kasirId] ?: 0) + 1
         failedAttempts[kasirId] = current
@@ -48,7 +49,7 @@ class PinRateLimiter : SynchronizedObject() {
     }
 
     /** Reset catatan saat PIN berhasil */
-    fun catatSukses(kasirId: Long) = synchronized(this) {
+    suspend fun catatSukses(kasirId: Long): Unit = mutex.withLock {
         failedAttempts.remove(kasirId)
         lockoutUntil.remove(kasirId)
     }
