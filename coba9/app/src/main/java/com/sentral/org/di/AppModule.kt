@@ -10,7 +10,10 @@ import com.sentral.org.data.repository.*
 import com.sentral.org.data.repository.impl.*
 import com.sentral.org.data.seed.ProductSeeder
 import com.sentral.org.data.service.*
-import com.sentral.org.data.session.DevSesiKasirProvider
+import com.sentral.org.data.security.AndroidPinHasher
+import com.sentral.org.data.security.PinHasher
+import com.sentral.org.data.security.PinRateLimiter
+import com.sentral.org.data.session.ActiveSesiKasirProvider
 import com.sentral.org.data.session.DevSessionBootstrap
 import com.sentral.org.data.session.SesiKasirProvider
 import com.sentral.org.hardware.EscPosPrinterDriver
@@ -103,8 +106,11 @@ val appModule = module {
         )
     }
 
-    // 5. Sesi & ViewModels
-    single<SesiKasirProvider> { DevSesiKasirProvider(get(), get()) }
+    // 5. Keamanan & Sesi Otoritatif
+    single<PinHasher> { AndroidPinHasher() }
+    single { PinRateLimiter() }
+    single { ActiveSesiKasirProvider(kasirDao = get(), shiftDao = get()) }
+    single<SesiKasirProvider> { get<ActiveSesiKasirProvider>() }
     viewModel {
         CheckoutViewModel(
             checkoutService = get(),
