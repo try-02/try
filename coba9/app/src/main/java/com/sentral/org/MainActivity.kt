@@ -8,6 +8,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.sentral.org.ui.MainViewModel
 import com.sentral.org.ui.navigation.PosNavHost
 import org.koin.androidx.viewmodel.ext.android.viewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 class MainActivity : ComponentActivity() {
 
@@ -24,8 +25,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         
         setContent {
-            val isReady by androidx.lifecycle.compose.collectAsStateWithLifecycle(mainViewModel.isReady)
-            val startDestination by androidx.lifecycle.compose.collectAsStateWithLifecycle(mainViewModel.startDestination)
+            val isReady by collectAsStateWithLifecycle(mainViewModel.isReady)
+            val startDestination by collectAsStateWithLifecycle(mainViewModel.startDestination)
 
             if (isReady) {
                 PosNavHost(startDestination = startDestination)
