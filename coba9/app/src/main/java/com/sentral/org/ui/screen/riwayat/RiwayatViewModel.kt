@@ -7,6 +7,7 @@ import androidx.paging.cachedIn
 import androidx.paging.map
 import com.sentral.org.data.dao.ReturDao
 import com.sentral.org.data.entity.TransaksiDenganDetail
+import com.sentral.org.data.entity.TransaksiEntity
 import com.sentral.org.data.model.MetodePembayaran
 import com.sentral.org.data.model.PrintResult
 import com.sentral.org.data.model.QUANTITY_SCALE
