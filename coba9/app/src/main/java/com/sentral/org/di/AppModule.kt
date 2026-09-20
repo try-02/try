@@ -24,6 +24,7 @@ import com.sentral.org.hardware.EscPosPrinterDriver
 import com.sentral.org.ui.MainViewModel
 import com.sentral.org.ui.screen.pos.KasirViewModel
 import com.sentral.org.ui.screen.riwayat.RiwayatViewModel
+import com.sentral.org.ui.screen.settings.PrinterSettingsViewModel
 import com.sentral.org.ui.viewmodel.AddPrinterViewModel
 import com.sentral.org.export.ExcelReportExporter
 import com.sentral.org.export.TransaksiExportUseCase
@@ -152,7 +153,12 @@ val appModule = module {
             printerService = get(),
         )
     }
-    viewModelOf(::PrinterSettingsViewModel)
+    viewModel {
+        PrinterSettingsViewModel(
+            printerRepo = get(),
+            profilRepo = get(),
+        )
+    }
     single { ExcelReportExporter(androidContext()) }
     factory { TransaksiExportUseCase(transaksiRepo = get(), excelExporter = get()) }
     viewModel {
