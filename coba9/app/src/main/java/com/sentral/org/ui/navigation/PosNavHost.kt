@@ -67,10 +67,21 @@ fun PosNavHost(
                         navController.navigate(PosRoute.RiwayatTransaksi()) 
                     },
                     onNavigateToTutupShift = {
-                        // TODO: Logika navigasi tutup shift
+                        navController.navigate(PosRoute.TutupShift)
                     },
                     onNavigateToPrinterSettings = {
                         navController.navigate(PosRoute.PrinterSettings)
+                    },
+                )
+            }
+
+            composable<PosRoute.TutupShift> {
+                com.sentral.org.ui.screen.shift.TutupShiftScreen(
+                    onBack = { navController.popBackStack() },
+                    onShiftDitutup = {
+                        navController.navigate(PosRoute.LoginKasir) {
+                            popUpTo(0) { inclusive = true }
+                        }
                     },
                 )
             }

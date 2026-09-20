@@ -1,0 +1,178 @@
+package com.sentral.org.ui.screen.shift
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.sentral.org.data.model.PrintResult
+import com.sentral.org.data.repository.ProfilTokoRepository
+import com.sentral.org.data.service.PrinterService
+import com.sentral.org.data.service.ReceiptFormatter
+import com.sentral.org.data.service.ShiftService
+import com.sentral.org.data.session.ActiveSesiKasirProvider
+import com.sentral.org.shared.currentTimeMillis
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+
+class TutupShiftViewModel(
+    private val shiftService: ShiftService,
+    private val sessionProvider: ActiveSesiKasirProvider,
+    private val printerService: PrinterService,
+    private val profilRepo: ProfilTokoRepository,
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(TutupShiftUiState())
+    val uiState: StateFlow<TutupShiftUiState> = _uiState.asStateFlow()
+
+    private val _event = Channel<TutupShiftEvent>(Channel.BUFFERED)
+    val event = _event.receiveAsFlow()
+
+    init {
+        muatInfoShiftAktif()
+    }
+
+    private fun muatInfoShiftAktif() {
+        viewModelScope.launch {
+            val sesi = sessionProvider.sesiAktif()
+            if (sesi != null) {
+                try {
+                    val summary = shiftService.getShiftSummary(sesi.shiftId, isZReport = false)
+                    _uiState.update {
+                        it.copy(
+                            shiftId = sesi.shiftId,
+                            namaKasir = sesi.namaKasir,
+                            dimulaiPada = summary.dimulaiPada,
+                        )
+                    }
+                } catch (e: Exception) {
+                    _event.send(TutupShiftEvent.Pesan(e.message ?: "Gagal memuat shift"))
+                }
+            } else {
+                _event.send(TutupShiftEvent.ShiftSelesaiDanKeluar)
+            }
+        }
+    }
+
+    fun tekanAngka(digit: String) {
+        val current = _uiState.value.kasAktualInput
+        if (current.length < 11 && !_uiState.value.sedangMemproses) {
+            val updated = (current.filter(Char::isDigit) + digit).take(11)
+            _uiState.update { it.copy(kasAktualInput = updated, pesanError = null) }
+        }
+    }
+
+    fun hapusDigit() {
+        val current = _uiState.value.kasAktualInput
+        if (current.isNotEmpty()) {
+            _uiState.update { it.copy(kasAktualInput = current.dropLast(1), pesanError = null) }
+        }
+    }
+
+    fun setNominalCepat(nominal: Long) {
+        _uiState.update { it.copy(kasAktualInput = nominal.toString(), pesanError = null) }
+    }
+
+    fun setCatatan(catatan: String) {
+        _uiState.update { it.copy(catatan = catatan) }
+    }
+
+    /** Tahap 1 -> Tahap 2: Lakukan rekonsiliasi kas buta */
+    fun hitungRekonsiliasi() {
+        val shiftId = _uiState.value.shiftId ?: return
+        val kasAktual = _uiState.value.kasAktualNominal
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(sedangMemproses = true) }
+            try {
+                val summary = shiftService.getShiftSummary(shiftId, isZReport = true, actualCash = kasAktual)
+                _uiState.update {
+                    it.copy(
+                        summary = summary,
+                        step = TutupShiftStep.REKONSILIASI,
+                        sedangMemproses = false,
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        sedangMemproses = false,
+                        pesanError = e.message ?: "Gagal merekonsiliasi kas",
+                    )
+                }
+            }
+        }
+    }
+
+    /** Kembali dari rekonsiliasi ke input fisik jika kasir ingin hitung ulang */
+    fun hitungUlangFisik() {
+        _uiState.update { it.copy(step = TutupShiftStep.BLIND_COUNT, pesanError = null) }
+    }
+
+    /** Cetak Laporan X Sementara (Shift tidak ditutup) */
+    fun cetakLaporanX() {
+        val shiftId = _uiState.value.shiftId ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(sedangCetak = true) }
+            try {
+                val summary = shiftService.getShiftSummary(shiftId, isZReport = false)
+                val toko = profilRepo.get()
+                val receiptData = ReceiptFormatter.formatShiftReport(toko, summary)
+
+                printerService.enqueue(receiptData) { result ->
+                    viewModelScope.launch {
+                        _uiState.update { it.copy(sedangCetak = false) }
+                        if (result is PrintResult.Failure) {
+                            _event.send(TutupShiftEvent.Pesan("Gagal cetak Laporan X: ${result.message}"))
+                        } else {
+                            _event.send(TutupShiftEvent.Pesan("Laporan X berhasil dicetak"))
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(sedangCetak = false) }
+                _event.send(TutupShiftEvent.Pesan(e.message ?: "Gagal cetak Laporan X"))
+            }
+        }
+    }
+
+    /** Tahap Final: Tutup Shift secara Atomik di Database & Cetak Z Report */
+    fun konfirmasiTutupShift() {
+        val shiftId = _uiState.value.shiftId ?: return
+        val actualCash = _uiState.value.kasAktualNominal
+        val catatan = _uiState.value.catatan
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(sedangMemproses = true) }
+            val now = currentTimeMillis()
+
+            shiftService.close(shiftId, actualCash, now, catatan).fold(
+                onSuccess = { summaryFinal ->
+                    // 1. Kirim cetak Z-Report ke printer
+                    try {
+                        val toko = profilRepo.get()
+                        val receiptData = ReceiptFormatter.formatShiftReport(toko, summaryFinal)
+                        printerService.enqueue(receiptData)
+                    } catch (_: Exception) {}
+
+                    // 2. Bersihkan pointer sesi kasir
+                    sessionProvider.logout()
+
+                    // 3. Navigasi keluar
+                    _uiState.update { it.copy(sedangMemproses = false) }
+                    _event.send(TutupShiftEvent.ShiftSelesaiDanKeluar)
+                },
+                onFailure = { error ->
+                    _uiState.update {
+                        it.copy(
+                            sedangMemproses = false,
+                            pesanError = error.message ?: "Gagal menutup shift",
+                        )
+                    }
+                },
+            )
+        }
+    }
+}

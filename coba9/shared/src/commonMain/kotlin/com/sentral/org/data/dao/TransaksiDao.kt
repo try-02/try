@@ -96,4 +96,11 @@ interface TransaksiDao {
         limit: Int,
         offset: Int,
     ): List<TransaksiDenganDetail>
+
+    @Query("""
+        SELECT * FROM transaksi
+        WHERE shift_id = :shiftId
+        ORDER BY dibuat_pada ASC
+    """)
+    suspend fun getByShift(shiftId: Long): List<TransaksiEntity>
 }

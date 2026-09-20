@@ -78,4 +78,62 @@ object ReceiptFormatter {
         // Format sederhana tanpa library, cocok untuk struk thermal
         return value.toString()
     }
+
+    fun formatShiftReport(
+        toko: ProfilTokoEntity?,
+        summary: com.sentral.org.data.model.ShiftSummary,
+    ): ReceiptData {
+        val jenisLaporan = if (summary.isZReport) "LAPORAN PENUTUPAN (Z REPORT)" else "LAPORAN SEMENTARA (X REPORT)"
+        val waktuLaporan = summary.ditutupPada ?: summary.dimulaiPada
+
+        val items = mutableListOf(
+            ReceiptItem("Modal Awal Kas", 1000, summary.kasAwal, summary.kasAwal),
+            ReceiptItem("Penjualan Tunai", 1000, summary.totalPenjualanTunai, summary.totalPenjualanTunai),
+            ReceiptItem("Penjualan QRIS", 1000, summary.totalPenjualanNonTunai, summary.totalPenjualanNonTunai),
+        )
+        if (summary.totalReturTunai > 0) {
+            items.add(ReceiptItem("Retur / Refund Kas", 1000, -summary.totalReturTunai, -summary.totalReturTunai))
+        }
+
+        val payments = if (summary.isZReport && summary.kasAktual != null) {
+            listOf(
+                PaymentInfo(
+                    metode = MetodePembayaran.CASH,
+                    jumlah = summary.kasDiharapkan,
+                    diterima = summary.kasAktual,
+                    kembalian = summary.selisihKas,
+                )
+            )
+        } else {
+            emptyList()
+        }
+
+        val footerText = if (summary.isZReport) {
+            "*** SHIFT RESMI DITUTUP ***\nSimpan struk ini untuk rekonsiliasi kas."
+        } else {
+            "*** BACAAN SEMENTARA (SHIFT MASIH AKTIF) ***"
+        }
+
+        return ReceiptData(
+            toko = StoreInfo(
+                nama = toko?.namaToko ?: "Toko",
+                alamat = toko?.alamat ?: "",
+                footer = footerText,
+                logoUri = toko?.logoUri,
+                cetakQr = false,
+            ),
+            transaksi = TransactionInfo(
+                nomor = if (summary.isZReport) "Z-SHIFT-${summary.shiftId}" else "X-SHIFT-${summary.shiftId}",
+                kasir = summary.kasirNama,
+                waktu = waktuLaporan,
+                subtotal = summary.totalPenjualanTunai + summary.totalPenjualanNonTunai,
+                diskon = 0L,
+                pajak = 0L,
+                total = summary.kasDiharapkan,
+            ),
+            items = items,
+            payments = payments,
+            footer = footerText,
+        )
+    }
 }

@@ -19,6 +19,7 @@ import com.sentral.org.data.session.SesiKasirProvider
 import com.sentral.org.data.service.AuthService
 import com.sentral.org.ui.screen.auth.LoginKasirViewModel
 import com.sentral.org.ui.screen.shift.BukaShiftViewModel
+import com.sentral.org.ui.screen.shift.TutupShiftViewModel
 import com.sentral.org.hardware.EscPosPrinterDriver
 import com.sentral.org.ui.MainViewModel
 import com.sentral.org.ui.screen.pos.CheckoutViewModel
@@ -77,7 +78,16 @@ val appModule = module {
     factory { InventoryMutationService(persediaanDao = get(), ledgerDao = get()) }
     factory { PersediaanService(write = get(), products = get(), stock = get(), ledger = get()) }
     factory { CartService(write = get(), carts = get(), items = get(), products = get(), cashiers = get()) }
-    factory { ShiftService(write = get(), cashiers = get(), shifts = get(), cashLedger = get()) }
+    factory {
+        ShiftService(
+            write = get(),
+            cashiers = get(),
+            shifts = get(),
+            cashLedger = get(),
+            transactions = get(),
+            payments = get(),
+        )
+    }
     single {
         AuthService(
             kasirDao = get(),
@@ -174,6 +184,14 @@ val appModule = module {
             shiftService = get(),
             kasirDao = get(),
             sessionProvider = get(),
+        )
+    }
+    viewModel {
+        TutupShiftViewModel(
+            shiftService = get(),
+            sessionProvider = get(),
+            printerService = get(),
+            profilRepo = get(),
         )
     }
 }
