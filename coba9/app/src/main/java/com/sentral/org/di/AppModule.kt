@@ -171,6 +171,10 @@ val appModule = module {
             profilRepo = get(),
             printerService = get(),
             exportUseCase = get(),
+            voidService = get(),
+            returService = get(),
+            returDao = get(),
+            sessionProvider = get(),
         )
     }
     viewModel {

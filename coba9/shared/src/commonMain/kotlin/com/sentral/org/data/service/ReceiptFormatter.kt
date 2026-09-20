@@ -137,4 +137,105 @@ object ReceiptFormatter {
             footer = footerText,
         )
     }
+
+    fun formatVoid(
+        toko: ProfilTokoEntity?,
+        transaksi: TransaksiEntity,
+        items: List<ItemTransaksiEntity>,
+        kasirPelaksana: String,
+        alasan: String,
+        waktuVoid: Long,
+    ): ReceiptData {
+        val footerText = "*** TRANSAKSI DIBATALKAN (VOID) ***\n" +
+            "Alasan: $alasan\n" +
+            "Kasir Void: $kasirPelaksana\n" +
+            "Semua stok telah dikembalikan ke sistem."
+
+        return ReceiptData(
+            toko = StoreInfo(
+                nama = toko?.namaToko ?: "Toko",
+                alamat = toko?.alamat ?: "",
+                footer = footerText,
+                logoUri = toko?.logoUri,
+                cetakQr = false,
+            ),
+            transaksi = TransactionInfo(
+                nomor = "VOID-${transaksi.nomorTransaksi}",
+                kasir = transaksi.namaKasir,
+                waktu = waktuVoid,
+                subtotal = transaksi.subtotal,
+                diskon = transaksi.diskon,
+                pajak = transaksi.pajak,
+                total = transaksi.total,
+            ),
+            items = items.map { item ->
+                ReceiptItem(
+                    nama = "[VOID] ${item.namaProduk}",
+                    jumlah = item.jumlah,
+                    hargaSatuan = item.hargaSatuan,
+                    totalBaris = item.totalBaris,
+                )
+            },
+            payments = listOf(
+                PaymentInfo(
+                    metode = MetodePembayaran.CASH,
+                    jumlah = transaksi.total,
+                    diterima = null,
+                    kembalian = null,
+                )
+            ),
+            footer = footerText,
+        )
+    }
+
+    fun formatReturn(
+        toko: ProfilTokoEntity?,
+        transaksi: TransaksiEntity,
+        itemsRetur: List<Pair<ItemTransaksiEntity, Long>>, // item to returned scaled qty
+        totalRefund: Long,
+        metodeRefund: MetodePembayaran,
+        kasirPelaksana: String,
+        waktuRetur: Long,
+    ): ReceiptData {
+        val footerText = "*** STRUK PENGEMBALIAN BARANG (RETUR) ***\n" +
+            "Ref Transaksi: ${transaksi.nomorTransaksi}\n" +
+            "Kasir Retur: $kasirPelaksana\n" +
+            "Barang yang diretur telah disesuaikan di gudang."
+
+        return ReceiptData(
+            toko = StoreInfo(
+                nama = toko?.namaToko ?: "Toko",
+                alamat = toko?.alamat ?: "",
+                footer = footerText,
+                logoUri = toko?.logoUri,
+                cetakQr = false,
+            ),
+            transaksi = TransactionInfo(
+                nomor = "RETUR-${transaksi.nomorTransaksi}",
+                kasir = kasirPelaksana,
+                waktu = waktuRetur,
+                subtotal = totalRefund,
+                diskon = 0L,
+                pajak = 0L,
+                total = totalRefund,
+            ),
+            items = itemsRetur.map { (item, qty) ->
+                ReceiptItem(
+                    nama = "[RETUR] ${item.namaProduk}",
+                    jumlah = qty,
+                    hargaSatuan = item.hargaSatuan,
+                    totalBaris = MoneyMath.lineTotal(item.hargaSatuan, qty),
+                )
+            },
+            payments = listOf(
+                PaymentInfo(
+                    metode = metodeRefund,
+                    jumlah = totalRefund,
+                    diterima = null,
+                    kembalian = null,
+                )
+            ),
+            footer = footerText,
+        )
+    }
 }

@@ -1,7 +1,7 @@
 package com.sentral.org.ui.screen.riwayat
 
+import android.content.Intent
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -23,16 +23,18 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import android.content.Intent
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FileDownload
-import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material.icons.filled.Undo
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -53,14 +55,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.SheetValue
-import androidx.compose.material3.rememberBottomSheetState
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -75,6 +77,7 @@ import com.sentral.org.data.entity.TransaksiEntity
 import com.sentral.org.data.model.MetodePembayaran
 import com.sentral.org.data.model.QUANTITY_SCALE
 import com.sentral.org.data.model.StatusTransaksi
+import com.sentral.org.data.model.TujuanStokPengembalian
 import com.sentral.org.ui.screen.pos.formatRupiah
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -98,6 +101,8 @@ fun RiwayatTransaksiScreen(
             when (event) {
                 is RiwayatEvent.Pesan -> snackbarHostState.showSnackbar(event.teks)
                 is RiwayatEvent.ReprintSukses -> snackbarHostState.showSnackbar("Salinan struk ${event.nomorTransaksi} berhasil dicetak")
+                is RiwayatEvent.VoidSukses -> snackbarHostState.showSnackbar("Transaksi ${event.nomorTransaksi} berhasil dibatalkan (VOID)")
+                is RiwayatEvent.ReturSukses -> snackbarHostState.showSnackbar("Retur ${event.nomorTransaksi} berhasil (Refund ${formatRupiah(event.totalRefund)})")
                 is RiwayatEvent.FileSiapDibagikan -> {
                     val sendIntent = Intent(Intent.ACTION_SEND).apply {
                         type = event.mimeType
@@ -158,7 +163,6 @@ fun RiwayatTransaksiScreen(
                 .fillMaxSize()
                 .padding(padding),
         ) {
-            // Bilah Pencarian Nomor Transaksi (Prefix Search)
             OutlinedTextField(
                 value = uiState.filter.query,
                 onValueChange = { viewModel.setQueryPencarian(it) },
@@ -178,7 +182,6 @@ fun RiwayatTransaksiScreen(
                 shape = MaterialTheme.shapes.medium,
             )
 
-            // Bilah Filter Status Transaksi
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -211,7 +214,6 @@ fun RiwayatTransaksiScreen(
                 modifier = Modifier.padding(top = 8.dp),
             )
 
-            // Konten Daftar Paging 3
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -265,12 +267,6 @@ fun RiwayatTransaksiScreen(
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold,
                                     )
-                                    Spacer(Modifier.height(4.dp))
-                                    Text(
-                                        "Belum ada riwayat transaksi yang cocok dengan filter.",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
                                 }
                             }
                         } else {
@@ -291,44 +287,6 @@ fun RiwayatTransaksiScreen(
                                         )
                                     }
                                 }
-
-                                // Status Append (Paging halaman berikutnya)
-                                when (val appendState = pagedTransaksi.loadState.append) {
-                                    is LoadState.Loading -> {
-                                        item {
-                                            Box(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(16.dp),
-                                                contentAlignment = Alignment.Center,
-                                            ) {
-                                                CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                                            }
-                                        }
-                                    }
-                                    is LoadState.Error -> {
-                                        item {
-                                            Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(8.dp),
-                                                horizontalArrangement = Arrangement.Center,
-                                                verticalAlignment = Alignment.CenterVertically,
-                                            ) {
-                                                Text(
-                                                    "Gagal memuat item selanjutnya",
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.error,
-                                                )
-                                                Spacer(Modifier.width(8.dp))
-                                                TextButton(onClick = { pagedTransaksi.retry() }) {
-                                                    Text("Coba Lagi")
-                                                }
-                                            }
-                                        }
-                                    }
-                                    is LoadState.NotLoading -> Unit
-                                }
                             }
                         }
                     }
@@ -337,13 +295,44 @@ fun RiwayatTransaksiScreen(
         }
     }
 
-    // BottomSheet Detail Transaksi & Cetak Ulang Struk
+    // Sheet Detail Transaksi
     uiState.detailTerpilih?.let { detail ->
         SheetDetailTransaksi(
             detail = detail,
             sedangReprint = uiState.sedangReprint,
+            sedangMemprosesAksi = uiState.sedangMemprosesAksi,
             onDismiss = { viewModel.tutupDetailTransaksi() },
             onReprint = { viewModel.cetakUlangStruk(detail) },
+            onBukaVoid = { viewModel.bukaDialogVoid() },
+            onBukaRetur = { viewModel.bukaDialogRetur() },
+        )
+    }
+
+    // Dialog Konfirmasi Void
+    if (uiState.dialogVoidTerbuka) {
+        DialogKonfirmasiVoid(
+            alasan = uiState.alasanVoidInput,
+            sedangMemproses = uiState.sedangMemprosesAksi,
+            onAlasanChange = { viewModel.setAlasanVoid(it) },
+            onKonfirmasi = { viewModel.konfirmasiVoid() },
+            onDismiss = { viewModel.tutupDialogVoid() },
+        )
+    }
+
+    // Sheet Form Retur Barang
+    if (uiState.dialogReturTerbuka) {
+        SheetFormRetur(
+            items = uiState.daftarItemRetur,
+            metodeRefund = uiState.metodeRefundRetur,
+            catatan = uiState.catatanReturInput,
+            sedangMemproses = uiState.sedangMemprosesAksi,
+            onTambahQty = { viewModel.ubahQtyRetur(it, 1) },
+            onKurangQty = { viewModel.ubahQtyRetur(it, -1) },
+            onUbahTujuan = { id, tujuan -> viewModel.ubahTujuanRetur(id, tujuan) },
+            onUbahMetodeRefund = { viewModel.setMetodeRefund(it) },
+            onCatatanChange = { viewModel.setCatatanRetur(it) },
+            onKonfirmasi = { viewModel.konfirmasiRetur() },
+            onDismiss = { viewModel.tutupDialogRetur() },
         )
     }
 }
@@ -376,7 +365,6 @@ private fun KartuTransaksi(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                 )
-                // Badge Status
                 Surface(
                     shape = RoundedCornerShape(8.dp),
                     color = when (transaksi.status) {
@@ -431,18 +419,19 @@ private fun KartuTransaksi(
 private fun SheetDetailTransaksi(
     detail: TransaksiDenganDetail,
     sedangReprint: Boolean,
+    sedangMemprosesAksi: Boolean,
     onDismiss: () -> Unit,
     onReprint: () -> Unit,
+    onBukaVoid: () -> Unit,
+    onBukaRetur: () -> Unit,
 ) {
     val dateFormat = remember { SimpleDateFormat("dd MMMM yyyy, HH:mm", Locale.getDefault()) }
     val waktuFormatted = remember(detail.transaksi.dibuatPada) { dateFormat.format(Date(detail.transaksi.dibuatPada)) }
-    val sheetState = rememberBottomSheetState(
-        initialValue = SheetValue.Hidden
-    )
+    val isSelesai = detail.transaksi.status == StatusTransaksi.SELESAI
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         containerColor = MaterialTheme.colorScheme.surface,
     ) {
@@ -452,7 +441,6 @@ private fun SheetDetailTransaksi(
                 .fillMaxHeight(0.85f)
                 .padding(20.dp),
         ) {
-            // Header Dialog
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -494,7 +482,6 @@ private fun SheetDetailTransaksi(
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(Modifier.height(12.dp))
 
-            // Rincian Item Barang Historis
             Text(
                 "Rincian Produk",
                 style = MaterialTheme.typography.labelLarge,
@@ -549,33 +536,6 @@ private fun SheetDetailTransaksi(
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     Spacer(Modifier.height(8.dp))
 
-                    // Rincian Keuangan
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Text("Subtotal", style = MaterialTheme.typography.bodyMedium)
-                        Text(formatRupiah(detail.transaksi.subtotal), style = MaterialTheme.typography.bodyMedium)
-                    }
-                    if (detail.transaksi.diskon > 0) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                        ) {
-                            Text("Diskon Transaksi", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.secondary)
-                            Text("-${formatRupiah(detail.transaksi.diskon)}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.secondary)
-                        }
-                    }
-                    if (detail.transaksi.pajak > 0) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                        ) {
-                            Text("Pajak", style = MaterialTheme.typography.bodyMedium)
-                            Text(formatRupiah(detail.transaksi.pajak), style = MaterialTheme.typography.bodyMedium)
-                        }
-                    }
-                    Spacer(Modifier.height(4.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -584,55 +544,56 @@ private fun SheetDetailTransaksi(
                         Text(formatRupiah(detail.transaksi.total), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     }
 
-                    Spacer(Modifier.height(12.dp))
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                    Spacer(Modifier.height(8.dp))
-
-                    // Metode Pembayaran
-                    Text(
-                        "Pembayaran",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Spacer(Modifier.height(6.dp))
-
-                    detail.pembayaran.forEach { pay ->
-                        Row(
+                    if (detail.transaksi.alasanPembatalan != null) {
+                        Spacer(Modifier.height(8.dp))
+                        Surface(
+                            shape = MaterialTheme.shapes.small,
+                            color = MaterialTheme.colorScheme.errorContainer,
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
-                            val metodeLabel = when (pay.metode) {
-                                MetodePembayaran.CASH -> "Tunai"
-                                MetodePembayaran.QRIS -> "QRIS"
-                            }
-                            Text(metodeLabel, style = MaterialTheme.typography.bodyMedium)
-                            Text(formatRupiah(pay.jumlah), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                        }
-                        val uangDiterima = pay.diterima
-                        if (uangDiterima != null && uangDiterima > 0) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                            ) {
-                                Text("Diterima", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text(formatRupiah(uangDiterima), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                        val uangKembalian = pay.kembalian
-                        if (uangKembalian != null && uangKembalian > 0) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                            ) {
-                                Text("Kembalian", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text(formatRupiah(uangKembalian), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
+                            Text(
+                                "Alasan Void: ${detail.transaksi.alasanPembatalan}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.padding(10.dp),
+                            )
                         }
                     }
                 }
             }
 
             Spacer(Modifier.height(16.dp))
+
+            // Baris Tombol Aksi Kasir (Void & Retur hanya jika status SELESAI)
+            if (isSelesai) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    OutlinedButton(
+                        onClick = onBukaVoid,
+                        enabled = !sedangMemprosesAksi,
+                        modifier = Modifier.weight(1f).height(44.dp),
+                        shape = MaterialTheme.shapes.medium,
+                    ) {
+                        Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
+                        Spacer(Modifier.width(4.dp))
+                        Text("Void", color = MaterialTheme.colorScheme.error)
+                    }
+
+                    OutlinedButton(
+                        onClick = onBukaRetur,
+                        enabled = !sedangMemprosesAksi,
+                        modifier = Modifier.weight(1f).height(44.dp),
+                        shape = MaterialTheme.shapes.medium,
+                    ) {
+                        Icon(Icons.Filled.Undo, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Retur")
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+            }
 
             // Tombol Cetak Ulang Struk
             Button(
@@ -641,22 +602,231 @@ private fun SheetDetailTransaksi(
                 shape = MaterialTheme.shapes.medium,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp),
+                    .height(48.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
             ) {
                 if (sedangReprint) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
+                        modifier = Modifier.size(22.dp),
                         color = MaterialTheme.colorScheme.onPrimary,
                     )
                 } else {
-                    Icon(Icons.Filled.Print, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Filled.Print, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text(
-                        "Cetak Ulang Struk (Salinan)",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
+                    Text("Cetak Ulang Struk (Salinan)", fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DialogKonfirmasiVoid(
+    alasan: String,
+    sedangMemproses: Boolean,
+    onAlasanChange: (String) -> Unit,
+    onKonfirmasi: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = MaterialTheme.shapes.extraLarge,
+        title = {
+            Text("Batalkan Transaksi (Void)?", fontWeight = FontWeight.Bold)
+        },
+        text = {
+            Column {
+                Text(
+                    "Transaksi akan dibatalkan permanen. Seluruh stok barang akan dikembalikan ke rak, dan uang tunai akan di-refund dari shift saat ini.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = alasan,
+                    onValueChange = onAlasanChange,
+                    label = { Text("Alasan Pembatalan") },
+                    placeholder = { Text("Contoh: Pembeli batal, salah input...") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium,
+                    singleLine = true,
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onKonfirmasi,
+                enabled = !sedangMemproses && alasan.isNotBlank(),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                shape = MaterialTheme.shapes.medium,
+            ) {
+                if (sedangMemproses) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), color = MaterialTheme.colorScheme.onError)
+                } else {
+                    Text("Ya, Batalkan", fontWeight = FontWeight.Bold)
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !sedangMemproses) {
+                Text("Batal")
+            }
+        },
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SheetFormRetur(
+    items: List<ItemReturUi>,
+    metodeRefund: MetodePembayaran,
+    catatan: String,
+    sedangMemproses: Boolean,
+    onTambahQty: (Long) -> Unit,
+    onKurangQty: (Long) -> Unit,
+    onUbahTujuan: (Long, TujuanStokPengembalian) -> Unit,
+    onUbahMetodeRefund: (MetodePembayaran) -> Unit,
+    onCatatanChange: (String) -> Unit,
+    onKonfirmasi: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        containerColor = MaterialTheme.colorScheme.surface,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.85f)
+                .padding(20.dp),
+        ) {
+            Text(
+                "Pengembalian Barang (Retur)",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                "Tentukan item dan unit yang ingin dikembalikan",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(12.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(Modifier.height(10.dp))
+
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                items(items.size) { index ->
+                    val row = items[index]
+                    Surface(
+                        shape = MaterialTheme.shapes.medium,
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Column(Modifier.padding(12.dp)) {
+                            Row(
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        row.item.namaProduk,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                    )
+                                    Text(
+                                        "Sisa dapat diretur: ${row.sisaQtyScaled / QUANTITY_SCALE} unit",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    IconButton(
+                                        onClick = { onKurangQty(row.item.id) },
+                                        enabled = row.qtyPilihanScaled > 0,
+                                        modifier = Modifier.size(32.dp),
+                                    ) {
+                                        Icon(Icons.Filled.Remove, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    }
+                                    Text(
+                                        "${row.qtyPilihanScaled / QUANTITY_SCALE}",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.width(32.dp),
+                                        textAlign = TextAlign.Center,
+                                    )
+                                    IconButton(
+                                        onClick = { onTambahQty(row.item.id) },
+                                        enabled = row.qtyPilihanScaled < row.sisaQtyScaled,
+                                        modifier = Modifier.size(32.dp),
+                                    ) {
+                                        Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    }
+                                }
+                            }
+
+                            if (row.qtyPilihanScaled > 0) {
+                                Spacer(Modifier.height(8.dp))
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text("Kondisi:", style = MaterialTheme.typography.labelSmall)
+                                    FilterChip(
+                                        selected = row.tujuan == TujuanStokPengembalian.NORMAL,
+                                        onClick = { onUbahTujuan(row.item.id, TujuanStokPengembalian.NORMAL) },
+                                        label = { Text("Bagus (Rak)") },
+                                        shape = MaterialTheme.shapes.small,
+                                    )
+                                    FilterChip(
+                                        selected = row.tujuan == TujuanStokPengembalian.RUSAK,
+                                        onClick = { onUbahTujuan(row.item.id, TujuanStokPengembalian.RUSAK) },
+                                        label = { Text("Rusak") },
+                                        shape = MaterialTheme.shapes.small,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                item {
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = catatan,
+                        onValueChange = onCatatanChange,
+                        label = { Text("Catatan Retur") },
+                        placeholder = { Text("Misal: barang cacat kemasan") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.medium,
+                        singleLine = true,
                     )
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            Button(
+                onClick = onKonfirmasi,
+                enabled = !sedangMemproses && items.any { it.qtyPilihanScaled > 0 },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                shape = MaterialTheme.shapes.medium,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+            ) {
+                if (sedangMemproses) {
+                    CircularProgressIndicator(modifier = Modifier.size(22.dp), color = MaterialTheme.colorScheme.onPrimary)
+                } else {
+                    Text("Proses Pengembalian", fontWeight = FontWeight.Bold)
                 }
             }
         }
