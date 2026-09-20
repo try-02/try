@@ -11,6 +11,7 @@ import android.bluetooth.le.ScanResult
 import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import co.touchlab.kermit.Logger
 import com.dantsu.escposprinter.EscPosCharsetEncoding
 import com.dantsu.escposprinter.EscPosPrinter
 import com.dantsu.escposprinter.connection.bluetooth.BluetoothConnection
@@ -67,6 +68,8 @@ class AddPrinterViewModel(
     private val foundDevices = mutableMapOf<String, BluetoothDeviceUi>()
 
     companion object {
+        private const val TAG = "AddPrinterVM"
+        private val log = Logger.withTag(TAG)
         private const val SCAN_DURATION_MS = 15000L // 15 detik
         private const val CONNECTION_TIMEOUT_MS = 10000L // 10 detik
         private const val PRINTER_DPI = 203
@@ -288,17 +291,16 @@ class AddPrinterViewModel(
                 }
                 
                 val savedId = printerRepo.insert(printerToSave)
-                android.util.Log.d("AddPrinterVM", "💾 Printer saved: ${printerToSave.nama}, isDefault=${printerToSave.isDefault}, id=$savedId")
+                log.d { "💾 Printer saved: ${printerToSave.nama}, isDefault=${printerToSave.isDefault}, id=$savedId" }
                 
                 printerService.reloadPrinter()
-                android.util.Log.d("AddPrinterVM", "🔄 PrinterService reloaded")
+                log.d { "🔄 PrinterService reloaded" }
             }
             onComplete()
         }
     }
 
     override fun onCleared() {
-        super.onCleared()
         stopScan()
     }
 }

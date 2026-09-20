@@ -60,12 +60,34 @@ class AddPrinterViewModel(
     private val _scanProgress = MutableStateFlow(0f)
     val scanProgress: StateFlow<Float> = _scanProgress.asStateFlow()
 
+    private val _isBluetoothEnabled = MutableStateFlow(true)
+    val isBluetoothEnabled: StateFlow<Boolean> = _isBluetoothEnabled.asStateFlow()
+
+    private val _scanMessage = MutableSharedFlow<String>()
+    val scanMessage: SharedFlow<String> = _scanMessage.asSharedFlow()
+
     private val _testResult = MutableSharedFlow<PrinterTestResult>()
     val testResult: SharedFlow<PrinterTestResult> = _testResult.asSharedFlow()
 
     private var scanner: BluetoothLeScanner? = null
     private var scanCallback: ScanCallback? = null
     private val foundDevices = mutableMapOf<String, BluetoothDeviceUi>()
+
+    fun checkBluetoothEnabled(): Boolean {
+        val context = getApplication<Application>()
+        val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
+        val adapter = bluetoothManager?.adapter
+        val enabled = adapter != null && adapter.isEnabled
+        _isBluetoothEnabled.value = enabled
+        return enabled
+    }
+
+    fun setBluetoothEnabled(enabled: Boolean) {
+        _isBluetoothEnabled.value = enabled
+        if (!enabled) {
+            stopScan()
+        }
+    }
 
     companion object {
         private const val TAG = "AddPrinterVM"
@@ -81,20 +103,34 @@ class AddPrinterViewModel(
     fun startBluetoothScan() {
         if (_isScanning.value) return
 
+        val context = getApplication<Application>()
+        val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
+        val bluetoothAdapter = bluetoothManager?.adapter
+
+        if (bluetoothAdapter == null) {
+            _isBluetoothEnabled.value = false
+            viewModelScope.launch {
+                _scanMessage.emit("Perangkat ini tidak mendukung Bluetooth.")
+            }
+            return
+        }
+
+        if (!bluetoothAdapter.isEnabled) {
+            _isBluetoothEnabled.value = false
+            _isScanning.value = false
+            viewModelScope.launch {
+                _scanMessage.emit("Bluetooth sedang tidak aktif. Harap nyalakan Bluetooth terlebih dahulu.")
+            }
+            return
+        }
+
+        _isBluetoothEnabled.value = true
+
         viewModelScope.launch {
             _isScanning.value = true
             _scanProgress.value = 0f
             foundDevices.clear()
             _bluetoothDevices.value = emptyList()
-
-            val context = getApplication<Application>()
-            val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-            val bluetoothAdapter = bluetoothManager.adapter
-
-            if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled) {
-                _isScanning.value = false
-                return@launch
-            }
 
             // Muat langsung perangkat yang sudah di-pair di Android Settings
             val pairedDevices = bluetoothAdapter.bondedDevices.orEmpty()
@@ -112,6 +148,7 @@ class AddPrinterViewModel(
             scanner = bluetoothAdapter.bluetoothLeScanner
             if (scanner == null) {
                 _isScanning.value = false
+                _scanMessage.emit("Gagal menginisialisasi Bluetooth Scanner.")
                 return@launch
             }
 
@@ -166,6 +203,8 @@ class AddPrinterViewModel(
             scanner?.stopScan(scanCallback)
         } catch (e: SecurityException) {
             // Ignore
+        } catch (e: Exception) {
+            // Menghindari crash jika Bluetooth dimatikan mendadak saat scan berjalan
         }
         scanCallback = null
         _isScanning.value = false
@@ -173,6 +212,13 @@ class AddPrinterViewModel(
     }
 
     fun testBluetoothConnection(device: BluetoothDeviceUi) {
+        if (!checkBluetoothEnabled()) {
+            viewModelScope.launch {
+                _testResult.emit(PrinterTestResult.Failed("Bluetooth tidak aktif. Silakan nyalakan Bluetooth."))
+            }
+            return
+        }
+
         viewModelScope.launch {
             _testResult.emit(PrinterTestResult.Testing)
 
