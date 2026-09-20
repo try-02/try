@@ -70,6 +70,53 @@ class LoginKasirViewModel(
         _stateInternal.update { it.copy(pinInput = "", pesanError = null) }
     }
 
+    fun bukaDialogTambahKasir() {
+        _stateInternal.update { it.copy(dialogTambahKasirTerbuka = true) }
+    }
+
+    fun tutupDialogTambahKasir() {
+        _stateInternal.update { it.copy(dialogTambahKasirTerbuka = false) }
+    }
+
+    fun tambahKasirBaru(nama: String, pin: String) {
+        val namaClean = nama.trim()
+        if (namaClean.isBlank()) {
+            viewModelScope.launch { _event.send(LoginKasirEvent.Pesan("Nama kasir tidak boleh kosong")) }
+            return
+        }
+        if (pin.length !in 4..6 || !pin.all { it.isDigit() }) {
+            viewModelScope.launch { _event.send(LoginKasirEvent.Pesan("PIN harus berupa 4-6 angka")) }
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                val now = System.currentTimeMillis()
+                val pinHash = authService.buatHashPin(pin)
+                val id = kasirDao.insert(
+                    KasirEntity(
+                        nama = namaClean,
+                        pinHash = pinHash,
+                        aktif = true,
+                        dibuatPada = now,
+                    )
+                )
+                val kasirBaru = kasirDao.getById(id)
+                _stateInternal.update {
+                    it.copy(
+                        dialogTambahKasirTerbuka = false,
+                        kasirTerpilih = kasirBaru ?: it.kasirTerpilih,
+                        pinInput = "",
+                        pesanError = null,
+                    )
+                }
+                _event.send(LoginKasirEvent.Pesan("Kasir '$namaClean' berhasil ditambahkan"))
+            } catch (e: Exception) {
+                _event.send(LoginKasirEvent.Pesan(e.message ?: "Gagal menambahkan kasir"))
+            }
+        }
+    }
+
     fun submitPin(pinOverride: String? = null) {
         val kasir = uiState.value.kasirTerpilih ?: return
         val pin = pinOverride ?: uiState.value.pinInput

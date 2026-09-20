@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "e64f2fb04d8690a1641fbb86ef44f398",
+    "identityHash": "bf38c61a0eac37f5f349a7d9a355301b",
     "entities": [
       {
         "tableName": "produk",
@@ -1075,6 +1075,27 @@
             ],
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_transaksi_status` ON `${TABLE_NAME}` (`status`)"
+          },
+          {
+            "name": "indeks_transaksi_waktu_id",
+            "unique": false,
+            "columnNames": [
+              "dibuat_pada",
+              "id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `indeks_transaksi_waktu_id` ON `${TABLE_NAME}` (`dibuat_pada`, `id`)"
+          },
+          {
+            "name": "indeks_transaksi_status_waktu_id",
+            "unique": false,
+            "columnNames": [
+              "status",
+              "dibuat_pada",
+              "id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `indeks_transaksi_status_waktu_id` ON `${TABLE_NAME}` (`status`, `dibuat_pada`, `id`)"
           }
         ],
         "foreignKeys": [
@@ -1772,7 +1793,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e64f2fb04d8690a1641fbb86ef44f398')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'bf38c61a0eac37f5f349a7d9a355301b')"
     ]
   }
 }

@@ -43,8 +43,7 @@ val appModule = module {
     }
     single<PosWriteService> { RoomTransactionRunner(get()) }
     single { ProductSeeder(get()) }
-    single { DevSessionBootstrap(get(), get(), get()) }
-    single { DatabaseWarmup(get(), get(), get()) }
+    single { DatabaseWarmup(get(), get()) }
 
     // 2. DAOs
     single { get<PosDatabase>().produkDao() }

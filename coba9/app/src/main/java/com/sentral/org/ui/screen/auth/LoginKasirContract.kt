@@ -9,6 +9,7 @@ data class LoginKasirUiState(
     val sedangMemproses: Boolean = false,
     val pesanError: String? = null,
     val sisaDetikTerkunci: Long? = null,
+    val dialogTambahKasirTerbuka: Boolean = false,
 )
 
 sealed interface LoginKasirEvent {

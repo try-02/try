@@ -24,7 +24,12 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         
         setContent {
-            PosNavHost()
+            val isReady by androidx.lifecycle.compose.collectAsStateWithLifecycle(mainViewModel.isReady)
+            val startDestination by androidx.lifecycle.compose.collectAsStateWithLifecycle(mainViewModel.startDestination)
+
+            if (isReady) {
+                PosNavHost(startDestination = startDestination)
+            }
         }
     }
 }
