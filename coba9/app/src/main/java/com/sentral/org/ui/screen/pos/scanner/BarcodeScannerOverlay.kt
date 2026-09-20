@@ -531,19 +531,51 @@ private fun ScannerViewfinder(
                 // 4 Sudut Viewfinder
                 drawLine(color, Offset(left, top + cornerRadiusPx), Offset(left, top + cornerLength), strokeWidthPx)
                 drawLine(color, Offset(left + cornerRadiusPx, top), Offset(left + cornerLength, top), strokeWidthPx)
-                drawArc(color, 180f, 90f, false, Offset(left, top), GeometrySize(cornerRadiusPx * 2, cornerRadiusPx * 2), strokeStyle)
+                drawArc(
+                    color = color,
+                    startAngle = 180f,
+                    sweepAngle = 90f,
+                    useCenter = false,
+                    topLeft = Offset(left, top),
+                    size = GeometrySize(cornerRadiusPx * 2, cornerRadiusPx * 2),
+                    style = strokeStyle,
+                )
 
                 drawLine(color, Offset(right, top + cornerRadiusPx), Offset(right, top + cornerLength), strokeWidthPx)
                 drawLine(color, Offset(right - cornerRadiusPx, top), Offset(right - cornerLength, top), strokeWidthPx)
-                drawArc(color, 270f, 90f, false, Offset(right - cornerRadiusPx * 2, top), GeometrySize(cornerRadiusPx * 2, cornerRadiusPx * 2), strokeStyle)
+                drawArc(
+                    color = color,
+                    startAngle = 270f,
+                    sweepAngle = 90f,
+                    useCenter = false,
+                    topLeft = Offset(right - cornerRadiusPx * 2, top),
+                    size = GeometrySize(cornerRadiusPx * 2, cornerRadiusPx * 2),
+                    style = strokeStyle,
+                )
 
                 drawLine(color, Offset(left, bottom - cornerRadiusPx), Offset(left, bottom - cornerLength), strokeWidthPx)
                 drawLine(color, Offset(left + cornerRadiusPx, bottom), Offset(left + cornerLength, bottom), strokeWidthPx)
-                drawArc(color, 90f, 90f, false, Offset(left, bottom - cornerRadiusPx * 2), GeometrySize(cornerRadiusPx * 2, cornerRadiusPx * 2), strokeStyle)
+                drawArc(
+                    color = color,
+                    startAngle = 90f,
+                    sweepAngle = 90f,
+                    useCenter = false,
+                    topLeft = Offset(left, bottom - cornerRadiusPx * 2),
+                    size = GeometrySize(cornerRadiusPx * 2, cornerRadiusPx * 2),
+                    style = strokeStyle,
+                )
 
                 drawLine(color, Offset(right, bottom - cornerRadiusPx), Offset(right, bottom - cornerLength), strokeWidthPx)
                 drawLine(color, Offset(right - cornerRadiusPx, bottom), Offset(right - cornerLength, bottom), strokeWidthPx)
-                drawArc(color, 0f, 90f, false, Offset(right - cornerRadiusPx * 2, bottom - cornerRadiusPx * 2), GeometrySize(cornerRadiusPx * 2, cornerRadiusPx * 2), strokeStyle)
+                drawArc(
+                    color = color,
+                    startAngle = 0f,
+                    sweepAngle = 90f,
+                    useCenter = false,
+                    topLeft = Offset(right - cornerRadiusPx * 2, bottom - cornerRadiusPx * 2),
+                    size = GeometrySize(cornerRadiusPx * 2, cornerRadiusPx * 2),
+                    style = strokeStyle,
+                )
             }
         },
     )
