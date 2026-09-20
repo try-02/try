@@ -133,15 +133,6 @@ val appModule = module {
     single { PinRateLimiter() }
     single { ActiveSesiKasirProvider(kasirDao = get(), shiftDao = get()) }
     single<SesiKasirProvider> { get<ActiveSesiKasirProvider>() }
-    viewModel {
-        CheckoutViewModel(
-            checkoutService = get(),
-            printerService = get(),
-            transaksiRepo = get(),
-            produkRepo = get(),
-            profilRepo = get(),
-        )
-    }
     viewModelOf(::MainViewModel)
     viewModel {
         KasirViewModel(

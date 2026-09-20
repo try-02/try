@@ -277,10 +277,9 @@ class AddPrinterViewModel(
         }
     }
 
-    fun savePrinter(printer: PrinterEntity) {
+    fun savePrinter(printer: PrinterEntity, onComplete: () -> Unit) {
         viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                // Set printer baru sebagai default jika belum ada default lain
+            withContext(kotlinx.coroutines.NonCancellable + Dispatchers.IO) {
                 val existingDefault = printerRepo.getDefault()
                 val printerToSave = if (existingDefault == null) {
                     printer.copy(isDefault = true)
@@ -291,10 +290,10 @@ class AddPrinterViewModel(
                 val savedId = printerRepo.insert(printerToSave)
                 android.util.Log.d("AddPrinterVM", "💾 Printer saved: ${printerToSave.nama}, isDefault=${printerToSave.isDefault}, id=$savedId")
                 
-                // ===== LANGSUNG RELOAD DI SINI (bukan di UI callback) =====
                 printerService.reloadPrinter()
                 android.util.Log.d("AddPrinterVM", "🔄 PrinterService reloaded")
             }
+            onComplete()
         }
     }
 

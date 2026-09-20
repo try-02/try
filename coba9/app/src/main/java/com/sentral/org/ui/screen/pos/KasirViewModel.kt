@@ -367,6 +367,7 @@ class KasirViewModel(
     }
 
     private suspend fun pastikanKeranjangAktif(): Long? = keranjangMutex.withLock {
+        pilihanManual.value?.let { return it }
         uiState.value.keranjangAktifId?.let { return it }
         val s = sesi.sesiAktif() ?: run {
             kirim("Buka shift kasir terlebih dahulu", KasirEvent.Pesan.Jenis.GALAT)

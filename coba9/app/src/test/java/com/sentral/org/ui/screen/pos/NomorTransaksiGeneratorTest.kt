@@ -12,7 +12,7 @@ class NomorTransaksiGeneratorTest {
         val nomor = NomorTransaksiGenerator.buat(1_700_000_000_000L)
         assertTrue(
             "pola salah: $nomor",
-            nomor.matches(Regex("^TRX-\\d{8}-\\d{6}-\\d{3}$")),
+            nomor.matches(Regex("^TRX-\\d{8}-\\d{6}-\\d{3}-\\d{2}$")),
         )
     }
 
@@ -24,12 +24,12 @@ class NomorTransaksiGeneratorTest {
     }
 
     @Test
-    fun `segmen acak selalu tiga digit`() {
+    fun `segmen acak selalu dua digit`() {
         repeat(50) {
             val nomor = NomorTransaksiGenerator.buat(System.currentTimeMillis())
             val segmen = nomor.substringAfterLast('-')
-            assertEquals(3, segmen.length)
-            assertTrue(segmen.toInt() in 100..999)
+            assertEquals(2, segmen.length)
+            assertTrue(segmen.toInt() in 10..99)
         }
     }
 }

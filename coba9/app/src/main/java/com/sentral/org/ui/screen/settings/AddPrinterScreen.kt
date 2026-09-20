@@ -251,8 +251,9 @@ fun AddPrinterScreen(
                     testResult = null
                 },
                 onSave = { printer ->
-                    viewModel.savePrinter(printer)
-                    onSaved()
+                    viewModel.savePrinter(printer) {
+                        onSaved()
+                    }
                 },
             )
         }
