@@ -35,6 +35,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -65,7 +66,7 @@ class RiwayatViewModel(
         .debounce(300L)
         .distinctUntilChanged()
         .flatMapLatest { filter ->
-            transaksiRepo.getRiwayatPaged(filter).map { pagingData ->
+            transaksiRepo.getRiwayatPaged(filter).map { pagingData: PagingData<TransaksiEntity> ->
                 pagingData.map { it.toUiModel() }
             }
         }
