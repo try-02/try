@@ -495,7 +495,8 @@ fun PosUtamaScreen(
 
             if (sheetKeranjangTerbuka) {
                 val sheetState = rememberBottomSheetState(
-                    initialValue = SheetValue.Hidden
+                    initialValue = SheetValue.Hidden,
+                    enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
                 )
                 ModalBottomSheet(
                     onDismissRequest = { sheetKeranjangTerbuka = false },
