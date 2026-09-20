@@ -22,7 +22,6 @@ import com.sentral.org.ui.screen.shift.BukaShiftViewModel
 import com.sentral.org.ui.screen.shift.TutupShiftViewModel
 import com.sentral.org.hardware.EscPosPrinterDriver
 import com.sentral.org.ui.MainViewModel
-import com.sentral.org.ui.screen.pos.CheckoutViewModel
 import com.sentral.org.ui.screen.pos.KasirViewModel
 import com.sentral.org.ui.screen.riwayat.RiwayatViewModel
 import com.sentral.org.ui.viewmodel.AddPrinterViewModel
