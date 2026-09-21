@@ -9,8 +9,8 @@ sealed interface PosRoute {
     @Serializable data object PosUtama : PosRoute
     @Serializable data object TutupShift : PosRoute
     
+    // Contoh mengirim argumen dengan aman
     @Serializable data class RiwayatTransaksi(val kasirId: Long? = null) : PosRoute
     @Serializable data object PrinterSettings : PosRoute
     @Serializable data object AddPrinter : PosRoute
-    @Serializable data object BackupRestore : PosRoute
 }

@@ -55,6 +55,7 @@ import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.ShoppingCartCheckout
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.Print
+import androidx.compose.material.icons.filled.Backup
 import com.sentral.org.ui.screen.pos.scanner.BarcodeScannerOverlay
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -133,6 +134,7 @@ fun PosUtamaScreen(
     onNavigateToRiwayat: () -> Unit,
     onNavigateToTutupShift: () -> Unit,
     onNavigateToPrinterSettings: () -> Unit,
+    onNavigateToBackupRestore: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: KasirViewModel = koinViewModel(),
 ) {
@@ -497,6 +499,50 @@ fun PosUtamaScreen(
                                     )
                                     Text(
                                         "Kelola koneksi Bluetooth, WiFi, dan cetak otomatis.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(Modifier.height(12.dp))
+
+                        // Tombol Cadangan & Pemulihan Data
+                        Surface(
+                            shape = MaterialTheme.shapes.large,
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onNavigateToBackupRestore() },
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(20.dp),
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = MaterialTheme.colorScheme.secondaryContainer,
+                                    modifier = Modifier.size(48.dp),
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            Icons.Filled.Backup,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                            modifier = Modifier.size(24.dp),
+                                        )
+                                    }
+                                }
+                                Spacer(Modifier.width(16.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        "Cadangan & Pemulihan (SAF)",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                    )
+                                    Text(
+                                        "Ekspor file .posbak terenkripsi atau pulihkan data.",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )

@@ -72,9 +72,6 @@ fun PosNavHost(
                     onNavigateToPrinterSettings = {
                         navController.navigate(PosRoute.PrinterSettings)
                     },
-                    onNavigateToBackupRestore = {
-                        navController.navigate(PosRoute.BackupRestore)
-                    },
                 )
             }
 
