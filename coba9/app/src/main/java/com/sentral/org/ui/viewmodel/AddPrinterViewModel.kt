@@ -33,6 +33,9 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
 import com.sentral.org.data.service.PrinterService
+import com.dantsu.escposprinter.exceptions.EscPosConnectionException
+import com.dantsu.escposprinter.exceptions.EscPosParserException
+import com.dantsu.escposprinter.exceptions.EscPosEncodingException
 
 data class BluetoothDeviceUi(
     val name: String,
