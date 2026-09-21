@@ -75,6 +75,9 @@ fun PosNavHost(
                     onNavigateToBackupRestore = {
                         navController.navigate(PosRoute.BackupRestore)
                     },
+                    onNavigateToKelolaProduk = {
+                        navController.navigate(PosRoute.KelolaProduk)
+                    },
                 )
             }
 
@@ -115,6 +118,20 @@ fun PosNavHost(
 
             composable<PosRoute.BackupRestore> {
                 com.sentral.org.ui.screen.settings.BackupRestoreScreen(
+                    onBack = { navController.popBackStack() },
+                )
+            }
+
+            composable<PosRoute.KelolaProduk> {
+                com.sentral.org.ui.screen.inventory.KelolaProdukScreen(
+                    onBack = { navController.popBackStack() },
+                    onTambahProduk = { navController.navigate(PosRoute.FormProduk()) },
+                    onEditProduk = { id -> navController.navigate(PosRoute.FormProduk(id)) },
+                )
+            }
+
+            composable<PosRoute.FormProduk> {
+                com.sentral.org.ui.screen.inventory.FormProdukScreen(
                     onBack = { navController.popBackStack() },
                 )
             }

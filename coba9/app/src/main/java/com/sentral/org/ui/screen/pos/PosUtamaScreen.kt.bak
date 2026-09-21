@@ -399,10 +399,8 @@ fun PosUtamaScreen(
                     modifier = Modifier.fillMaxSize(),
                 )
 
-                2 -> PlaceholderTab(
-                    ikon = Icons.Filled.Insights,
-                    judul = "Laporan",
-                    pesan = "Ringkasan penjualan offline akan hadir di sini.",
+                2 -> com.sentral.org.ui.screen.laporan.LaporanScreen(
+                    modifier = Modifier.fillMaxSize(),
                 )
 
                 else -> {

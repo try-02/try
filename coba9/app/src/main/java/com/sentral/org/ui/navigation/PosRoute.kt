@@ -13,4 +13,6 @@ sealed interface PosRoute {
     @Serializable data object PrinterSettings : PosRoute
     @Serializable data object AddPrinter : PosRoute
     @Serializable data object BackupRestore : PosRoute
+    @Serializable data object KelolaProduk : PosRoute
+    @Serializable data class FormProduk(val produkId: Long? = null) : PosRoute
 }

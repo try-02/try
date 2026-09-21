@@ -112,6 +112,15 @@ val appModule = module {
     factory { InventoryMutationService(persediaanDao = get(), ledgerDao = get()) }
     factory { PersediaanService(write = get(), products = get(), stock = get(), ledger = get()) }
     factory { CartService(write = get(), carts = get(), items = get(), products = get(), cashiers = get()) }
+    single {
+        com.sentral.org.domain.service.ProductManagementService(
+            write = get(),
+            produkDao = get(),
+            persediaanDao = get(),
+            ledgerDao = get(),
+            mutationService = get(),
+        )
+    }
     factory {
         ShiftService(
             write = get(),
