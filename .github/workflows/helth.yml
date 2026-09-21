@@ -5,7 +5,7 @@ on:
 
 defaults:
   run:
-    working-directory: ./coba3
+    working-directory: ./coba9
 
 jobs:
   compose-doctor-check:
@@ -13,11 +13,11 @@ jobs:
 
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
       with:
-        # Melakukan checkout dari root terluar agar folder coba3 ikut terbawa
+        # Melakukan checkout dari root terluar agar folder coba9 ikut terbawa
         sparse-checkout: |
-          coba3
+          coba9
 
     - name: Set up JDK 17
       uses: actions/setup-java@v5
@@ -39,7 +39,7 @@ jobs:
     - name: Grant Execute Permission for Gradle
       run: chmod +x gradlew
 
-    # Menjalankan perintah analisis Compose Doctor di dalam folder coba3
+    # Menjalankan perintah analisis Compose Doctor di dalam folder coba9
     - name: Run Compose Doctor
       run: ./gradlew composeDoctor
 
@@ -50,6 +50,6 @@ jobs:
       with:
         name: compose-doctor-report
         path: |
-          coba3/app/build/reports/compose-doctor/*.*
-          coba3/app/build/reports/detekt/*.*
+          coba9/app/build/reports/compose-doctor/*.*
+          coba9/app/build/reports/detekt/*.*
         retention-days: 1
