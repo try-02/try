@@ -87,7 +87,7 @@ fun LaporanScreen(
 
         Spacer(Modifier.height(8.dp))
 
-        if (uiState.sedangMembuat && uiState.data == null) {
+        if (uiState.sedangMemuat && uiState.data == null) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
