@@ -487,3 +487,131 @@ fun DialogCheckoutBerhasil(
         },
     )
 }
+
+/**
+ * Dialog input kuantitas manual: mendukung bilangan desimal (koma / titik)
+ * untuk produk timbangan / pecahan (mis. 0.5 kg, 1.25 unit).
+ */
+@Composable
+fun DialogUbahJumlah(
+    namaProduk: String,
+    hargaSatuan: Long,
+    jumlahAwalScaled: Long,
+    onKonfirmasi: (Long) -> Unit,
+    onTutup: () -> Unit,
+) {
+    var inputTeks by rememberSaveable {
+        mutableStateOf(com.sentral.org.data.model.formatQuantity(jumlahAwalScaled).replace(',', '.'))
+    }
+
+    // Normalisasi input ke kuantitas scaled (mis. 0.5 -> 500)
+    val parsedScaled: Long = remember(inputTeks) {
+        val clean = inputTeks.replace(',', '.').trim()
+        val num = clean.toDoubleOrNull() ?: 0.0
+        if (num > 0.0) (num * com.sentral.org.data.model.QUANTITY_SCALE).toLong() else 0L
+    }
+
+    val totalBaris = remember(parsedScaled, hargaSatuan) {
+        if (parsedScaled > 0) com.sentral.org.data.model.MoneyMath.lineTotal(hargaSatuan, parsedScaled) else 0L
+    }
+
+    AlertDialog(
+        onDismissRequest = onTutup,
+        shape = MaterialTheme.shapes.extraLarge,
+        title = {
+            Column {
+                Text(
+                    "Ubah Jumlah Barang",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    namaProduk,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = inputTeks,
+                    onValueChange = { baru ->
+                        // Hanya izinkan angka, maksimal 1 tanda koma/titik, dan maks 3 digit pecahan
+                        if (baru.isEmpty() || baru.matches(Regex("^\\d*([.,]\\d{0,3})?$"))) {
+                            inputTeks = baru
+                        }
+                    },
+                    label = { Text("Kuantitas (Unit / Kg)") },
+                    placeholder = { Text("Contoh: 0.5 atau 1.25") },
+                    singleLine = true,
+                    shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                // Chip shortcut penambahan cepat
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    listOf("0.25", "0.5", "1", "2").forEach { preset ->
+                        Surface(
+                            shape = MaterialTheme.shapes.small,
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { inputTeks = preset },
+                        ) {
+                            Text(
+                                text = preset,
+                                textAlign = TextAlign.Center,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(vertical = 8.dp),
+                            )
+                        }
+                    }
+                }
+
+                // Kalkulasi harga live
+                Surface(
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("Subtotal Baris:", style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            formatRupiah(totalBaris),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onKonfirmasi(parsedScaled)
+                    onTutup()
+                },
+                enabled = parsedScaled >= 0,
+                shape = MaterialTheme.shapes.medium,
+            ) {
+                Text(if (parsedScaled == 0L) "Hapus Item" else "Terapkan", fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onTutup) {
+                Text("Batal")
+            }
+        },
+    )
+}
