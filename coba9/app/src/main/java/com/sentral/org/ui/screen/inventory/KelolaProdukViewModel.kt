@@ -20,10 +20,22 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+private data class FilterConfig(
+    val query: String,
+    val status: StatusStokFilter,
+    val kategori: String?,
+    val urutan: UrutanProduk,
+)
+
+private data class DialogTargets(
+    val penyesuaian: ProdukItemAdminUi?,
+    val kartuStok: ProdukItemAdminUi?,
+)
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 class KelolaProdukViewModel(
@@ -42,61 +54,70 @@ class KelolaProdukViewModel(
     private val _event = Channel<KelolaProdukEvent>(Channel.BUFFERED)
     val event = _event.receiveAsFlow()
 
-    private val queryDebounced = _query.debounce(300L)
-
-    private val rawProdukFlow = combine(
-        queryDebounced,
-        _filterKategori,
-        _filterStatus,
-    ) { q, kat, status -> Triple(q, kat, status) }
-        .flatMapLatest { (q, kat, status) ->
-            val hanyaAktif = (status != StatusStokFilter.NONAKTIF && status != StatusStokFilter.SEMUA)
-            productService.observeKatalogAdmin(
-                query = q.trim(),
-                kategori = kat,
-                hanyaAktif = hanyaAktif,
-            )
-        }
-
-    val uiState: StateFlow<KelolaProdukUiState> = combine(
-        _query,
+    // Sub-Grup 1: Konfigurasi Filter & Urutan (4 Flow <= 5)
+    private val filterConfigFlow = combine(
+        _query.debounce(300L),
         _filterStatus,
         _filterKategori,
         _urutan,
-        productService.observeKategori(),
-        rawProdukFlow,
+    ) { q, status, kat, urut ->
+        FilterConfig(query = q, status = status, kategori = kat, urutan = urut)
+    }
+
+    // Sub-Grup 2: State Dialog (2 Flow <= 5)
+    private val dialogTargetsFlow = combine(
         _dialogPenyesuaianTarget,
         _kartuStokTarget,
-    ) { q, status, kat, urut, categories, rawList, dialogTarget, kartuTarget ->
-        val filtered = rawList.filter { raw ->
-            val stok = raw.stokNormal ?: 0L
-            when (status) {
-                StatusStokFilter.SEMUA -> true
-                StatusStokFilter.MENIPIS -> raw.produk.aktif && stok in 1..5_000L
-                StatusStokFilter.HABIS -> raw.produk.aktif && stok <= 0L
-                StatusStokFilter.NONAKTIF -> !raw.produk.aktif
+    ) { penyesuaian, kartuStok ->
+        DialogTargets(penyesuaian = penyesuaian, kartuStok = kartuStok)
+    }
+
+    // Sub-Grup 3: Stream Produk Reaktif Terfilter & Terurut
+    private val produkListFlow = filterConfigFlow.flatMapLatest { config ->
+        val hanyaAktif = (config.status != StatusStokFilter.NONAKTIF && config.status != StatusStokFilter.SEMUA)
+        productService.observeKatalogAdmin(
+            query = config.query.trim(),
+            kategori = config.kategori,
+            hanyaAktif = hanyaAktif,
+        ).map { rawList ->
+            val filtered = rawList.filter { raw ->
+                val stok = raw.stokNormal ?: 0L
+                when (config.status) {
+                    StatusStokFilter.SEMUA -> true
+                    StatusStokFilter.MENIPIS -> raw.produk.aktif && stok in 1..5_000L
+                    StatusStokFilter.HABIS -> raw.produk.aktif && stok <= 0L
+                    StatusStokFilter.NONAKTIF -> !raw.produk.aktif
+                }
+            }.map { it.toUi() }
+
+            when (config.urutan) {
+                UrutanProduk.NAMA_AZ -> filtered.sortedBy { it.nama.lowercase() }
+                UrutanProduk.NAMA_ZA -> filtered.sortedByDescending { it.nama.lowercase() }
+                UrutanProduk.STOK_TERENDAH -> filtered.sortedBy { it.stokNormalScaled }
+                UrutanProduk.STOK_TERTINGGI -> filtered.sortedByDescending { it.stokNormalScaled }
+                UrutanProduk.HARGA_TERMURAH -> filtered.sortedBy { it.harga }
+                UrutanProduk.HARGA_TERMAHAL -> filtered.sortedByDescending { it.harga }
             }
-        }.map { it.toUi() }
-
-        val sorted = when (urut) {
-            UrutanProduk.NAMA_AZ -> filtered.sortedBy { it.nama.lowercase() }
-            UrutanProduk.NAMA_ZA -> filtered.sortedByDescending { it.nama.lowercase() }
-            UrutanProduk.STOK_TERENDAH -> filtered.sortedBy { it.stokNormalScaled }
-            UrutanProduk.STOK_TERTINGGI -> filtered.sortedByDescending { it.stokNormalScaled }
-            UrutanProduk.HARGA_TERMURAH -> filtered.sortedBy { it.harga }
-            UrutanProduk.HARGA_TERMAHAL -> filtered.sortedByDescending { it.harga }
         }
+    }
 
+    // Kombinasi Akhir Type-Safe (4 Flow <= 5)
+    val uiState: StateFlow<KelolaProdukUiState> = combine(
+        filterConfigFlow,
+        productService.observeKategori(),
+        produkListFlow,
+        dialogTargetsFlow,
+    ) { config, categories, produkList, dialogs ->
         KelolaProdukUiState(
-            query = q,
-            filterStatus = status,
-            filterKategori = kat,
-            urutan = urut,
+            query = config.query,
+            filterStatus = config.status,
+            filterKategori = config.kategori,
+            urutan = config.urutan,
             daftarKategori = categories,
-            daftarProduk = sorted,
+            daftarProduk = produkList,
             sedangMemuat = false,
-            dialogPenyesuaianTarget = dialogTarget,
-            kartuStokTarget = kartuTarget,
+            dialogPenyesuaianTarget = dialogs.penyesuaian,
+            kartuStokTarget = dialogs.kartuStok,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), KelolaProdukUiState())
 
