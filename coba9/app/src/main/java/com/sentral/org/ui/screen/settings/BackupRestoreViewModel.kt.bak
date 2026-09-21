@@ -1,9 +1,7 @@
 package com.sentral.org.ui.screen.settings
 
-import android.app.Application
 import android.content.Context
 import android.net.Uri
-import androidx.core.content.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sentral.org.backup.AppReloadHandler
@@ -25,7 +23,7 @@ import kotlinx.coroutines.launch
 class BackupRestoreViewModel(
     private val backupService: BackupService,
     private val restoreService: RestoreService,
-    private val application: Application,
+    private val context: Context,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BackupRestoreUiState())
@@ -34,7 +32,7 @@ class BackupRestoreViewModel(
     private val _event = Channel<BackupRestoreEvent>(Channel.BUFFERED)
     val event = _event.receiveAsFlow()
 
-    private val prefs = application.getSharedPreferences("pos_backup_pref", Context.MODE_PRIVATE)
+    private val prefs = context.getSharedPreferences("pos_backup_pref", Context.MODE_PRIVATE)
     private var pendingImportUri: Uri? = null
 
     init {
@@ -103,10 +101,10 @@ class BackupRestoreViewModel(
             }.fold(
                 onSuccess = { meta ->
                     val now = System.currentTimeMillis()
-                    prefs.edit {
-                        putLong("last_backup_ts", now)
-                        putString("last_backup_name", "POS-Backup-$now.posbak")
-                    }
+                    prefs.edit()
+                        .putLong("last_backup_ts", now)
+                        .putString("last_backup_name", "POS-Backup-$now.posbak")
+                        .apply()
                     muatInfoBackupTerakhir()
                     _uiState.update { it.copy(sedangMemproses = false) }
                     _event.send(BackupRestoreEvent.Pesan("Backup berhasil dibuat dan diverifikasi"))
@@ -199,7 +197,7 @@ class BackupRestoreViewModel(
                 onSuccess = {
                     _uiState.update { it.copy(sedangMemproses = false) }
                     _event.send(BackupRestoreEvent.RestartAplikasi)
-                    AppReloadHandler.restartApp(application)
+                    AppReloadHandler.restartApp(context)
                 },
                 onFailure = { err ->
                     _uiState.update { it.copy(sedangMemproses = false) }

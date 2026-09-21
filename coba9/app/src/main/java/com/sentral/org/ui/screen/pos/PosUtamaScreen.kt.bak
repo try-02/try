@@ -135,6 +135,7 @@ fun PosUtamaScreen(
     onNavigateToTutupShift: () -> Unit,
     onNavigateToPrinterSettings: () -> Unit,
     onNavigateToBackupRestore: () -> Unit = {},
+    onNavigateToKelolaProduk: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: KasirViewModel = koinViewModel(),
 ) {
@@ -541,6 +542,50 @@ fun PosUtamaScreen(
                                     )
                                     Text(
                                         "Ekspor file .posbak terenkripsi atau pulihkan data.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(Modifier.height(12.dp))
+
+                        // Tombol Kelola Katalog & Stok Produk
+                        Surface(
+                            shape = MaterialTheme.shapes.large,
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onNavigateToKelolaProduk() },
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(20.dp),
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                                    modifier = Modifier.size(48.dp),
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            Icons.Filled.Inventory2,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                                            modifier = Modifier.size(24.dp),
+                                        )
+                                    }
+                                }
+                                Spacer(Modifier.width(16.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        "Katalog & Stok Produk",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                    )
+                                    Text(
+                                        "Tambah produk, opname fisik, barang rusak, & kartu stok.",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )

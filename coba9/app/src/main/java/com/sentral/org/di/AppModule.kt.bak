@@ -243,4 +243,18 @@ val appModule = module {
             laporanRepo = get(),
         )
     }
+    viewModel {
+        com.sentral.org.ui.screen.inventory.KelolaProdukViewModel(
+            productService = get(),
+            sessionProvider = get(),
+        )
+    }
+    viewModel { (handle: androidx.lifecycle.SavedStateHandle) ->
+        com.sentral.org.ui.screen.inventory.FormProdukViewModel(
+            savedStateHandle = handle,
+            productService = get(),
+            produkDao = get(),
+            sessionProvider = get(),
+        )
+    }
 }

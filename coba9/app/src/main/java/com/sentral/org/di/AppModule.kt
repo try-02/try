@@ -74,7 +74,7 @@ val appModule = module {
         com.sentral.org.ui.screen.settings.BackupRestoreViewModel(
             backupService = get(),
             restoreService = get(),
-            context = androidContext(),
+            application = androidApplication(),
         )
     }
 
