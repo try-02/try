@@ -12,5 +12,4 @@ data class TransaksiFilter(
     val status: StatusTransaksi? = null,
     val startDate: Long? = null,
     val endDate: Long? = null,
-    val refreshEpoch: Long = 0L,
 )

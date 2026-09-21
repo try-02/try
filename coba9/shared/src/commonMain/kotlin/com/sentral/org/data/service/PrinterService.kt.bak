@@ -88,12 +88,12 @@ class PrinterService(
                     activeDriver = driverFactory(defaultPrinter)
                     activePrinter = defaultPrinter
                     _status.value = PrinterStatus.SIAP
-                    log.i { "✅ Initialized with printer: ${defaultPrinter.nama} (${defaultPrinter.tipeKoneksi})" }
+                    log.e { "✅ Initialized with printer: ${defaultPrinter.nama} (${defaultPrinter.tipeKoneksi})" }
                 } else {
                     activeDriver = NoOpPrinterDriver()
                     activePrinter = null
                     _status.value = PrinterStatus.SIAP
-                    log.i { "ℹ️ No default printer found, using NoOp driver" }
+                    log.e { "⚠️ No default printer found, using NoOp driver" }
                 }
             } catch (e: Exception) {
                 log.e(e) { "❌ Failed to initialize printer: ${e.message}" }

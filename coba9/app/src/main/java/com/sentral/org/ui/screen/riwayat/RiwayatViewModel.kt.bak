@@ -238,9 +238,7 @@ class RiwayatViewModel(
                             detailTerpilih = updatedDetail?.toUiModel(),
                         )
                     }
-                    val refreshFilter = _uiState.value.filter.copy(refreshEpoch = currentTimeMillis())
-                    _uiState.update { it.copy(filter = refreshFilter) }
-                    _filterFlow.value = refreshFilter
+                    _filterFlow.value = _uiState.value.filter // Memicu refresh Paging
                     _event.send(RiwayatEvent.VoidSukses(detail.transaksi.nomorTransaksi))
                 },
                 onFailure = { error ->

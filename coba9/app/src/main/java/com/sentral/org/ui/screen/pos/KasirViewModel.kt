@@ -373,6 +373,8 @@ class KasirViewModel(
                 ).fold(
                     onSuccess = { r ->
                         log.i { "✅ Checkout success: txId=${r.transactionId}, number=${r.transactionNumber}" }
+                        // Reset pointer manual agar keranjang berikutnya membuat instans aktif baru
+                        pilihanManual.value = null
                         
                         // ===== AUTO-PRINT: Trigger cetak struk =====
                         triggerAutoPrint(r.transactionId)
@@ -391,8 +393,26 @@ class KasirViewModel(
     }
 
     private suspend fun pastikanKeranjangAktif(): Long? = keranjangMutex.withLock {
-        pilihanManual.value?.let { return it }
-        uiState.value.keranjangAktifId?.let { return it }
+        // Validasi keaktifan ID yang sedang dipegang pilihanManual
+        val manualId = pilihanManual.value
+        if (manualId != null) {
+            val cart = cartRepo.getById(manualId)
+            if (cart != null && cart.status == com.sentral.org.data.model.StatusKeranjang.AKTIF) {
+                return manualId
+            } else {
+                pilihanManual.value = null
+            }
+        }
+
+        // Validasi keaktifan ID yang sedang aktif di UI State
+        val stateCartId = uiState.value.keranjangAktifId
+        if (stateCartId != null) {
+            val cart = cartRepo.getById(stateCartId)
+            if (cart != null && cart.status == com.sentral.org.data.model.StatusKeranjang.AKTIF) {
+                return stateCartId
+            }
+        }
+
         val s = sesi.sesiAktif() ?: run {
             kirim("Buka shift kasir terlebih dahulu", KasirEvent.Pesan.Jenis.GALAT)
             return null

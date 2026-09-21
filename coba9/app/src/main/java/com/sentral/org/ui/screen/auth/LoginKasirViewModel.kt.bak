@@ -30,13 +30,14 @@ class LoginKasirViewModel(
         kasirDao.observeAktif(),
         _stateInternal,
     ) { kasirs, internal ->
+        val mappedKasir = kasirs.map { KasirItemUi(id = it.id, nama = it.nama) }
         internal.copy(
-            daftarKasir = kasirs,
-            kasirTerpilih = internal.kasirTerpilih ?: kasirs.firstOrNull(),
+            daftarKasir = mappedKasir,
+            kasirTerpilih = internal.kasirTerpilih ?: mappedKasir.firstOrNull(),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LoginKasirUiState())
 
-    fun pilihKasir(kasir: KasirEntity) {
+    fun pilihKasir(kasir: KasirItemUi) {
         _stateInternal.update {
             it.copy(
                 kasirTerpilih = kasir,
@@ -101,7 +102,7 @@ class LoginKasirViewModel(
                         dibuatPada = now,
                     )
                 )
-                val kasirBaru = kasirDao.getById(id)
+                val kasirBaru = kasirDao.getById(id)?.let { KasirItemUi(id = it.id, nama = it.nama) }
                 _stateInternal.update {
                     it.copy(
                         dialogTambahKasirTerbuka = false,
