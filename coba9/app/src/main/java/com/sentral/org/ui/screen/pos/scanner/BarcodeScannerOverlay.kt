@@ -449,7 +449,7 @@ analysis.setAnalyzer(executor) { proxy ->
             .fillMaxSize()
             .background(Color.Black),
     ) {
-        AndroidView(
+/**        AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = { c: Context ->
                 val previewView = PreviewView(c).apply {
@@ -457,7 +457,7 @@ analysis.setAnalyzer(executor) { proxy ->
                 }
                 previewViewRef = previewView
                 val providerFuture = ProcessCameraProvider.getInstance(c)
-/**                providerFuture.addListener({
+                providerFuture.addListener({
                     try {
                         cameraProvider = providerFuture.get()
                         attemptBind()
@@ -468,32 +468,48 @@ analysis.setAnalyzer(executor) { proxy ->
                 previewView
             },
         ) */
-providerFuture.addListener(
-    {
-        try {
-            cameraProvider = providerFuture.get()
-            attemptBind()
-
-        } catch (e: InterruptedException) {
-            Thread.currentThread().interrupt()
-
-            log.e(e) {
-                "Thread kamera terinterupsi: ${e.message}"
-            }
-
-            cameraError = "Proses kamera terhenti."
-
-        } catch (e: ExecutionException) {
-            log.e(e) {
-                "Gagal memuat sistem kamera: ${e.cause?.message ?: e.message}"
-            }
-
-            cameraError = "Gagal memuat sistem kamera."
-
+AndroidView(
+    modifier = Modifier.fillMaxSize(),
+    factory = { c: Context ->
+        val previewView = PreviewView(c).apply {
+            implementationMode = PreviewView.ImplementationMode.COMPATIBLE
         }
+
+        previewViewRef = previewView
+
+        val providerFuture =
+            ProcessCameraProvider.getInstance(c)
+
+        providerFuture.addListener(
+            Runnable {
+                try {
+                    cameraProvider = providerFuture.get()
+                    attemptBind()
+
+                } catch (e: InterruptedException) {
+                    Thread.currentThread().interrupt()
+
+                    log.e(e) {
+                        "Thread kamera terinterupsi: ${e.message}"
+                    }
+
+                    cameraError = "Proses kamera terhenti."
+
+                } catch (e: ExecutionException) {
+                    log.e(e) {
+                        "Gagal memuat sistem kamera: ${
+                            e.cause?.message ?: e.message
+                        }"
+                    }
+
+                    cameraError = "Gagal memuat sistem kamera."
+                }
+            },
+            ContextCompat.getMainExecutor(c),
+        )
+
+        previewView
     },
-    ContextCompat.getMainExecutor(c),
-)
 )
 
         // Viewfinder Cutout
