@@ -9,15 +9,6 @@ interface ProdukRepository {
     suspend fun getBySku(sku: String): ProdukEntity?
     suspend fun getByBarcode(barcode: String): ProdukEntity?
     suspend fun insert(entity: ProdukEntity): Long
-    suspend fun updateMaster(
-        id: Long,
-        nama: String,
-        sku: String,
-        barcode: String?,
-        harga: Long,
-        hargaModal: Long,
-        kategori: String,
-        waktu: Long,
-    ): Int
+    suspend fun updateMaster(id: Long, nama: String, harga: Long, hargaModal: Long, kategori: String, waktu: Long): Int
     suspend fun setAktif(id: Long, aktif: Boolean, waktu: Long): Int
 }
