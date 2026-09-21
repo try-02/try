@@ -517,7 +517,7 @@ private fun SheetDetailTransaksi(
                                 overflow = TextOverflow.Ellipsis,
                             )
                             Text(
-                                "${item.jumlah / QUANTITY_SCALE}x @ ${formatRupiah(item.hargaSatuan)}",
+                                "${com.sentral.org.data.model.formatQuantity(item.jumlah)}x @ ${formatRupiah(item.hargaSatuan)}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -753,7 +753,7 @@ private fun SheetFormRetur(
                                         fontWeight = FontWeight.Bold,
                                     )
                                     Text(
-                                        "Sisa dapat diretur: ${row.sisaQtyScaled / QUANTITY_SCALE} unit",
+                                        "Sisa dapat diretur: ${com.sentral.org.data.model.formatQuantity(row.sisaQtyScaled)} unit",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -768,7 +768,7 @@ private fun SheetFormRetur(
                                         Icon(Icons.Filled.Remove, contentDescription = null, modifier = Modifier.size(18.dp))
                                     }
                                     Text(
-                                        "${row.qtyPilihanScaled / QUANTITY_SCALE}",
+                                        com.sentral.org.data.model.formatQuantity(row.qtyPilihanScaled),
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold,
                                         modifier = Modifier.width(32.dp),

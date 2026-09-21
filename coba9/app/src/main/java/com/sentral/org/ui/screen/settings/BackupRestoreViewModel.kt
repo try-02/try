@@ -81,8 +81,8 @@ class BackupRestoreViewModel(
     }
 
     fun eksekusiBackupKeUri(uri: Uri) {
-        val pwd = _uiState.value.passwordInput
-        val note = _uiState.value.catatanInput
+        val pwd = _uiState.value.passwordInput.trim()
+        val note = _uiState.value.catatanInput.trim()
 
         viewModelScope.launch {
             _uiState.update { it.copy(sedangMemproses = true, statusPesan = "Memulai backup...") }
@@ -133,7 +133,7 @@ class BackupRestoreViewModel(
 
     fun verifikasiDanBukaPreviewRestore() {
         val uri = pendingImportUri ?: return
-        val pwd = _uiState.value.passwordInput
+        val pwd = _uiState.value.passwordInput.trim()
         if (pwd.isBlank()) {
             _uiState.update { it.copy(pesanError = "Masukkan password backup") }
             return

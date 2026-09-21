@@ -65,5 +65,6 @@ jobs:
           path: |
             ${{ steps.sign_app.outputs.signedReleaseFile }}
             coba9/**/*.json
+            coba9/app/build/reports/
           retention-days: 1
           if-no-files-found: error

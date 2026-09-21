@@ -9,12 +9,10 @@ import java.io.DataOutputStream
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.security.SecureRandom
 import javax.crypto.Cipher
-import javax.crypto.CipherOutputStream
 import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.PBEKeySpec
@@ -58,8 +56,6 @@ class BackupCryptoEngine {
         )
 
         val headerBytes = serializeHeader(header)
-
-        // KDF PBKDF2-HMAC-SHA256 -> AES-256 Key
         val secretKey = deriveKey(password, salt, KDF_ITERATIONS)
 
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
@@ -69,17 +65,23 @@ class BackupCryptoEngine {
         // 1. Tulis Header Kanonikal Terbuka
         outputStream.write(headerBytes)
 
-        // 2. Tulis Payload Terenkripsi
-        val cipherOut = CipherOutputStream(outputStream, cipher)
+        // 2. Tulis Payload Terenkripsi & GCM Auth Tag via direct Cipher streaming
         FileInputStream(sourceDbFile).use { input ->
             val buffer = ByteArray(BUFFER_SIZE)
             var bytesRead: Int
             while (input.read(buffer).also { bytesRead = it } != -1) {
-                cipherOut.write(buffer, 0, bytesRead)
+                val outputChunk = cipher.update(buffer, 0, bytesRead)
+                if (outputChunk != null && outputChunk.isNotEmpty()) {
+                    outputStream.write(outputChunk)
+                }
             }
+            // doFinal() menghasilkan blok akhir DAN 16-byte GCM Tag
+            val finalBytes = cipher.doFinal()
+            if (finalBytes != null && finalBytes.isNotEmpty()) {
+                outputStream.write(finalBytes)
+            }
+            outputStream.flush()
         }
-        cipherOut.flush()
-        // Penutupan cipherOut menyelesaikan komputasi GCM tag
     }
 
     fun decrypt(
@@ -90,31 +92,36 @@ class BackupCryptoEngine {
         if (destinationDbFile.exists()) destinationDbFile.delete()
 
         FileInputStream(sourceEncryptedFile).use { fileIn ->
-            val (header, headerBytes) = parseHeader(fileIn)
+            val header = parseHeader(fileIn)
 
             if (header.formatVersion > CURRENT_FORMAT_VERSION) {
                 throw PosBackupException.UnsupportedVersion(header.formatVersion)
             }
 
+            val headerBytes = serializeHeader(header)
             val secretKey = deriveKey(password, header.salt, header.kdfIterations)
+
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")
             cipher.init(Cipher.DECRYPT_MODE, secretKey, GCMParameterSpec(GCM_TAG_LENGTH_BITS, header.iv))
             cipher.updateAAD(headerBytes)
 
             try {
                 FileOutputStream(destinationDbFile).use { fileOut ->
-                    val cipherOut = CipherOutputStream(fileOut, cipher)
                     val buffer = ByteArray(BUFFER_SIZE)
                     var bytesRead: Int
                     while (fileIn.read(buffer).also { bytesRead = it } != -1) {
-                        cipherOut.write(buffer, 0, bytesRead)
+                        val outputChunk = cipher.update(buffer, 0, bytesRead)
+                        if (outputChunk != null && outputChunk.isNotEmpty()) {
+                            fileOut.write(outputChunk)
+                        }
                     }
-                    cipherOut.flush()
-                    cipherOut.close() // Memvalidasi GCM Auth Tag
+                    // Memvalidasi integritas tag GCM secara langsung
+                    val finalBytes = cipher.doFinal()
+                    if (finalBytes != null && finalBytes.isNotEmpty()) {
+                        fileOut.write(finalBytes)
+                    }
+                    fileOut.flush()
                 }
-            } catch (e: IOException) {
-                destinationDbFile.delete()
-                throw PosBackupException.WrongPasswordOrCorrupted(e)
             } catch (e: Exception) {
                 destinationDbFile.delete()
                 throw PosBackupException.WrongPasswordOrCorrupted(e)
@@ -152,20 +159,8 @@ class BackupCryptoEngine {
         return byteStream.toByteArray()
     }
 
-    private fun parseHeader(inputStream: InputStream): Pair<PosBakHeader, ByteArray> {
-        val byteStream = ByteArrayOutputStream()
-        val dataIn = DataInputStream(object : InputStream() {
-            override fun read(): Int {
-                val b = inputStream.read()
-                if (b != -1) byteStream.write(b)
-                return b
-            }
-            override fun read(b: ByteArray, off: Int, len: Int): Int {
-                val n = inputStream.read(b, off, len)
-                if (n > 0) byteStream.write(b, off, n)
-                return n
-            }
-        })
+    private fun parseHeader(inputStream: InputStream): PosBakHeader {
+        val dataIn = DataInputStream(inputStream)
 
         val magic = ByteArray(MAGIC_BYTES.size)
         dataIn.readFully(magic)
@@ -179,16 +174,19 @@ class BackupCryptoEngine {
         val kdfIterations = dataIn.readInt()
 
         val saltSize = dataIn.readInt()
+        if (saltSize <= 0 || saltSize > 256) throw PosBackupException.InvalidFormat("Ukuran salt tidak valid")
         val salt = ByteArray(saltSize).also { dataIn.readFully(it) }
 
         val ivSize = dataIn.readInt()
+        if (ivSize <= 0 || ivSize > 256) throw PosBackupException.InvalidFormat("Ukuran IV tidak valid")
         val iv = ByteArray(ivSize).also { dataIn.readFully(it) }
 
         val metaSize = dataIn.readInt()
+        if (metaSize <= 0 || metaSize > 10 * 1024 * 1024) throw PosBackupException.InvalidFormat("Ukuran metadata tidak valid")
         val metaBytes = ByteArray(metaSize).also { dataIn.readFully(it) }
         val metadataJson = metaBytes.decodeToString()
 
-        val header = PosBakHeader(
+        return PosBakHeader(
             formatVersion = formatVersion,
             schemaVersion = schemaVersion,
             createdAt = createdAt,
@@ -197,8 +195,6 @@ class BackupCryptoEngine {
             iv = iv,
             metadataJson = metadataJson,
         )
-
-        return Pair(header, byteStream.toByteArray())
     }
 
     private fun deriveKey(password: CharArray, salt: ByteArray, iterations: Int): SecretKeySpec {
