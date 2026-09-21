@@ -40,6 +40,7 @@ import com.sentral.org.data.repository.TransaksiRepository
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import androidx.sqlite.SQLiteException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class KasirViewModel(
@@ -319,7 +320,7 @@ class KasirViewModel(
                         }
                     }
                 }
-            } catch (e: Exception) {
+            } catch (e: androidx.sqlite.SQLiteException) {
                 log.e(e) { "❌ Auto-print exception: ${e.message}" }
             }
         }

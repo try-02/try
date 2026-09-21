@@ -206,6 +206,15 @@ class KasirViewModel(
     fun tambahSatuan(produkId: Long) = ubah(produkId, quantityOf(1))
     fun kurangiSatuan(produkId: Long) = ubah(produkId, -quantityOf(1))
 
+    /** Menyetel kuantitas mutlak (menerima kuantitas desimal ter-skala) */
+    fun aturJumlah(produkId: Long, kuantitasScaled: Long) {
+        viewModelScope.launch {
+            val cartId = pastikanKeranjangAktif() ?: return@launch
+            cartService.setJumlah(cartId, produkId, kuantitasScaled, System.currentTimeMillis())
+                .onFailure { kirim(it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT) }
+        }
+    }
+
     fun hapusBaris(produkId: Long) {
         viewModelScope.launch {
             val cartId = uiState.value.keranjangAktifId ?: return@launch

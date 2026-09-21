@@ -393,12 +393,12 @@ class EscPosPrinterDriver(
 
         // ===== ITEMS =====
         receipt.items.forEach { item ->
-            val qty = item.jumlah / 1000
+            val qtyStr = com.sentral.org.data.model.formatQuantity(item.jumlah)
             val priceStr = ReceiptFormatter.formatMoney(item.hargaSatuan)
             val lineTotal = ReceiptFormatter.formatMoney(item.totalBaris)
 
             sb.append("[L]<b>").append(escapeDantSuText(truncate(item.nama, charsPerLine))).append("</b>\n")
-            sb.append("[L]").append(qty).append(" x ").append(priceStr)
+            sb.append("[L]").append(qtyStr).append(" x ").append(priceStr)
                 .append("[R]").append(lineTotal).append("\n")
         }
 

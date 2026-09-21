@@ -155,10 +155,37 @@ class LoginKasirViewModel(
                             pesanError = "Terlalu banyak percobaan. Terkunci ${result.sisaDetik} detik",
                         )
                     }
+                    mulaiHitungMundurLockout(result.sisaDetik)
                 }
                 is AuthResult.KasirTidakAktif -> {
                     _stateInternal.update {
                         it.copy(sedangMemproses = false, pinInput = "", pesanError = "Kasir tidak aktif")
+                    }
+                }
+            }
+        }
+    }
+
+    private var lockoutJob: kotlinx.coroutines.Job? = null
+
+    private fun mulaiHitungMundurLockout(durasiDetik: Long) {
+        lockoutJob?.cancel()
+        lockoutJob = viewModelScope.launch {
+            var detikTersisa = durasiDetik
+            while (detikTersisa > 0) {
+                kotlinx.coroutines.delay(1000L)
+                detikTersisa--
+                _stateInternal.update {
+                    if (detikTersisa > 0) {
+                        it.copy(
+                            sisaDetikTerkunci = detikTersisa,
+                            pesanError = "Terlalu banyak percobaan. Terkunci $detikTersisa detik",
+                        )
+                    } else {
+                        it.copy(
+                            sisaDetikTerkunci = null,
+                            pesanError = null,
+                        )
                     }
                 }
             }

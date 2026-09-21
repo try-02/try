@@ -32,6 +32,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import android.bluetooth.BluetoothManager
+import java.io.IOException
 
 /**
  * Implementasi PrinterDriver untuk Android menggunakan library DantSu ESC/POS v3.4.0.
@@ -98,7 +99,13 @@ class EscPosPrinterDriver(
             handle = buildPrinterHandle() ?: return@withContext false
             handle.printer.printFormattedText("[C]TEST CONNECTION\n")
             true
-        } catch (e: Exception) {
+        } catch (e: EscPosConnectionException) {
+            log.e(e) { "testConnection failed: ${e.message}" }
+            false
+        } catch (e: EscPosEncodingException) {
+            log.e(e) { "testConnection failed: ${e.message}" }
+            false
+        } catch (e: EscPosParserException) {
             log.e(e) { "testConnection failed: ${e.message}" }
             false
         } finally {
@@ -318,8 +325,11 @@ class EscPosPrinterDriver(
                 } catch (e: SecurityException) {
                     log.e(e) { "No permission to read logo: ${e.message}" }
                     null
-                } catch (e: Exception) {
+                } catch (e: IOException) {
                     log.e(e) { "Failed to load logo: ${e.message}" }
+                    null
+                } catch (e: IllegalArgumentException) {
+                    log.e(e) { "Invalid logo data: ${e.message}" }
                     null
                 }
             }
@@ -330,23 +340,49 @@ class EscPosPrinterDriver(
      * Hitung ukuran file dari URI. Return null jika tidak bisa ditentukan (misal content:// tanpa size).
      */
     private fun getFileSize(uri: Uri): Long? {
-        return try {
-            when (uri.scheme) {
-                "file" -> uri.path?.let { java.io.File(it).length().takeIf { it > 0 } }
-                "content" -> {
-                    context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-                        if (cursor.moveToFirst()) {
-                            val sizeIndex = cursor.getColumnIndex(android.provider.OpenableColumns.SIZE)
-                            if (sizeIndex >= 0) cursor.getLong(sizeIndex) else null
-                        } else null
+return try {
+    when (uri.scheme) {
+        "file" -> uri.path
+            ?.let { java.io.File(it).length().takeIf { it > 0 } }
+
+        "content" -> {
+            context.contentResolver.query(
+                uri,
+                null,
+                null,
+                null,
+                null,
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val sizeIndex =
+                        cursor.getColumnIndex(
+                            android.provider.OpenableColumns.SIZE
+                        )
+
+                    if (sizeIndex >= 0) {
+                        cursor.getLong(sizeIndex)
+                    } else {
+                        null
                     }
+                } else {
+                    null
                 }
-                else -> null
             }
-        } catch (e: Exception) {
-            log.e(e) { "Cannot get file size for $uri: ${e.message}" }
-            null
         }
+
+        else -> null
+    }
+} catch (e: SecurityException) {
+    log.e(e) {
+        "Cannot get file size for $uri: ${e.message}"
+    }
+    null
+} catch (e: IllegalArgumentException) {
+    log.e(e) {
+        "Invalid URI for file size: $uri: ${e.message}"
+    }
+    null
+}
     }
 
     /**
@@ -474,7 +510,7 @@ class EscPosPrinterDriver(
     private fun alignedLineBold(label: String, value: String): String = "[L]<b>$label</b>[R]<b>$value</b>\n"
 
     private fun isRetryableError(e: Exception): Boolean {
-        return e is java.io.IOException
+        return e is IOException
             || e is java.net.SocketTimeoutException
             || e is EscPosConnectionException
     }

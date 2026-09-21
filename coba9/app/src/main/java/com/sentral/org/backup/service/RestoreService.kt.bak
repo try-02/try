@@ -30,22 +30,16 @@ class RestoreService(
             val tempEncrypted = File(context.cacheDir, "restore_enc_$timestamp.tmp")
             val tempDecrypted = File(context.cacheDir, "restore_staging_$timestamp.db")
 
-            var restoreBerhasil = false
-
             try {
                 onProgress(RestoreState.DownloadingToStaging)
-
                 context.contentResolver.openInputStream(sourceUri)?.use { input ->
                     tempEncrypted.outputStream().use { output ->
                         input.copyTo(output)
                     }
-                } ?: throw PosBackupException.StorageError(
-                    "Tidak dapat membuka berkas backup dari URI"
-                )
+                } ?: throw PosBackupException.StorageError("Tidak dapat membuka berkas backup dari URI")
 
                 onProgress(RestoreState.ValidatingHeader)
                 onProgress(RestoreState.Decrypting)
-
                 val metadata = crypto.decrypt(
                     sourceEncryptedFile = tempEncrypted,
                     destinationDbFile = tempDecrypted,
@@ -59,18 +53,12 @@ class RestoreService(
                 validator.verifySchemaAndGetStats(tempDecrypted)
 
                 onProgress(RestoreState.PreviewReady(metadata))
-
-                restoreBerhasil = true
-
                 Pair(tempDecrypted, metadata)
+            } catch (e: Exception) {
+                if (tempDecrypted.exists()) tempDecrypted.delete()
+                throw e
             } finally {
-                if (!restoreBerhasil && tempDecrypted.exists()) {
-                    tempDecrypted.delete()
-                }
-
-                if (tempEncrypted.exists()) {
-                    tempEncrypted.delete()
-                }
+                if (tempEncrypted.exists()) tempEncrypted.delete()
             }
         }
     }

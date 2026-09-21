@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import androidx.sqlite.SQLiteException
+import java.security.GeneralSecurityException
 
 class LoginKasirViewModel(
     private val kasirDao: KasirDao,
@@ -112,8 +114,14 @@ class LoginKasirViewModel(
                     )
                 }
                 _event.send(LoginKasirEvent.Pesan("Kasir '$namaClean' berhasil ditambahkan"))
-            } catch (e: Exception) {
-                _event.send(LoginKasirEvent.Pesan(e.message ?: "Gagal menambahkan kasir"))
+            } catch (e: GeneralSecurityException) {
+                _event.send(LoginKasirEvent.Pesan(e.message ?: "Gagal membuat hash PIN"))
+            } catch (e: androidx.sqlite.SQLiteException) {
+                _event.send(
+                    LoginKasirEvent.Pesan(
+                        e.message ?: "Gagal menyimpan kasir"
+                    )
+                )
             }
         }
     }

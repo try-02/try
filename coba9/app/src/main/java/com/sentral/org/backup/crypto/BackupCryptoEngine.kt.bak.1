@@ -19,9 +19,6 @@ import javax.crypto.spec.PBEKeySpec
 import javax.crypto.spec.SecretKeySpec
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import java.io.IOException
-import java.security.GeneralSecurityException
-import kotlinx.serialization.SerializationException
 
 class BackupCryptoEngine {
 
@@ -112,38 +109,28 @@ class BackupCryptoEngine {
                 FileOutputStream(destinationDbFile).use { fileOut ->
                     val buffer = ByteArray(BUFFER_SIZE)
                     var bytesRead: Int
-
                     while (fileIn.read(buffer).also { bytesRead = it } != -1) {
                         val outputChunk = cipher.update(buffer, 0, bytesRead)
-
                         if (outputChunk != null && outputChunk.isNotEmpty()) {
                             fileOut.write(outputChunk)
                         }
                     }
-
                     // Memvalidasi integritas tag GCM secara langsung
                     val finalBytes = cipher.doFinal()
-
                     if (finalBytes != null && finalBytes.isNotEmpty()) {
                         fileOut.write(finalBytes)
                     }
-
                     fileOut.flush()
                 }
-            } catch (e: IOException) {
-                destinationDbFile.delete()
-                throw PosBackupException.WrongPasswordOrCorrupted(e)
-            } catch (e: GeneralSecurityException) {
+            } catch (e: Exception) {
                 destinationDbFile.delete()
                 throw PosBackupException.WrongPasswordOrCorrupted(e)
             }
 
             return try {
                 json.decodeFromString<BackupMetadata>(header.metadataJson)
-            } catch (_: SerializationException) {
-                throw PosBackupException.InvalidFormat(
-                    "Metadata file backup tidak terbaca"
-                )
+            } catch (_: Exception) {
+                throw PosBackupException.InvalidFormat("Metadata file backup tidak terbaca")
             }
         }
     }

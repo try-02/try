@@ -88,9 +88,17 @@ class TutupShiftViewModel(
             _uiState.update { it.copy(sedangMemproses = true) }
             try {
                 val summary = shiftService.getShiftSummary(shiftId, isZReport = true, actualCash = kasAktual)
+                val summaryUi = ShiftSummaryUi(
+                    kasAwal = summary.kasAwal,
+                    totalPenjualanTunai = summary.totalPenjualanTunai,
+                    totalReturTunai = summary.totalReturTunai,
+                    kasDiharapkan = summary.kasDiharapkan,
+                    kasAktual = summary.kasAktual,
+                    selisihKas = summary.selisihKas,
+                )
                 _uiState.update {
                     it.copy(
-                        summary = summary,
+                        summary = summaryUi,
                         step = TutupShiftStep.REKONSILIASI,
                         sedangMemproses = false,
                     )

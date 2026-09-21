@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import androidx.sqlite.SQLiteException
 
 class TutupShiftViewModel(
     private val shiftService: ShiftService,
@@ -47,7 +48,7 @@ class TutupShiftViewModel(
                             dimulaiPada = summary.dimulaiPada,
                         )
                     }
-                } catch (e: Exception) {
+                } catch (e: androidx.sqlite.SQLiteException) {
                     _event.send(TutupShiftEvent.Pesan(e.message ?: "Gagal memuat shift"))
                 }
             } else {
@@ -103,7 +104,7 @@ class TutupShiftViewModel(
                         sedangMemproses = false,
                     )
                 }
-            } catch (e: Exception) {
+            } catch (e: androidx.sqlite.SQLiteException) {
                 _uiState.update {
                     it.copy(
                         sedangMemproses = false,
@@ -139,9 +140,9 @@ class TutupShiftViewModel(
                         }
                     }
                 }
-            } catch (e: Exception) {
+            } catch (e: androidx.sqlite.SQLiteException) {
                 _uiState.update { it.copy(sedangCetak = false) }
-                _event.send(TutupShiftEvent.Pesan(e.message ?: "Gagal cetak Laporan X"))
+                _event.send(TutupShiftEvent.Pesan(e.message ?: "Gagal mengambil data Laporan X"))
             }
         }
     }

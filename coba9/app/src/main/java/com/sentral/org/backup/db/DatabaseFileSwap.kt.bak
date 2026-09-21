@@ -36,17 +36,13 @@ class DatabaseFileSwap(
             // 5. Bersihkan staging dan backup darurat
             decryptedStagingFile.delete()
             if (emergencyBackup.exists()) emergencyBackup.delete()
-        } catch (e: IOException) {
+        } catch (e: Exception) {
             // Rollback darurat
             if (emergencyBackup.exists()) {
                 emergencyBackup.copyTo(dbFile, overwrite = true)
                 emergencyBackup.delete()
             }
-
-            throw IOException(
-                "Gagal menimpa berkas database: ${e.message}",
-                e,
-            )
+            throw IOException("Gagal menimpa berkas database: ${e.message}", e)
         }
     }
 }

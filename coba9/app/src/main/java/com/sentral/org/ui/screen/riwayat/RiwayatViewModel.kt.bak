@@ -40,7 +40,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import androidx.sqlite.SQLiteException
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 class RiwayatViewModel(
@@ -108,7 +107,7 @@ class RiwayatViewModel(
                     _uiState.update { it.copy(sedangMemuatDetail = false) }
                     _event.send(RiwayatEvent.Pesan("Data transaksi tidak ditemukan", RiwayatEvent.Pesan.Jenis.GALAT))
                 }
-            } catch (e: androidx.sqlite.SQLiteException) {
+            } catch (e: Exception) {
                 _uiState.update { it.copy(sedangMemuatDetail = false) }
                 _event.send(RiwayatEvent.Pesan(e.message ?: "Gagal memuat detail", RiwayatEvent.Pesan.Jenis.GALAT))
             }
@@ -151,9 +150,9 @@ class RiwayatViewModel(
                         }
                     }
                 }
-            } catch (e: androidx.sqlite.SQLiteException) {
+            } catch (e: Exception) {
                 _uiState.update { it.copy(sedangReprint = false) }
-                _event.send(RiwayatEvent.Pesan(e.message ?: "Gagal mengambil data untuk cetak ulang", RiwayatEvent.Pesan.Jenis.GALAT))
+                _event.send(RiwayatEvent.Pesan(e.message ?: "Gagal mencetak struk", RiwayatEvent.Pesan.Jenis.GALAT))
             }
         }
     }
