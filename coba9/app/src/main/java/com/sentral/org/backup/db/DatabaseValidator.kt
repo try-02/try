@@ -1,17 +1,30 @@
 package com.sentral.org.backup.db
 
+import androidx.sqlite.SQLiteConnection
+import androidx.sqlite.SQLiteStatement
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
-import androidx.sqlite.usePrepared
 import com.sentral.org.backup.model.PosBackupException
 import java.io.File
 
 class DatabaseValidator {
 
+    private inline fun <T> SQLiteConnection.query(
+        sql: String,
+        block: (SQLiteStatement) -> T,
+    ): T {
+        val statement = prepare(sql)
+        return try {
+            block(statement)
+        } finally {
+            statement.close()
+        }
+    }
+
     fun verifyIntegrity(sqliteFile: File) {
         val driver = BundledSQLiteDriver()
         val connection = driver.open(sqliteFile.absolutePath)
         try {
-            val result = connection.usePrepared("PRAGMA integrity_check;") { stmt ->
+            val result = connection.query("PRAGMA integrity_check;") { stmt ->
                 if (stmt.step()) stmt.getText(0) else "error"
             }
             if (result.lowercase() != "ok") {
@@ -32,7 +45,7 @@ class DatabaseValidator {
                 "printer", "profil_toko", "room_master_table",
             )
             val existingTables = mutableSetOf<String>()
-            connection.usePrepared("SELECT name FROM sqlite_master WHERE type='table';") { stmt ->
+            connection.query("SELECT name FROM sqlite_master WHERE type='table';") { stmt ->
                 while (stmt.step()) {
                     existingTables.add(stmt.getText(0))
                 }
@@ -43,7 +56,7 @@ class DatabaseValidator {
             }
 
             var identityHash = ""
-            connection.usePrepared("SELECT identity_hash FROM room_master_table WHERE id = 42;") { stmt ->
+            connection.query("SELECT identity_hash FROM room_master_table WHERE id = 42;") { stmt ->
                 if (stmt.step()) {
                     identityHash = stmt.getText(0)
                 }
@@ -57,16 +70,16 @@ class DatabaseValidator {
             var totalKasir = 0L
             var totalShift = 0L
 
-            connection.usePrepared("SELECT COUNT(*) FROM transaksi;") { stmt ->
+            connection.query("SELECT COUNT(*) FROM transaksi;") { stmt ->
                 if (stmt.step()) totalTrx = stmt.getLong(0)
             }
-            connection.usePrepared("SELECT COUNT(*) FROM produk;") { stmt ->
+            connection.query("SELECT COUNT(*) FROM produk;") { stmt ->
                 if (stmt.step()) totalProduk = stmt.getLong(0)
             }
-            connection.usePrepared("SELECT COUNT(*) FROM kasir;") { stmt ->
+            connection.query("SELECT COUNT(*) FROM kasir;") { stmt ->
                 if (stmt.step()) totalKasir = stmt.getLong(0)
             }
-            connection.usePrepared("SELECT COUNT(*) FROM shift;") { stmt ->
+            connection.query("SELECT COUNT(*) FROM shift;") { stmt ->
                 if (stmt.step()) totalShift = stmt.getLong(0)
             }
 

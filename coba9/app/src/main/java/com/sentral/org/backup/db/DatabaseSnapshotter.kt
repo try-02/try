@@ -1,7 +1,7 @@
 package com.sentral.org.backup.db
 
+import androidx.room3.execSQL
 import androidx.room3.useWriterConnection
-import androidx.sqlite.execSQL
 import com.sentral.org.data.PosDatabase
 import java.io.File
 
@@ -13,8 +13,8 @@ class DatabaseSnapshotter(
             destinationFile.delete()
         }
         val pathEscaped = destinationFile.absolutePath.replace("'", "''")
-        database.useWriterConnection { connection ->
-            connection.execSQL("VACUUM INTO '$pathEscaped'")
+        database.useWriterConnection { transactor ->
+            transactor.execSQL("VACUUM INTO '$pathEscaped'")
         }
     }
 }
