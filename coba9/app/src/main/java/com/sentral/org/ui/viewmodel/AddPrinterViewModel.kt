@@ -275,7 +275,7 @@ class AddPrinterViewModel(
         _isScanning.value = false
         _scanProgress.value = 0f
     }
-
+/**
     fun testBluetoothConnection(device: BluetoothDeviceUi) {
         if (!checkBluetoothEnabled()) {
             viewModelScope.launch {
@@ -340,8 +340,148 @@ class AddPrinterViewModel(
                 _testResult.emit(PrinterTestResult.Failed("Tidak dapat terhubung ke printer. Pastikan printer menyala dan dalam jangkauan."))
             }
         }
+    } */
+fun testBluetoothConnection(device: BluetoothDeviceUi) {
+    if (!checkBluetoothEnabled()) {
+        viewModelScope.launch {
+            _testResult.emit(
+                PrinterTestResult.Failed(
+                    "Bluetooth tidak aktif. Silakan nyalakan Bluetooth."
+                )
+            )
+        }
+        return
     }
 
+    stopScan()
+
+    viewModelScope.launch {
+        _testResult.emit(PrinterTestResult.Testing)
+
+        try {
+            val result = withContext(Dispatchers.IO) {
+                withTimeoutOrNull(CONNECTION_TIMEOUT_MS) {
+                    val context = getApplication<Application>()
+
+                    val bluetoothAdapter =
+                        (
+                            context.getSystemService(
+                                Context.BLUETOOTH_SERVICE
+                            ) as BluetoothManager
+                        ).adapter
+
+                    val bluetoothDevice =
+                        bluetoothAdapter.getRemoteDevice(device.address)
+
+                    val connection =
+                        BluetoothConnection(bluetoothDevice)
+
+                    val printer = EscPosPrinter(
+                        connection,
+                        PRINTER_DPI,
+                        PRINTER_WIDTH_MM,
+                        CHARS_PER_LINE,
+                        CHARSET_UTF8,
+                    )
+
+                    try {
+                        printer.printFormattedText(
+                            "[C]TEST CONNECTION\n"
+                        )
+
+                        PrinterEntity(
+                            nama = device.name,
+                            tipeKoneksi = "BLUETOOTH",
+                            isDefault = false,
+                            prioritas = 1,
+                            karakterPerBaris = CHARS_PER_LINE,
+                            lebarKertas = "80mm",
+                            mendukungStatus = true,
+                            alamatBluetooth = device.address,
+                            alamatWifi = null,
+                            portWifi = null,
+                            usbVendorId = null,
+                            usbProductId = null,
+                            dibuatPada = System.currentTimeMillis(),
+                            gagalStatusBerturut = 0,
+                            dinonaktifkanOtomatis = false,
+                        )
+                    } finally {
+                        printer.disconnectPrinter()
+                    }
+                }
+            }
+
+            if (result != null) {
+                _testResult.emit(
+                    PrinterTestResult.Success(result)
+                )
+            } else {
+                _testResult.emit(
+                    PrinterTestResult.Failed(
+                        "Timeout: tidak dapat terhubung ke printer."
+                    )
+                )
+            }
+
+        } catch (e: EscPosConnectionException) {
+            log.e(e) {
+                "Bluetooth printer connection failed: ${e.message}"
+            }
+
+            _testResult.emit(
+                PrinterTestResult.Failed(
+                    "Koneksi printer gagal: ${e.message}"
+                )
+            )
+
+        } catch (e: EscPosEncodingException) {
+            log.e(e) {
+                "Bluetooth printer encoding failed: ${e.message}"
+            }
+
+            _testResult.emit(
+                PrinterTestResult.Failed(
+                    "Gagal encode data printer: ${e.message}"
+                )
+            )
+
+        } catch (e: EscPosParserException) {
+            log.e(e) {
+                "Bluetooth printer parser failed: ${e.message}"
+            }
+
+            _testResult.emit(
+                PrinterTestResult.Failed(
+                    "Format data printer tidak valid: ${e.message}"
+                )
+            )
+
+        } catch (e: SecurityException) {
+            log.e(e) {
+                "Bluetooth permission denied: ${e.message}"
+            }
+
+            _testResult.emit(
+                PrinterTestResult.Failed(
+                    "Izin Bluetooth tidak tersedia."
+                )
+            )
+
+        } catch (e: IllegalArgumentException) {
+            log.e(e) {
+                "Invalid Bluetooth address: ${e.message}"
+            }
+
+            _testResult.emit(
+                PrinterTestResult.Failed(
+                    "Alamat Bluetooth tidak valid."
+                )
+            )
+        }
+    }
+}
+/**
     fun testWifiConnection(name: String, ipAddress: String, port: Int) {
         viewModelScope.launch {
             _testResult.emit(PrinterTestResult.Testing)
@@ -392,7 +532,115 @@ class AddPrinterViewModel(
                 _testResult.emit(PrinterTestResult.Failed("Tidak dapat terhubung ke printer. Periksa IP address dan port."))
             }
         }
+    } */
+fun testWifiConnection(
+    name: String,
+    ipAddress: String,
+    port: Int,
+) {
+    viewModelScope.launch {
+        _testResult.emit(PrinterTestResult.Testing)
+
+        try {
+            val result = withContext(Dispatchers.IO) {
+                withTimeoutOrNull(CONNECTION_TIMEOUT_MS) {
+                    val connection =
+                        TcpConnection(ipAddress, port, 5000)
+
+                    val printer = EscPosPrinter(
+                        connection,
+                        PRINTER_DPI,
+                        PRINTER_WIDTH_MM,
+                        CHARS_PER_LINE,
+                        CHARSET_UTF8,
+                    )
+
+                    try {
+                        printer.printFormattedText(
+                            "[C]TEST CONNECTION\n"
+                        )
+
+                        PrinterEntity(
+                            nama = name,
+                            tipeKoneksi = "WIFI",
+                            isDefault = false,
+                            prioritas = 1,
+                            karakterPerBaris = CHARS_PER_LINE,
+                            lebarKertas = "80mm",
+                            mendukungStatus = true,
+                            alamatBluetooth = null,
+                            alamatWifi = ipAddress,
+                            portWifi = port,
+                            usbVendorId = null,
+                            usbProductId = null,
+                            dibuatPada = System.currentTimeMillis(),
+                            gagalStatusBerturut = 0,
+                            dinonaktifkanOtomatis = false,
+                        )
+                    } finally {
+                        printer.disconnectPrinter()
+                    }
+                }
+            }
+
+            if (result != null) {
+                _testResult.emit(
+                    PrinterTestResult.Success(result)
+                )
+            } else {
+                _testResult.emit(
+                    PrinterTestResult.Failed(
+                        "Timeout: tidak dapat terhubung ke printer."
+                    )
+                )
+            }
+
+        } catch (e: EscPosConnectionException) {
+            log.e(e) {
+                "WiFi printer connection failed: ${e.message}"
+            }
+
+            _testResult.emit(
+                PrinterTestResult.Failed(
+                    "Koneksi printer gagal: ${e.message}"
+                )
+            )
+
+        } catch (e: EscPosEncodingException) {
+            log.e(e) {
+                "WiFi printer encoding failed: ${e.message}"
+            }
+
+            _testResult.emit(
+                PrinterTestResult.Failed(
+                    "Gagal encode data printer: ${e.message}"
+                )
+            )
+
+        } catch (e: EscPosParserException) {
+            log.e(e) {
+                "WiFi printer parser failed: ${e.message}"
+            }
+
+            _testResult.emit(
+                PrinterTestResult.Failed(
+                    "Format data printer tidak valid: ${e.message}"
+                )
+            )
+
+        } catch (e: IllegalArgumentException) {
+            log.e(e) {
+                "Invalid WiFi configuration: ${e.message}"
+            }
+
+            _testResult.emit(
+                PrinterTestResult.Failed(
+                    "IP address atau port tidak valid."
+                )
+            )
+        }
     }
+}
 
     fun savePrinter(printer: PrinterEntity, onComplete: () -> Unit) {
         viewModelScope.launch {

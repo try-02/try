@@ -126,7 +126,7 @@ class EscPosPrinterDriver(
     
     /**
      * Internal print logic (dipisah untuk timeout wrapper).
-     
+     */
     private suspend fun printInternal(receipt: ReceiptData): PrintResult {
         var handle: PrinterHandle? = null
         try {
@@ -194,94 +194,7 @@ class EscPosPrinterDriver(
             handle?.printer?.disconnectPrinter()
         }
     }
-*/
-private suspend fun printInternal(receipt: ReceiptData): PrintResult {
-    var handle: PrinterHandle? = null
 
-    try {
-        log.i {
-            "🖨️ print() called for receipt: ${receipt.transaksi.nomor}"
-        }
-
-        handle = buildPrinterHandle()
-            ?: return PrintResult.Failure(
-                "Tidak dapat terhubung ke printer (koneksi tidak dikonfigurasi)",
-                isRetryable = true,
-            )
-
-        log.i {
-            "🔌 Connected to printer: ${printerConfig.nama}"
-        }
-
-        // ===== TAHAP 1: Print logo =====
-        val logoUri = receipt.toko.logoUri
-
-        if (!logoUri.isNullOrBlank()) {
-            val logoBytes = loadAndConvertLogo(logoUri)
-
-            if (logoBytes != null) {
-                try {
-                    handle.connection.write(logoBytes)
-                    handle.connection.write(byteArrayOf(0x0A))
-                    handle.connection.send()
-                } catch (e: EscPosConnectionException) {
-                    log.e(e) {
-                        "Failed to send logo: ${e.message}"
-                    }
-
-                    // Logo gagal bukan berarti seluruh cetak gagal.
-                    // Exception dicatat dan proses teks tetap dilanjutkan.
-                }
-            }
-        }
-
-        // ===== TAHAP 2: Print teks =====
-        val formattedText = buildFormattedReceipt(
-            receipt,
-            handle.printer.printerNbrCharactersPerLine,
-        )
-
-        handle.printer.printFormattedTextAndCut(
-            formattedText,
-            FEED_PAPER_MM,
-        )
-
-        return PrintResult.Success
-
-    } catch (e: EscPosConnectionException) {
-        return PrintResult.Failure(
-            message = "Koneksi printer terputus: ${e.message}",
-            isRetryable = true,
-        )
-    } catch (e: EscPosEncodingException) {
-        return PrintResult.Failure(
-            message = "Gagal encode teks struk: ${e.message}",
-            isRetryable = false,
-        )
-    } catch (e: EscPosParserException) {
-        return PrintResult.Failure(
-            message = "Format struk tidak valid: ${e.message}",
-            isRetryable = false,
-        )
-    } catch (e: EscPosBarcodeException) {
-        return PrintResult.Failure(
-            message = "Gagal render QR/barcode: ${e.message}",
-            isRetryable = false,
-        )
-    } catch (e: RuntimeException) {
-        log.e(e) {
-            "Unexpected printer runtime error: ${e.message}"
-        }
-
-        return PrintResult.Failure(
-            message = e.message ?: "Error cetak tidak diketahui",
-            isRetryable = isRetryableError(e),
-        )
-    } finally {
-        log.i { "🔌 Disconnecting printer" }
-        handle?.printer?.disconnectPrinter()
-    }
-}
     override suspend fun disconnect() {
         // Koneksi dikelola per-job, tidak ada state persisten
     }
