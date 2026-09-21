@@ -24,11 +24,11 @@ import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PointOfSale
 import androidx.compose.material.icons.filled.QrCode2
-import androidx.compose.material.icons.filled.ReceiptLong
-import androidx.compose.material.icons.filled.ShowChart
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.TrendingDown
-import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -120,7 +120,7 @@ private fun LaporanDashboardContent(data: LaporanPenjualan) {
                     title = "Laba Kotor",
                     value = formatRupiah(data.labaKotor),
                     subtitle = "Margin: ${"%.1f".format(data.marginPersen)}%",
-                    icon = Icons.Filled.TrendingUp,
+                    icon = Icons.AutoMirrored.Filled.TrendingUp,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.weight(1f),
                 )
@@ -128,7 +128,7 @@ private fun LaporanDashboardContent(data: LaporanPenjualan) {
                     title = "HPP Bersih",
                     value = formatRupiah(data.hppBersih),
                     subtitle = "Biaya modal historis",
-                    icon = Icons.Filled.ShowChart,
+                    icon = Icons.AutoMirrored.Filled.ShowChart,
                     color = MaterialTheme.colorScheme.tertiary,
                     modifier = Modifier.weight(1f),
                 )
@@ -139,7 +139,7 @@ private fun LaporanDashboardContent(data: LaporanPenjualan) {
                     title = "Rata-Rata Nota",
                     value = formatRupiah(data.rataRataTransaksi),
                     subtitle = "${data.jumlahTransaksiSelesai} pesanan",
-                    icon = Icons.Filled.ReceiptLong,
+                    icon = Icons.AutoMirrored.Filled.ReceiptLong,
                     color = MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.weight(1f),
                 )
@@ -147,7 +147,7 @@ private fun LaporanDashboardContent(data: LaporanPenjualan) {
                     title = "Total Retur",
                     value = formatRupiah(data.totalRetur),
                     subtitle = "Refund kasir",
-                    icon = Icons.Filled.TrendingDown,
+                    icon = Icons.AutoMirrored.Filled.TrendingDown,
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.weight(1f),
                 )

@@ -16,7 +16,6 @@ enum class JenisPergerakanPersediaan {
     STOK_MASUK,
     KERUSAKAN,
     PEMULIHAN_KERUSAKAN,
-    PEMUSNAHAN,
 }
 enum class JenisPergerakanKas {
     KAS_AWAL,

@@ -43,7 +43,7 @@ jobs:
       # - name: Run Pure Unit Tests
       #  run: ./gradlew :shared:assemble --stacktrace
       - name: check
-        run: ./gradlew check
+        run: ./gradlew :shared:check
       # - name: alltes shared dan testdebugunittes
       #  run: ./gradlew :shared:allTests :app:testDebugUnitTest
 
