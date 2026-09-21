@@ -22,8 +22,8 @@ jobs:
         uses: actions/checkout@v7
         with:
         # Melakukan checkout dari root terluar agar folder coba9 ikut terbawa
-        sparse-checkout: |
-          coba9
+          sparse-checkout: |
+            coba9
 
       - name: Set up JDK 17
         uses: actions/setup-java@v5
