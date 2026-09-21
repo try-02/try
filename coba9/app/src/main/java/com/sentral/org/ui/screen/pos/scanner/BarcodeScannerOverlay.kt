@@ -104,6 +104,8 @@ import co.touchlab.kermit.Logger
 
 enum class ScanVisualState { IDLE, SUCCESS, ERROR }
 
+private val log = Logger.withTag("ScanBO")
+
 @OptIn(ExperimentalGetImage::class)
 @Composable
 fun BarcodeScannerOverlay(
@@ -115,10 +117,6 @@ fun BarcodeScannerOverlay(
     val lifecycleOwner = LocalLifecycleOwner.current
     val coroutineScope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
-
-    private companion object {
-        private val log = Logger.withTag("ScanBO")
-    }
 
     // Audio Beeper Kasir bawaan Android
     val toneGenerator = remember {
