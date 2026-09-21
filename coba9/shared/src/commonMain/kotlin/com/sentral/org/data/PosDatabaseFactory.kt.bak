@@ -17,6 +17,6 @@ import com.sentral.org.data.migrasi.PosMigrasi
  */
 fun createPosDatabase(builder: RoomDatabase.Builder<PosDatabase>): PosDatabase =
     builder
-        .setQueryCoroutineContext(Dispatchers.Default)
+        .setQueryCoroutineContext(Dispatchers.IO)
         .addMigrations(*PosMigrasi.ALL.toTypedArray())
         .build()

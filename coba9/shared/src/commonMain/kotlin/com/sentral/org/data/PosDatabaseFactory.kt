@@ -2,7 +2,9 @@ package com.sentral.org.data
 
 import androidx.room3.RoomDatabase
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import com.sentral.org.data.migrasi.PosMigrasi
+
 /**
  * Membangun instance PosDatabase dari [RoomDatabase.Builder] yang sudah
  * dikonfigurasi driver-nya di platform source set (androidMain / iosMain).
