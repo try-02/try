@@ -52,6 +52,44 @@ class CartService(
             write.run { tulisDelta(cartId, productId, delta, now) }
         }
 
+    /**
+     * Menetapkan nilai kuantitas mutlak (ter-skala QUANTITY_SCALE).
+     * Jika target <= 0, item otomatis dihapus dari keranjang.
+     */
+    suspend fun setJumlah(cartId: Long, productId: Long, targetScaled: Long, now: Long): Result<Unit> =
+        suspendRunCatching {
+            require(targetScaled >= 0) { "Target kuantitas tidak boleh negatif" }
+            write.run {
+                pastikanAktif(cartId)
+                if (targetScaled == 0L) {
+                    items.deleteByProduct(cartId, productId)
+                } else {
+                    val existing = items.getByProduct(cartId, productId)
+                    if (existing != null) {
+                        val delta = targetScaled - existing.jumlah
+                        if (delta != 0L) {
+                            items.changeQuantity(cartId, productId, delta, now)
+                        }
+                    } else {
+                        val product = products.getById(productId)
+                            ?: throw PosDataException.NotFound("Produk tidak ditemukan")
+                        if (!product.aktif) throw PosDataException.Validation("Produk tidak aktif")
+                        items.insert(
+                            ItemKeranjangEntity(
+                                keranjangId = cartId,
+                                produkId = productId,
+                                namaProduk = product.nama,
+                                hargaSatuan = product.harga,
+                                jumlah = targetScaled,
+                                ditambahkanPada = now,
+                                diperbaruiPada = now,
+                            )
+                        )
+                    }
+                }
+            }
+        }
+
     suspend fun hapusBaris(cartId: Long, productId: Long, now: Long): Result<Unit> =
         suspendRunCatching {
             write.run {

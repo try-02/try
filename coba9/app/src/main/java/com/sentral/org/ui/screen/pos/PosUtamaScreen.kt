@@ -150,6 +150,7 @@ fun PosUtamaScreen(
     var konfirmasiBatal by rememberSaveable { mutableStateOf(false) }
     var hasilCheckout by remember { mutableStateOf<KasirEvent.CheckoutBerhasil?>(null) }
     var sheetKeranjangTerbuka by rememberSaveable { mutableStateOf(false) }
+    var barisUbahJumlah by remember { mutableStateOf<BarisKeranjangUi?>(null) }
 
     val kataKunci = rememberSaveable { mutableStateOf("") }
     val kategoriTerpilih = rememberSaveable { mutableStateOf<String?>(null) }
@@ -527,6 +528,7 @@ fun PosUtamaScreen(
                         onBatal = { konfirmasiBatal = true },
                         onTambah = viewModel::tambahSatuan,
                         onKurangi = viewModel::kurangiSatuan,
+                        onKlikUbahJumlah = { barisUbahJumlah = it },
                         onBayarCash = {
                             metodeBayar = 0
                             sheetKeranjangTerbuka = false
@@ -544,6 +546,19 @@ fun PosUtamaScreen(
                 }
             }
         }
+    }
+
+    barisUbahJumlah?.let { targetBaris ->
+        DialogUbahJumlah(
+            namaProduk = targetBaris.nama,
+            hargaSatuan = targetBaris.hargaSatuan,
+            jumlahAwalScaled = targetBaris.jumlahScaled,
+            onKonfirmasi = { scaledBaru ->
+                viewModel.aturJumlah(targetBaris.produkId, scaledBaru)
+                barisUbahJumlah = null
+            },
+            onTutup = { barisUbahJumlah = null },
+        )
     }
 
     if (dialogBayarTerbuka) {
@@ -945,6 +960,7 @@ private fun PanelKeranjang(
     onBatal: () -> Unit,
     onTambah: (Long) -> Unit,
     onKurangi: (Long) -> Unit,
+    onKlikUbahJumlah: (BarisKeranjangUi) -> Unit,
     onBayarCash: () -> Unit,
     onBayarQris: () -> Unit,
     modifier: Modifier = Modifier,
@@ -1041,6 +1057,7 @@ private fun PanelKeranjang(
                             baris = baris,
                             onTambah = onTambah,
                             onKurangi = onKurangi,
+                            onKlikJumlah = { onKlikUbahJumlah(baris) },
                         )
                     }
                 }
@@ -1142,6 +1159,7 @@ private fun BarisItem(
     baris: BarisKeranjangUi,
     onTambah: (Long) -> Unit,
     onKurangi: (Long) -> Unit,
+    onKlikJumlah: () -> Unit,
 ) {
     Surface(
         shape = MaterialTheme.shapes.medium,
@@ -1161,7 +1179,7 @@ private fun BarisItem(
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    "${formatRupiah(baris.hargaSatuan)} × ${baris.jumlahScaled / QUANTITY_SCALE}",
+                    "${formatRupiah(baris.hargaSatuan)} × ${com.sentral.org.data.model.formatQuantity(baris.jumlahScaled)}",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -1187,9 +1205,11 @@ private fun BarisItem(
                         )
                     }
                     Text(
-                        (baris.jumlahScaled / QUANTITY_SCALE).toString(),
+                        text = com.sentral.org.data.model.formatQuantity(baris.jumlahScaled),
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.width(24.dp),
+                        modifier = Modifier
+                            .padding(horizontal = 4.dp)
+                            .clickable(onClick = onKlikJumlah),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
