@@ -59,6 +59,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import org.koin.androidx.compose.koinViewModel
+import androidx.compose.runtime.rememberUpdatedState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,11 +72,16 @@ fun TutupShiftScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    val currentOnShiftDitutup by rememberUpdatedState(onShiftDitutup)
+
     LaunchedEffect(Unit) {
         viewModel.event.collect { event ->
             when (event) {
-                TutupShiftEvent.ShiftSelesaiDanKeluar -> onShiftDitutup()
-                is TutupShiftEvent.Pesan -> snackbarHostState.showSnackbar(event.teks)
+                TutupShiftEvent.ShiftSelesaiDanKeluar ->
+                    currentOnShiftDitutup()
+
+                is TutupShiftEvent.Pesan ->
+                    snackbarHostState.showSnackbar(event.teks)
             }
         }
     }

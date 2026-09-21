@@ -134,8 +134,8 @@ fun PosUtamaScreen(
     onNavigateToRiwayat: () -> Unit,
     onNavigateToTutupShift: () -> Unit,
     onNavigateToPrinterSettings: () -> Unit,
-    onNavigateToBackupRestore: () -> Unit = {},
-    onNavigateToKelolaProduk: () -> Unit = {},
+    onNavigateToBackupRestore: () -> Unit,
+    onNavigateToKelolaProduk: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: KasirViewModel = koinViewModel(),
 ) {

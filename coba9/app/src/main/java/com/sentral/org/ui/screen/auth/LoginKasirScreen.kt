@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sentral.org.data.entity.KasirEntity
 import org.koin.androidx.compose.koinViewModel
+import androidx.compose.runtime.rememberUpdatedState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,12 +74,23 @@ fun LoginKasirScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    val currentOnLoginSuksesKePos by rememberUpdatedState(onLoginSuksesKePos)
+    val currentOnLoginSuksesKeBukaShift by rememberUpdatedState(onLoginSuksesKeBukaShift)
+
     LaunchedEffect(Unit) {
         viewModel.event.collect { event ->
             when (event) {
-                is LoginKasirEvent.NavigasiKePosUtama -> onLoginSuksesKePos()
-                is LoginKasirEvent.NavigasiKeBukaShift -> onLoginSuksesKeBukaShift(event.kasirId, event.namaKasir)
-                is LoginKasirEvent.Pesan -> snackbarHostState.showSnackbar(event.teks)
+                is LoginKasirEvent.NavigasiKePosUtama ->
+                    currentOnLoginSuksesKePos()
+
+                is LoginKasirEvent.NavigasiKeBukaShift ->
+                    currentOnLoginSuksesKeBukaShift(
+                        event.kasirId,
+                        event.namaKasir
+                    )
+
+                is LoginKasirEvent.Pesan ->
+                    snackbarHostState.showSnackbar(event.teks)
             }
         }
     }

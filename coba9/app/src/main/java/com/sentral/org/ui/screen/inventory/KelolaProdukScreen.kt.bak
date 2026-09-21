@@ -61,7 +61,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sentral.org.data.model.formatQuantity
 import com.sentral.org.ui.screen.pos.formatRupiah
 import org.koin.androidx.compose.koinViewModel
-import androidx.compose.runtime.rememberUpdatedState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,16 +74,11 @@ fun KelolaProdukScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    val currentOnEditProduk by rememberUpdatedState(onEditProduk)
-
     LaunchedEffect(Unit) {
         viewModel.event.collect { event ->
             when (event) {
-                is KelolaProdukEvent.Pesan ->
-                    snackbarHostState.showSnackbar(event.teks)
-
-                is KelolaProdukEvent.NavigasiKeForm ->
-                    currentOnEditProduk(event.produkId ?: 0L)
+                is KelolaProdukEvent.Pesan -> snackbarHostState.showSnackbar(event.teks)
+                is KelolaProdukEvent.NavigasiKeForm -> onEditProduk(event.produkId ?: 0L)
             }
         }
     }
