@@ -100,6 +100,7 @@ import kotlinx.coroutines.launch
 import java.util.concurrent.Executors
 import androidx.compose.ui.geometry.Size as GeometrySize
 import java.util.concurrent.ExecutionException
+import co.touchlab.kermit.Logger
 
 enum class ScanVisualState { IDLE, SUCCESS, ERROR }
 
@@ -114,6 +115,10 @@ fun BarcodeScannerOverlay(
     val lifecycleOwner = LocalLifecycleOwner.current
     val coroutineScope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
+
+    private companion object {
+        private val log = Logger.withTag("ScanBO")
+    }
 
     // Audio Beeper Kasir bawaan Android
     val toneGenerator = remember {
