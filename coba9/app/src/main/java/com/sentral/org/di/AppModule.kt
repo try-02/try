@@ -104,6 +104,9 @@ val appModule = module {
     single<ReturRepository> { OfflineReturRepository(get()) }
     single<PrinterRepository> { OfflinePrinterRepository(get()) }
     single<ProfilTokoRepository> { OfflineProfilTokoRepository(get()) }
+    single<com.sentral.org.data.repository.LaporanRepository> {
+        com.sentral.org.data.repository.impl.OfflineLaporanRepository(get(), get())
+    }
 
     // 4. Domain Services
     factory { InventoryMutationService(persediaanDao = get(), ledgerDao = get()) }
@@ -224,6 +227,11 @@ val appModule = module {
             sessionProvider = get(),
             printerService = get(),
             profilRepo = get(),
+        )
+    }
+    viewModel {
+        com.sentral.org.ui.screen.laporan.LaporanViewModel(
+            laporanRepo = get(),
         )
     }
 }

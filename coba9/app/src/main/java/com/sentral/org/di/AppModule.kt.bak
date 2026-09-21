@@ -35,16 +35,48 @@ import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
 val appModule = module {
-    // 1. Core & Database
+    // 1. Core, Concurrency & Database
+    single<com.sentral.org.data.concurrency.PosExecutionLock> { com.sentral.org.data.concurrency.PosExecutionLockImpl() }
     single {
         createPosDatabase(
             Room.databaseBuilder<PosDatabase>(androidContext(), "pos.db")
                 .setDriver(BundledSQLiteDriver())
         )
     }
-    single<PosWriteService> { RoomTransactionRunner(get()) }
-    single { ProductSeeder(get()) }
+    single<PosWriteService> { RoomTransactionRunner(get(), get()) }
+    single { ProductSeeder(get(), get()) }
     single { DatabaseWarmup(get(), get()) }
+
+    // Backup & Restore Core
+    single { com.sentral.org.backup.db.DatabaseSnapshotter(get()) }
+    single { com.sentral.org.backup.db.DatabaseValidator() }
+    single { com.sentral.org.backup.db.DatabaseFileSwap(androidContext(), get()) }
+    single { com.sentral.org.backup.crypto.BackupCryptoEngine() }
+    single {
+        com.sentral.org.backup.service.BackupService(
+            context = androidContext(),
+            snapshotter = get(),
+            validator = get(),
+            crypto = get(),
+            lock = get(),
+        )
+    }
+    single {
+        com.sentral.org.backup.service.RestoreService(
+            context = androidContext(),
+            validator = get(),
+            crypto = get(),
+            fileSwap = get(),
+            lock = get(),
+        )
+    }
+    viewModel {
+        com.sentral.org.ui.screen.settings.BackupRestoreViewModel(
+            backupService = get(),
+            restoreService = get(),
+            context = androidContext(),
+        )
+    }
 
     // 2. DAOs
     single { get<PosDatabase>().produkDao() }
