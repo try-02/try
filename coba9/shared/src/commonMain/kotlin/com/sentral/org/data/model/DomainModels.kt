@@ -12,20 +12,23 @@ const val QUANTITY_SCALE = 1000L
 fun quantityOf(units: Long): Long = multiplyExact(units, QUANTITY_SCALE)
 
 /**
- * Mengonversi kuantitas scaled (1000 = 1 unit) ke format teks yang aman.
- * Menghindari bug pemotongan integer (mis. 500 / 1000 = 0).
- * Contoh: 1000 -> "1", 1500 -> "1,5", 500 -> "0,5"
+ * Mengonversi kuantitas scaled (1000 = 1 unit) ke format teks yang aman,
+ * mendukung bilangan positif, nol, dan negatif (mis. untuk selisih opname).
+ * Contoh: 1000 -> "1", -2000 -> "-2", 1500 -> "1,5", -500 -> "-0,5", 0 -> "0"
  */
 fun formatQuantity(scaled: Long): String {
-    if (scaled <= 0) return "0"
-    val bulat = scaled / QUANTITY_SCALE
-    val sisa = scaled % QUANTITY_SCALE
-    return if (sisa == 0L) {
+    if (scaled == 0L) return "0"
+    val isNegatif = scaled < 0L
+    val absScaled = if (isNegatif) -scaled else scaled
+    val bulat = absScaled / QUANTITY_SCALE
+    val sisa = absScaled % QUANTITY_SCALE
+    val teks = if (sisa == 0L) {
         bulat.toString()
     } else {
         val desimal = (sisa.toDouble() / QUANTITY_SCALE).toString().substringAfter('.')
         "$bulat,${desimal.trimEnd('0')}"
     }
+    return if (isNegatif) "-$teks" else teks
 }
 
 @JvmInline

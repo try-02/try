@@ -120,59 +120,22 @@ fun DialogPenyesuaianStok(
                 )
 
                 if (selectedTab == 1 && inputJumlah.isNotBlank()) {
-                    // Penentuan palet 3-state: Defisit (Merah), Pas (Lavender), Surplus (Hijau Lime)
-                    val (containerColor, contentColor, labelStatus) = when {
-                        selisihOpname < 0L -> Triple(
-                            MaterialTheme.colorScheme.errorContainer,
-                            MaterialTheme.colorScheme.onErrorContainer,
-                            "Defisit (Fisik Kurang)",
-                        )
-                        selisihOpname > 0L -> Triple(
-                            MaterialTheme.colorScheme.secondaryContainer,
-                            MaterialTheme.colorScheme.onSecondaryContainer,
-                            "Surplus (Fisik Lebih)",
-                        )
-                        else -> Triple(
-                            MaterialTheme.colorScheme.primaryContainer,
-                            MaterialTheme.colorScheme.onPrimaryContainer,
-                            "Cocok (Fisik Pas)",
-                        )
-                    }
-
-                    val tanda = when {
-                        selisihOpname > 0L -> "+${formatQuantity(selisihOpname)}"
-                        selisihOpname < 0L -> formatQuantity(selisihOpname) // Otomatis menghasilkan "-X"
-                        else -> "0"
-                    }
-
+                    val tanda = if (selisihOpname > 0) "+${formatQuantity(selisihOpname)}" else formatQuantity(selisihOpname)
                     Surface(
                         shape = MaterialTheme.shapes.medium,
-                        color = containerColor,
+                        color = if (selisihOpname >= 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.errorContainer,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Column {
-                                Text(
-                                    labelStatus,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = contentColor,
-                                )
-                                Text(
-                                    "Sistem: ${formatQuantity(produk.stokNormalScaled)} → Fisik: ${formatQuantity(parsedQtyScaled)}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = contentColor.copy(alpha = 0.8f),
-                                )
-                            }
+                            Text("Selisih Opname:", style = MaterialTheme.typography.bodySmall)
                             Text(
                                 "$tanda unit",
-                                fontWeight = FontWeight.Black,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = contentColor,
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (selisihOpname >= 0) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onErrorContainer,
                             )
                         }
                     }

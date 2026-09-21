@@ -11,6 +11,23 @@ const val QUANTITY_SCALE = 1000L
 /** 2 buah -> 2_000. Satu-satunya pintu konversi dari input pengguna ke storage. */
 fun quantityOf(units: Long): Long = multiplyExact(units, QUANTITY_SCALE)
 
+/**
+ * Mengonversi kuantitas scaled (1000 = 1 unit) ke format teks yang aman.
+ * Menghindari bug pemotongan integer (mis. 500 / 1000 = 0).
+ * Contoh: 1000 -> "1", 1500 -> "1,5", 500 -> "0,5"
+ */
+fun formatQuantity(scaled: Long): String {
+    if (scaled <= 0) return "0"
+    val bulat = scaled / QUANTITY_SCALE
+    val sisa = scaled % QUANTITY_SCALE
+    return if (sisa == 0L) {
+        bulat.toString()
+    } else {
+        val desimal = (sisa.toDouble() / QUANTITY_SCALE).toString().substringAfter('.')
+        "$bulat,${desimal.trimEnd('0')}"
+    }
+}
+
 @JvmInline
 value class Quantity(val scaled: Long) {
     init { require(scaled > 0) { "Quantity harus > 0" } }
