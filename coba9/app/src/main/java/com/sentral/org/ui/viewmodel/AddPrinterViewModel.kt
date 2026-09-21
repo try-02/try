@@ -9,6 +9,8 @@ import android.bluetooth.le.BluetoothLeScanner
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import co.touchlab.kermit.Logger
@@ -72,6 +74,35 @@ class AddPrinterViewModel(
     private var scanner: BluetoothLeScanner? = null
     private var scanCallback: ScanCallback? = null
     private val foundDevices = mutableMapOf<String, BluetoothDeviceUi>()
+    private var isClassicReceiverRegistered = false
+
+    private val classicDiscoveryReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            when (intent.action) {
+                BluetoothDevice.ACTION_FOUND -> {
+                    val device = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                        intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
+                    } ?: return
+
+                    val name = try { device.name ?: "Unknown Device" } catch (_: SecurityException) { "Unknown Device" }
+                    val address = device.address
+                    val isPaired = device.bondState == BluetoothDevice.BOND_BONDED
+
+                    if (!foundDevices.containsKey(address)) {
+                        foundDevices[address] = BluetoothDeviceUi(
+                            name = name,
+                            address = address,
+                            isPaired = isPaired,
+                        )
+                        _bluetoothDevices.value = foundDevices.values.toList()
+                    }
+                }
+            }
+        }
+    }
 
     fun checkBluetoothEnabled(): Boolean {
         val context = getApplication<Application>()
@@ -150,41 +181,57 @@ class AddPrinterViewModel(
                 _scanMessage.emit("Izin koneksi Bluetooth belum diberikan.")
             }
 
-            scanner = bluetoothAdapter.bluetoothLeScanner
-            if (scanner == null) {
-                _isScanning.value = false
-                _scanMessage.emit("Gagal menginisialisasi Bluetooth Scanner.")
-                return@launch
+            // 1. Jalankan pemindaian Bluetooth Classic (SPP/RFCOMM) via startDiscovery
+            try {
+                val app = getApplication<Application>()
+                if (!isClassicReceiverRegistered) {
+                    val filter = IntentFilter(BluetoothDevice.ACTION_FOUND)
+                    androidx.core.content.ContextCompat.registerReceiver(
+                        app,
+                        classicDiscoveryReceiver,
+                        filter,
+                        androidx.core.content.ContextCompat.RECEIVER_EXPORTED,
+                    )
+                    isClassicReceiverRegistered = true
+                }
+                if (bluetoothAdapter.isDiscovering) {
+                    bluetoothAdapter.cancelDiscovery()
+                }
+                bluetoothAdapter.startDiscovery()
+            } catch (e: SecurityException) {
+                log.w { "Tidak dapat memulai Classic Discovery: ${e.message}" }
             }
 
-            scanCallback = object : ScanCallback() {
-                override fun onScanResult(callbackType: Int, result: ScanResult) {
-                    val device = result.device
-                    val name = device.name ?: "Unknown Device"
-                    val address = device.address
-                    val isPaired = device.bondState == BluetoothDevice.BOND_BONDED
+            // 2. Jalankan pemindaian BLE sebagai pelengkap
+            scanner = bluetoothAdapter.bluetoothLeScanner
+            if (scanner != null) {
+                scanCallback = object : ScanCallback() {
+                    override fun onScanResult(callbackType: Int, result: ScanResult) {
+                        val device = result.device
+                        val name = try { device.name ?: "Unknown Device" } catch (_: SecurityException) { "Unknown Device" }
+                        val address = device.address
+                        val isPaired = device.bondState == BluetoothDevice.BOND_BONDED
 
-                    if (!foundDevices.containsKey(address)) {
-                        foundDevices[address] = BluetoothDeviceUi(
-                            name = name,
-                            address = address,
-                            isPaired = isPaired,
-                        )
-                        _bluetoothDevices.value = foundDevices.values.toList()
+                        if (!foundDevices.containsKey(address)) {
+                            foundDevices[address] = BluetoothDeviceUi(
+                                name = name,
+                                address = address,
+                                isPaired = isPaired,
+                            )
+                            _bluetoothDevices.value = foundDevices.values.toList()
+                        }
+                    }
+
+                    override fun onScanFailed(errorCode: Int) {
+                        log.w { "BLE Scan gagal dengan kode: $errorCode" }
                     }
                 }
 
-                override fun onScanFailed(errorCode: Int) {
-                    _isScanning.value = false
-                    _scanProgress.value = 0f
+                try {
+                    scanner?.startScan(scanCallback)
+                } catch (e: SecurityException) {
+                    log.w { "Tidak dapat memulai BLE Scan: ${e.message}" }
                 }
-            }
-
-            try {
-                scanner?.startScan(scanCallback)
-            } catch (e: SecurityException) {
-                _isScanning.value = false
-                return@launch
             }
 
             // Progress animation
@@ -204,13 +251,26 @@ class AddPrinterViewModel(
     }
 
     private fun stopScan() {
+        // Hentikan Bluetooth Classic Discovery
+        try {
+            val context = getApplication<Application>()
+            val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
+            val adapter = bluetoothManager?.adapter
+            if (adapter?.isDiscovering == true) {
+                adapter.cancelDiscovery()
+            }
+            if (isClassicReceiverRegistered) {
+                context.unregisterReceiver(classicDiscoveryReceiver)
+                isClassicReceiverRegistered = false
+            }
+        } catch (_: Exception) {}
+
+        // Hentikan BLE Scanner
         try {
             scanner?.stopScan(scanCallback)
-        } catch (e: SecurityException) {
-            // Ignore
-        } catch (e: Exception) {
-            // Menghindari crash jika Bluetooth dimatikan mendadak saat scan berjalan
-        }
+        } catch (_: SecurityException) {
+        } catch (_: Exception) {}
+
         scanCallback = null
         _isScanning.value = false
         _scanProgress.value = 0f
@@ -223,6 +283,9 @@ class AddPrinterViewModel(
             }
             return
         }
+
+        // Matikan proses discovery terlebih dahulu agar bandwidth RFCOMM tidak terganggu
+        stopScan()
 
         viewModelScope.launch {
             _testResult.emit(PrinterTestResult.Testing)

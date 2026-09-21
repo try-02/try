@@ -132,18 +132,23 @@ class AddPrinterViewModel(
             foundDevices.clear()
             _bluetoothDevices.value = emptyList()
 
-            // Muat langsung perangkat yang sudah di-pair di Android Settings
-            val pairedDevices = bluetoothAdapter.bondedDevices.orEmpty()
-            for (device in pairedDevices) {
-                val name = device.name ?: "Unknown Device"
-                val address = device.address
-                foundDevices[address] = BluetoothDeviceUi(
-                    name = name,
-                    address = address,
-                    isPaired = true,
-                )
+            try {
+                // Muat langsung perangkat yang sudah di-pair di Android Settings dengan guard SecurityException
+                val pairedDevices = bluetoothAdapter.bondedDevices.orEmpty()
+                for (device in pairedDevices) {
+                    val name = try { device.name ?: "Unknown Device" } catch (_: SecurityException) { "Printer Bluetooth" }
+                    val address = device.address
+                    foundDevices[address] = BluetoothDeviceUi(
+                        name = name,
+                        address = address,
+                        isPaired = true,
+                    )
+                }
+                _bluetoothDevices.value = foundDevices.values.toList()
+            } catch (e: SecurityException) {
+                log.e(e) { "Izin BLUETOOTH_CONNECT tidak tersedia untuk mengakses bondedDevices" }
+                _scanMessage.emit("Izin koneksi Bluetooth belum diberikan.")
             }
-            _bluetoothDevices.value = foundDevices.values.toList()
 
             scanner = bluetoothAdapter.bluetoothLeScanner
             if (scanner == null) {

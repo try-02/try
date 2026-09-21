@@ -65,7 +65,7 @@ class ExcelReportExporter(private val context: Context) {
                     val trx = item.transaksi
                     val waktuStr = dateFormat.format(Date(trx.dibuatPada))
                     val itemSummary = item.items.joinToString("\n") {
-                        "- ${it.namaProduk} (${com.sentral.org.data.model.formatQuantity(it.jumlah)}x @ Rp ${it.hargaSatuan})"
+                        "- ${it.namaProduk} (${it.jumlah / QUANTITY_SCALE}x @ Rp ${it.hargaSatuan})"
                     }
                     val paymentSummary = item.pembayaran.joinToString(", ") {
                         "${it.metode.name}: Rp ${it.jumlah}"
