@@ -1,5 +1,6 @@
 package com.sentral.org.data.service
 
+import co.touchlab.kermit.Logger
 import com.sentral.org.data.dao.PrinterDao
 import com.sentral.org.data.entity.PrinterEntity
 import com.sentral.org.data.model.PrintResult
@@ -16,13 +17,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
-
 import kotlin.concurrent.Volatile
-import co.touchlab.kermit.Logger
 
 /**
  * Service yang mengelola antrian cetak dan health tracking printer.
- * 
+ *
  * PERBAIKAN:
  * - Mutex untuk mencegah race condition saat initialize/reload
  * - Disconnect driver lama sebelum ganti dengan yang baru
@@ -61,7 +60,7 @@ class PrinterService(
         scope.launch {
             initializeDefaultPrinter()
         }
-        
+
         // Mulai worker queue
         scope.launch {
             processQueue()
@@ -80,10 +79,10 @@ class PrinterService(
             } catch (e: Exception) {
                 log.e { "⚠️ Error disconnecting old driver: ${e.message}" }
             }
-            
+
             try {
                 val defaultPrinter = printerDao.getDefault()
-                
+
                 if (defaultPrinter != null && !defaultPrinter.dinonaktifkanOtomatis) {
                     activeDriver = driverFactory(defaultPrinter)
                     activePrinter = defaultPrinter
@@ -107,7 +106,7 @@ class PrinterService(
     }
 
     /**
-     * Reload printer dari database. 
+     * Reload printer dari database.
      * Dipanggil langsung dari AddPrinterViewModel setelah save.
      */
     suspend fun reloadPrinter() {
@@ -118,17 +117,21 @@ class PrinterService(
     /**
      * Enqueue job cetak.
      */
-    fun enqueue(receipt: ReceiptData, onResult: (PrintResult) -> Unit = {}) {
+    fun enqueue(
+        receipt: ReceiptData,
+        onResult: (PrintResult) -> Unit = {},
+    ) {
         scope.launch {
             // Tunggu sinyal inisialisasi selesai (maksimal 5 detik), tanpa busy-loop
-            val initializedInTime = withTimeoutOrNull(5000L) {
+            val initializedInTime =
+                withTimeoutOrNull(5000L) {
                 initSignal.await()
             }
-            
+
             if (initializedInTime == null && !isInitialized) {
                 log.e { "⚠️ Printer not initialized after 5s, using current driver" }
             }
-            
+
             printQueue.trySend(PrintJob(receipt, onResult))
         }
     }
@@ -136,10 +139,12 @@ class PrinterService(
     /**
      * Ganti printer aktif berdasarkan ID.
      */
-    suspend fun setActivePrinter(printerId: Long): Result<Unit> = suspendRunCatching {
-        val printer = printerDao.getById(printerId)
+    suspend fun setActivePrinter(printerId: Long): Result<Unit> =
+        suspendRunCatching {
+        val printer =
+            printerDao.getById(printerId)
             ?: throw IllegalArgumentException("Printer dengan ID $printerId tidak ditemukan")
-        
+
         initMutex.withLock {
             activeDriver.disconnect()
             activeDriver = driverFactory(printer)
@@ -155,21 +160,22 @@ class PrinterService(
     private suspend fun processQueue() {
         for (job in printQueue) {
             _status.value = PrinterStatus.SIBUK
-            
-            val result = try {
+
+            val result =
+                try {
                 activeDriver.print(job.receipt)
             } catch (e: Exception) {
                 log.e(e) { "❌ Print exception: ${e.message}" }
                 PrintResult.Failure(e.message ?: "Unknown error", isRetryable = true)
             }
-            
+
             when (result) {
                 is PrintResult.Success -> onPrintSuccess()
                 is PrintResult.Failure -> onPrintFailure(result)
             }
-            
+
             job.onResult(result)
-            
+
             if (_status.value == PrinterStatus.SIBUK) {
                 _status.value = PrinterStatus.SIAP
             }
@@ -184,33 +190,32 @@ class PrinterService(
 
     private suspend fun onPrintFailure(failure: PrintResult.Failure) {
         val printer = activePrinter ?: return
-        
+
         val current = printer.gagalStatusBerturut + 1
         val shouldDisable = current >= MAX_CONSECUTIVE_FAILURES
-        
-        activePrinter = printer.copy(
+
+        activePrinter =
+            printer.copy(
             gagalStatusBerturut = current,
             dinonaktifkanOtomatis = shouldDisable,
         )
-        
+
         printerDao.updateHealth(
             id = printer.id,
             failures = current,
             disabled = shouldDisable,
         )
-        
+
         if (shouldDisable) {
             _status.value = PrinterStatus.DINONAKTIFKAN
             log.e { "🚫 Printer disabled after $current failures" }
         } else {
             _status.value = PrinterStatus.ERROR
-            log.e { "⚠️ Print failed (${current}/$MAX_CONSECUTIVE_FAILURES): ${failure.message}" }
+            log.e { "⚠️ Print failed ($current/$MAX_CONSECUTIVE_FAILURES): ${failure.message}" }
         }
     }
 
-    suspend fun checkHealth(): Boolean {
-        return activeDriver.testConnection()
-    }
+    suspend fun checkHealth(): Boolean = activeDriver.testConnection()
 
     suspend fun shutdown() {
         activeDriver.disconnect()

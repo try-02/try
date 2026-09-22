@@ -569,10 +569,10 @@ class AddPrinterViewModel(
      }
      } */
     fun testWifiConnection(
-        name: String,
-        ipAddress: String,
-        port: Int,
-    ) {
+    name: String,
+    ipAddress: String,
+    port: Int,
+) {
         viewModelScope.launch {
             _testResult.emit(PrinterTestResult.Testing)
 
