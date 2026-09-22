@@ -102,7 +102,7 @@ private fun decryptPayload(
 
                 val outputChunk = cipher.update(buffer, 0, bytesRead)
 
-                if (!outputChunk.isNullOrEmpty()) {
+                if (outputChunk != null && outputChunk.isNotEmpty()) {
                     fileOut.write(outputChunk)
                 }
             }
