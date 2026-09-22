@@ -100,19 +100,11 @@ private fun decryptPayload(
                 val bytesRead = fileIn.read(buffer)
                 if (bytesRead == -1) break
 
-                val outputChunk = cipher.update(buffer, 0, bytesRead)
-
-                if (outputChunk != null && outputChunk.isNotEmpty()) {
-                    fileOut.write(outputChunk)
-                }
+                cipher.update(buffer, 0, bytesRead)
+                    ?.let(fileOut::write)
             }
 
-            val finalBytes = cipher.doFinal()
-
-            if (finalBytes.isNotEmpty()) {
-                fileOut.write(finalBytes)
-            }
-
+            fileOut.write(cipher.doFinal())
             fileOut.flush()
         }
     } catch (e: IOException) {
