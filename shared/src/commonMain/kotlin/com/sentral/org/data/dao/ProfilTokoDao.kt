@@ -3,6 +3,7 @@ package com.sentral.org.data.dao
 import androidx.room3.Dao
 import androidx.room3.Insert
 import androidx.room3.Query
+import androidx.room3.OnConflictStrategy
 import com.sentral.org.data.entity.ProfilTokoEntity
 import kotlinx.coroutines.flow.Flow
 

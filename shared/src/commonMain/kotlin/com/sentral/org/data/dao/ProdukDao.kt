@@ -5,6 +5,7 @@ import androidx.room3.Insert
 import androidx.room3.Query
 import androidx.room3.ColumnInfo
 import androidx.room3.Embedded
+import androidx.room3.OnConflictStrategy
 import com.sentral.org.data.entity.ProdukEntity
 import kotlinx.coroutines.flow.Flow
 
