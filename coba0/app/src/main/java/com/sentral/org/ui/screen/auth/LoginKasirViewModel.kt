@@ -1,0 +1,210 @@
+package com.sentral.org.ui.screen.auth
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import androidx.sqlite.SQLiteException
+import com.sentral.org.data.dao.KasirDao
+import com.sentral.org.data.entity.KasirEntity
+import com.sentral.org.data.service.AuthResult
+import com.sentral.org.data.service.AuthService
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import java.security.GeneralSecurityException
+
+class LoginKasirViewModel(
+    private val kasirDao: KasirDao,
+    private val authService: AuthService,
+) : ViewModel() {
+    private val _stateInternal = MutableStateFlow(LoginKasirUiState())
+    private val _event = Channel<LoginKasirEvent>(Channel.BUFFERED)
+    val event = _event.receiveAsFlow()
+
+    val uiState: StateFlow<LoginKasirUiState> =
+        combine(
+            kasirDao.observeAktif(),
+            _stateInternal,
+        ) { kasirs, internal ->
+            val mappedKasir = kasirs.map { KasirItemUi(id = it.id, nama = it.nama) }
+            internal.copy(
+                daftarKasir = mappedKasir,
+                kasirTerpilih = internal.kasirTerpilih ?: mappedKasir.firstOrNull(),
+            )
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LoginKasirUiState())
+
+    fun pilihKasir(kasir: KasirItemUi) {
+        _stateInternal.update {
+            it.copy(
+                kasirTerpilih = kasir,
+                pinInput = "",
+                pesanError = null,
+                sisaDetikTerkunci = null,
+            )
+        }
+    }
+
+    fun tekanAngka(digit: String) {
+        val current = _stateInternal.value.pinInput
+        if (current.length < 6 && !_stateInternal.value.sedangMemproses) {
+            val updated = current + digit
+            _stateInternal.update { it.copy(pinInput = updated, pesanError = null) }
+            // Auto-submit bila panjang PIN sudah mencapai 6 digit
+            if (updated.length == 6) {
+                submitPin(updated)
+            }
+        }
+    }
+
+    fun hapusDigit() {
+        val current = _stateInternal.value.pinInput
+        if (current.isNotEmpty()) {
+            _stateInternal.update { it.copy(pinInput = current.dropLast(1), pesanError = null) }
+        }
+    }
+
+    fun bersihkanPin() {
+        _stateInternal.update { it.copy(pinInput = "", pesanError = null) }
+    }
+
+    fun bukaDialogTambahKasir() {
+        _stateInternal.update { it.copy(dialogTambahKasirTerbuka = true) }
+    }
+
+    fun tutupDialogTambahKasir() {
+        _stateInternal.update { it.copy(dialogTambahKasirTerbuka = false) }
+    }
+
+    fun tambahKasirBaru(
+        nama: String,
+        pin: String,
+    ) {
+        val namaClean = nama.trim()
+        if (namaClean.isBlank()) {
+            viewModelScope.launch { _event.send(LoginKasirEvent.Pesan("Nama kasir tidak boleh kosong")) }
+            return
+        }
+        if (pin.length !in 4..6 || !pin.all { it.isDigit() }) {
+            viewModelScope.launch { _event.send(LoginKasirEvent.Pesan("PIN harus berupa 4-6 angka")) }
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                val now = System.currentTimeMillis()
+                val pinHash = authService.buatHashPin(pin)
+                val id =
+                    kasirDao.insert(
+                        KasirEntity(
+                            nama = namaClean,
+                            pinHash = pinHash,
+                            aktif = true,
+                            dibuatPada = now,
+                        ),
+                    )
+                val kasirBaru = kasirDao.getById(id)?.let { KasirItemUi(id = it.id, nama = it.nama) }
+                _stateInternal.update {
+                    it.copy(
+                        dialogTambahKasirTerbuka = false,
+                        kasirTerpilih = kasirBaru ?: it.kasirTerpilih,
+                        pinInput = "",
+                        pesanError = null,
+                    )
+                }
+                _event.send(LoginKasirEvent.Pesan("Kasir '$namaClean' berhasil ditambahkan"))
+            } catch (e: GeneralSecurityException) {
+                _event.send(LoginKasirEvent.Pesan(e.message ?: "Gagal membuat hash PIN"))
+            } catch (e: androidx.sqlite.SQLiteException) {
+                _event.send(
+                    LoginKasirEvent.Pesan(
+                        e.message ?: "Gagal menyimpan kasir",
+                    ),
+                )
+            }
+        }
+    }
+
+    fun submitPin(pinOverride: String? = null) {
+        val kasir = uiState.value.kasirTerpilih ?: return
+        val pin = pinOverride ?: uiState.value.pinInput
+        if (pin.length < 4) {
+            _stateInternal.update { it.copy(pesanError = "PIN minimal 4 digit") }
+            return
+        }
+
+        viewModelScope.launch {
+            _stateInternal.update { it.copy(sedangMemproses = true) }
+            when (val result = authService.login(kasir.id, pin)) {
+                is AuthResult.Success -> {
+                    _stateInternal.update { it.copy(sedangMemproses = false, pinInput = "", pesanError = null) }
+                    if (result.hasOpenShift) {
+                        _event.send(LoginKasirEvent.NavigasiKePosUtama(result.namaKasir))
+                    } else {
+                        _event.send(LoginKasirEvent.NavigasiKeBukaShift(result.kasirId, result.namaKasir))
+                    }
+                }
+
+                is AuthResult.Failed -> {
+                    _stateInternal.update {
+                        it.copy(
+                            sedangMemproses = false,
+                            pinInput = "",
+                            pesanError = "PIN salah. Sisa percobaan: ${result.sisaPercobaan}",
+                        )
+                    }
+                }
+
+                is AuthResult.Locked -> {
+                    _stateInternal.update {
+                        it.copy(
+                            sedangMemproses = false,
+                            pinInput = "",
+                            sisaDetikTerkunci = result.sisaDetik,
+                            pesanError = "Terlalu banyak percobaan. Terkunci ${result.sisaDetik} detik",
+                        )
+                    }
+                    mulaiHitungMundurLockout(result.sisaDetik)
+                }
+
+                is AuthResult.KasirTidakAktif -> {
+                    _stateInternal.update {
+                        it.copy(sedangMemproses = false, pinInput = "", pesanError = "Kasir tidak aktif")
+                    }
+                }
+            }
+        }
+    }
+
+    private var lockoutJob: kotlinx.coroutines.Job? = null
+
+    private fun mulaiHitungMundurLockout(durasiDetik: Long) {
+        lockoutJob?.cancel()
+        lockoutJob =
+            viewModelScope.launch {
+                var detikTersisa = durasiDetik
+                while (detikTersisa > 0) {
+                    kotlinx.coroutines.delay(1000L)
+                    detikTersisa--
+                    _stateInternal.update {
+                        if (detikTersisa > 0) {
+                            it.copy(
+                                sisaDetikTerkunci = detikTersisa,
+                                pesanError = "Terlalu banyak percobaan. Terkunci $detikTersisa detik",
+                            )
+                        } else {
+                            it.copy(
+                                sisaDetikTerkunci = null,
+                                pesanError = null,
+                            )
+                        }
+                    }
+                }
+            }
+    }
+}

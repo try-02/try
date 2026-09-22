@@ -1,4 +1,4 @@
-name: Android CI Tests 0000
+name: check & compose doctor
 
 on:
   workflow_dispatch:
@@ -7,10 +7,6 @@ on:
 concurrency:
   group: ci-test-${{ github.ref }}
   cancel-in-progress: true
-
-defaults:
-  run:
-    working-directory: ./coba0
 
 jobs:
   test:
@@ -56,8 +52,8 @@ jobs:
         with:
           name: unit-test-report
           path: |
-            coba0/app/build/reports/
-            coba0/app/build/test-results/
-            coba0/app/build/stability/
-            coba0/shared/schemas/
+            app/build/reports/
+            app/build/test-results/
+            app/build/stability/
+            shared/schemas/
           retention-days: 1
