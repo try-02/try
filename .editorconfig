@@ -1,0 +1,8 @@
+root = true
+
+[*.{kt,kts}]
+# Menonaktifkan aturan indentasi yang menyebabkan crash internal
+ktlint_standard_indent = disabled
+
+# Opsional: Jika Anda juga risih dengan error wildcard import (bintang *)
+ktlint_standard_no-wildcard-imports = disabled

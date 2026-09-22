@@ -34,9 +34,15 @@ fun Throwable.pesanPengguna(): String =
             message ?: "Stok rusak tidak mencukupi"
         }
 
-        is PosDataException.Duplicate -> message ?: "Data sudah terdaftar"
+        is PosDataException.Duplicate -> {
+            message ?: "Data sudah terdaftar"
+        }
 
-        is SQLiteConstraintException -> "Perubahan ditolak karena bentrok data. Muat ulang lalu coba lagi."
+        is SQLiteConstraintException -> {
+            "Perubahan ditolak karena bentrok data. Muat ulang lalu coba lagi."
+        }
 
-        else -> "Terjadi kesalahan tak terduga. Silakan coba lagi."
+        else -> {
+            "Terjadi kesalahan tak terduga. Silakan coba lagi."
+        }
     }
