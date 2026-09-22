@@ -110,7 +110,7 @@ private val log = Logger.withTag("ScanBO")
 @Composable
 fun BarcodeScannerOverlay(
     onDismiss: () -> Unit,
-    onBarcodeScanned: suspend (String) -> String?, // return nama produk jika sukses, null jika gagal
+    onBarcodeScan: suspend (String) -> String?, // return nama produk jika sukses, null jika gagal
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -239,7 +239,7 @@ fun BarcodeScannerOverlay(
                                             lastScannedTime = currentTime
 
                                             coroutineScope.launch {
-                                                val productName = onBarcodeScanned(code)
+                                                val productName = onBarcodeScan(code)
                                                 if (productName != null) {
                                                     // SUKSES: Audio beep + Haptic + Visual hijau
                                                     toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP, 150)
@@ -340,7 +340,7 @@ analysis.setAnalyzer(executor) { proxy ->
 
                                 coroutineScope.launch {
                                     val productName =
-                                        onBarcodeScanned(code)
+                                        onBarcodeScan(code)
 
                                     if (productName != null) {
                                         toneGenerator?.startTone(

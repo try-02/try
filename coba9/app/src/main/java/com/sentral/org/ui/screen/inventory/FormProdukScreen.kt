@@ -227,7 +227,7 @@ fun FormProdukScreen(
     if (uiState.scannerTerbuka) {
         BarcodeScannerOverlay(
             onDismiss = { viewModel.tutupScanner() },
-            onBarcodeScanned = { barcode ->
+            onBarcodeScan = { barcode ->
                 viewModel.onBarcodeHasilScan(barcode)
                 barcode
             },

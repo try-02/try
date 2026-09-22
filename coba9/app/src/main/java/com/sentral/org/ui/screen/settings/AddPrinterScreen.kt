@@ -98,7 +98,7 @@ import com.sentral.org.ui.viewmodel.PrinterTestResult
 @Composable
 fun AddPrinterScreen(
     onBack: () -> Unit,
-    onSaved: () -> Unit,
+    onSave: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: AddPrinterViewModel = koinViewModel(),
 ) {
@@ -304,7 +304,7 @@ fun AddPrinterScreen(
                         enableBluetoothLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
                     },
                     onRescan = requestScanOrPrerequisites,
-                    onDeviceSelected = { device ->
+                    onSelectDevice = { device ->
                         testResult = null
                         showTestDialog = true
                         viewModel.testBluetoothConnection(device)
@@ -334,7 +334,7 @@ fun AddPrinterScreen(
                 },
                 onSave = { printer ->
                     viewModel.savePrinter(printer) {
-                        onSaved()
+                        onSave()
                     }
                 },
             )
@@ -386,7 +386,7 @@ private fun BluetoothTab(
     isBluetoothEnabled: Boolean,
     onEnableBluetooth: () -> Unit,
     onRescan: () -> Unit,
-    onDeviceSelected: (BluetoothDeviceUi) -> Unit,
+    onSelectDevice: (BluetoothDeviceUi) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -544,7 +544,7 @@ private fun BluetoothTab(
                 items(devices, key = { it.address }) { device ->
                     BluetoothDeviceCard(
                         device = device,
-                        onClick = { onDeviceSelected(device) },
+                        onClick = { onSelectDevice(device) },
                     )
                 }
             }

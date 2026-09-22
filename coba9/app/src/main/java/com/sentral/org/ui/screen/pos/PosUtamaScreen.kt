@@ -691,7 +691,7 @@ fun PosUtamaScreen(
     if (scannerTerbuka) {
         BarcodeScannerOverlay(
             onDismiss = { scannerTerbuka = false },
-            onBarcodeScanned = { barcode ->
+            onBarcodeScan = { barcode ->
                 viewModel.scanBarcodeTambahProduk(barcode)
             },
         )

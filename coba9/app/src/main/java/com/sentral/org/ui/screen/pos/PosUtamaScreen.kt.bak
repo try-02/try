@@ -116,6 +116,7 @@ import com.sentral.org.data.model.PrinterStatus.SIBUK
 import com.sentral.org.data.model.PrinterStatus.ERROR
 import com.sentral.org.data.model.PrinterStatus.DINONAKTIFKAN
 import com.sentral.org.data.model.PrinterStatus.SIAP
+import androidx.compose.runtime.rememberUpdatedState
 
 private enum class TabBawah(val label: String) {
     PRODUK("Kasir"),
@@ -1111,13 +1112,28 @@ private fun PanelKeranjang(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                itemsIndexed(state.baris, key = { _, b -> b.itemId }) { _, baris ->
+/**                itemsIndexed(state.baris, key = { _, b -> b.itemId }) { _, baris ->
                     val dismissState = rememberSwipeToDismissBoxState(
                         positionalThreshold = { distance -> distance * 0.5f },
+                    ) */
+                    itemsIndexed(state.baris, key = { _, b -> b.itemId }) { _, baris ->
+                    val dismissState = rememberSwipeToDismissBoxState(
+                        positionalThreshold = { distance ->
+                            distance * 0.5f
+                        },
                     )
-                    LaunchedEffect(dismissState.currentValue) {
-                        if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
-                            onHapusBaris(baris.produkId)
+                    val currentOnHapusBaris by rememberUpdatedState(
+                        onHapusBaris
+                    )
+                    LaunchedEffect(
+                        dismissState.currentValue,
+                        baris.produkId,
+                    ) {
+                        if (
+                            dismissState.currentValue ==
+                            SwipeToDismissBoxValue.EndToStart
+                        ) {
+                            currentOnHapusBaris(baris.produkId)
                         }
                     }
                     SwipeToDismissBox(

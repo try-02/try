@@ -75,6 +75,9 @@ fun PosNavHost(
                     onNavigateToBackupRestore = {
                         navController.navigate(PosRoute.BackupRestore)
                     },
+                    onNavigateToKelolaProduk = {
+                        navController.navigate(PosRoute.KelolaProduk)
+                    },
                 )
             }
 

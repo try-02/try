@@ -104,7 +104,7 @@ fun PosNavHost(
             composable<PosRoute.AddPrinter> {
                 AddPrinterScreen(
                     onBack = { navController.popBackStack() },
-                    onSaved = { 
+                    onSave = { 
                         navController.popBackStack()
                     },
                 )
