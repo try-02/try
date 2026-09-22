@@ -27,6 +27,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SplitButtonDefaults
 import androidx.compose.material3.SplitButtonLayout
 import androidx.compose.material3.Surface
@@ -36,8 +37,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import com.sentral.org.data.model.MoneyMath
+import com.sentral.org.data.model.QUANTITY_SCALE
+import com.sentral.org.data.model.formatQuantity
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -501,18 +506,18 @@ fun DialogUbahJumlah(
     onTutup: () -> Unit,
 ) {
     var inputTeks by rememberSaveable {
-        mutableStateOf(com.sentral.org.data.model.formatQuantity(jumlahAwalScaled).replace(',', '.'))
+        mutableStateOf(formatQuantity(jumlahAwalScaled).replace(',', '.'))
     }
 
     // Normalisasi input ke kuantitas scaled (mis. 0.5 -> 500)
     val parsedScaled: Long = remember(inputTeks) {
         val clean = inputTeks.replace(',', '.').trim()
         val num = clean.toDoubleOrNull() ?: 0.0
-        if (num > 0.0) (num * com.sentral.org.data.model.QUANTITY_SCALE).toLong() else 0L
+        if (num > 0.0) (num * QUANTITY_SCALE).toLong() else 0L
     }
 
     val totalBaris = remember(parsedScaled, hargaSatuan) {
-        if (parsedScaled > 0) com.sentral.org.data.model.MoneyMath.lineTotal(hargaSatuan, parsedScaled) else 0L
+        if (parsedScaled > 0) MoneyMath.lineTotal(hargaSatuan, parsedScaled) else 0L
     }
 
     AlertDialog(
@@ -537,7 +542,7 @@ fun DialogUbahJumlah(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = inputTeks,
-                    onValueChange = { baru ->
+                    onValueChange = { baru: String ->
                         // Hanya izinkan angka, maksimal 1 tanda koma/titik, dan maks 3 digit pecahan
                         if (baru.isEmpty() || baru.matches(Regex("^\\d*([.,]\\d{0,3})?$"))) {
                             inputTeks = baru

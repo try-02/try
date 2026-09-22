@@ -195,6 +195,25 @@ class EscPosPrinterDriver(
         }
     }
 */
+private fun printLogo(
+    handle: PrinterHandle,
+    logoUri: String?,
+) {
+    if (logoUri.isNullOrBlank()) return
+
+    val logoBytes = loadAndConvertLogo(logoUri) ?: return
+
+    try {
+        handle.connection.write(logoBytes)
+        handle.connection.write(byteArrayOf(0x0A))
+        handle.connection.send()
+    } catch (e: EscPosConnectionException) {
+        log.e(e) {
+            "Failed to send logo: ${e.message}"
+        }
+    }
+}
+
 private suspend fun printInternal(receipt: ReceiptData): PrintResult {
     var handle: PrinterHandle? = null
 
@@ -214,26 +233,10 @@ private suspend fun printInternal(receipt: ReceiptData): PrintResult {
         }
 
         // ===== TAHAP 1: Print logo =====
-        val logoUri = receipt.toko.logoUri
-
-        if (!logoUri.isNullOrBlank()) {
-            val logoBytes = loadAndConvertLogo(logoUri)
-
-            if (logoBytes != null) {
-                try {
-                    handle.connection.write(logoBytes)
-                    handle.connection.write(byteArrayOf(0x0A))
-                    handle.connection.send()
-                } catch (e: EscPosConnectionException) {
-                    log.e(e) {
-                        "Failed to send logo: ${e.message}"
-                    }
-
-                    // Logo gagal bukan berarti seluruh cetak gagal.
-                    // Exception dicatat dan proses teks tetap dilanjutkan.
-                }
-            }
-        }
+        printLogo(
+            handle = handle,
+            logoUri = receipt.toko.logoUri,
+        )
 
         // ===== TAHAP 2: Print teks =====
         val formattedText = buildFormattedReceipt(
@@ -268,15 +271,11 @@ private suspend fun printInternal(receipt: ReceiptData): PrintResult {
             message = "Gagal render QR/barcode: ${e.message}",
             isRetryable = false,
         )
-    } catch (e: RuntimeException) {
-        log.e(e) {
-            "Unexpected printer runtime error: ${e.message}"
-        }
-
+/**
         return PrintResult.Failure(
             message = e.message ?: "Error cetak tidak diketahui",
             isRetryable = isRetryableError(e),
-        )
+        ) */
     } finally {
         log.i { "🔌 Disconnecting printer" }
         handle?.printer?.disconnectPrinter()
@@ -426,51 +425,55 @@ private suspend fun printInternal(receipt: ReceiptData): PrintResult {
     /**
      * Hitung ukuran file dari URI. Return null jika tidak bisa ditentukan (misal content:// tanpa size).
      */
-    private fun getFileSize(uri: Uri): Long? {
-return try {
-    when (uri.scheme) {
-        "file" -> uri.path
-            ?.let { java.io.File(it).length().takeIf { it > 0 } }
-
-        "content" -> {
-            context.contentResolver.query(
-                uri,
-                null,
-                null,
-                null,
-                null,
-            )?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    val sizeIndex =
-                        cursor.getColumnIndex(
-                            android.provider.OpenableColumns.SIZE
-                        )
-
-                    if (sizeIndex >= 0) {
-                        cursor.getLong(sizeIndex)
-                    } else {
-                        null
-                    }
-                } else {
-                    null
-                }
-            }
+private fun getContentFileSize(uri: Uri): Long? {
+    return context.contentResolver.query(
+        uri,
+        null,
+        null,
+        null,
+        null,
+    )?.use { cursor ->
+        if (!cursor.moveToFirst()) {
+            return@use null
         }
 
-        else -> null
+        val sizeIndex = cursor.getColumnIndex(
+            android.provider.OpenableColumns.SIZE,
+        )
+
+        if (sizeIndex >= 0) {
+            cursor.getLong(sizeIndex)
+        } else {
+            null
+        }
     }
-} catch (e: SecurityException) {
-    log.e(e) {
-        "Cannot get file size for $uri: ${e.message}"
-    }
-    null
-} catch (e: IllegalArgumentException) {
-    log.e(e) {
-        "Invalid URI for file size: $uri: ${e.message}"
-    }
-    null
 }
+
+private fun getFileSize(uri: Uri): Long? {
+    return try {
+        when (uri.scheme) {
+            "file" -> {
+                val path = uri.path ?: return null
+                val size = java.io.File(path).length()
+                size.takeIf { it > 0 }
+            }
+
+            "content" -> getContentFileSize(uri)
+
+            else -> null
+        }
+    } catch (e: SecurityException) {
+        log.e(e) {
+            "Cannot get file size for $uri: ${e.message}"
+        }
+        null
+    } catch (e: IllegalArgumentException) {
+        log.e(e) {
+            "Invalid URI for file size: $uri: ${e.message}"
+        }
+        null
     }
+}
 
     /**
      * Hitung sample size untuk BitmapFactory.decodeStream.
