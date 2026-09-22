@@ -34,6 +34,7 @@ import com.sentral.org.data.security.createPinHasher
 import com.sentral.org.data.seed.ProductSeeder
 import com.sentral.org.data.service.AuthService
 import com.sentral.org.data.service.PosWriteService
+import com.sentral.org.data.service.RoomTransactionRunner
 import com.sentral.org.data.service.InventoryMutationService
 import com.sentral.org.data.service.PersediaanService
 import com.sentral.org.data.service.CartService
