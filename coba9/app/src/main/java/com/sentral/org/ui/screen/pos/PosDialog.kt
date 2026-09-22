@@ -271,12 +271,47 @@ fun DialogPembayaran(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxWidth(),
                         ) {
+                            ChipNominal(
+                                label = "Pas",
+                                dipilih = cukup && diterima == total,
+                                onClick = {
+                                    teksInput = total.toString()
+                                },
+                                modifier = Modifier.weight(1f),
+                            ) /**
                             ChipNominal("Pas", dipilih = cukup && diterima == total, modifier = Modifier.weight(1f)) {
                                 teksInput = total.toString()
                             }
                             ChipNominal("50rb", dipilih = diterima == 50_000L, modifier = Modifier.weight(1f)) { teksInput = "50000" }
                             ChipNominal("100rb", dipilih = diterima == 100_000L, modifier = Modifier.weight(1f)) { teksInput = "100000" }
                             ChipNominal("200rb", dipilih = diterima == 200_000L, modifier = Modifier.weight(1f)) { teksInput = "200000" }
+                            */
+                            ChipNominal(
+                                label = "50rb",
+                                dipilih = diterima == 50_000L,
+                                onClick = {
+                                    teksInput = "50000"
+                                },
+                                modifier = Modifier.weight(1f),
+                            )
+
+                            ChipNominal(
+                                label = "100rb",
+                                dipilih = diterima == 100_000L,
+                                onClick = {
+                                    teksInput = "100000"
+                                },
+                                modifier = Modifier.weight(1f),
+                            )
+
+                            ChipNominal(
+                                label = "200rb",
+                                dipilih = diterima == 200_000L,
+                                onClick = {
+                                    teksInput = "200000"
+                                },
+                                modifier = Modifier.weight(1f),
+                            )
                         }
 
                         Spacer(Modifier.height(12.dp))

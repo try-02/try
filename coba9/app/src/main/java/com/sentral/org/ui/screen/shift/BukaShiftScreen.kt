@@ -189,7 +189,7 @@ fun BukaShiftScreen(
 
             Spacer(Modifier.height(12.dp))
 
-            // Chips Nominal Cepat
+            /** Chips Nominal Cepat
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth(),
@@ -206,6 +206,46 @@ fun BukaShiftScreen(
                 ChipNominalCepat("500rb", dipilih = uiState.modalAwalNominal == 500_000L, modifier = Modifier.weight(1f)) {
                     viewModel.setNominalCepat(500_000L)
                 }
+            } */
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                ChipNominalCepat(
+                    label = "0",
+                    dipilih = uiState.modalAwalNominal == 0L,
+                    onClick = {
+                        viewModel.setNominalCepat(0L)
+                    },
+                    modifier = Modifier.weight(1f),
+                )
+
+                ChipNominalCepat(
+                    label = "100rb",
+                    dipilih = uiState.modalAwalNominal == 100_000L,
+                    onClick = {
+                        viewModel.setNominalCepat(100_000L)
+                    },
+                    modifier = Modifier.weight(1f),
+                )
+
+                ChipNominalCepat(
+                    label = "200rb",
+                    dipilih = uiState.modalAwalNominal == 200_000L,
+                    onClick = {
+                        viewModel.setNominalCepat(200_000L)
+                    },
+                    modifier = Modifier.weight(1f),
+                )
+
+                ChipNominalCepat(
+                    label = "500rb",
+                    dipilih = uiState.modalAwalNominal == 500_000L,
+                    onClick = {
+                        viewModel.setNominalCepat(500_000L)
+                    },
+                    modifier = Modifier.weight(1f),
+                )
             }
 
             Spacer(Modifier.height(12.dp))
