@@ -1,6 +1,10 @@
 package com.sentral.org.data.dao
 
-import androidx.room3.*
+import androidx.room3.Dao
+import androidx.room3.Insert
+import androidx.room3.Query
+import androidx.room3.ColumnInfo
+import androidx.room3.Embedded
 import com.sentral.org.data.entity.ProdukEntity
 import kotlinx.coroutines.flow.Flow
 

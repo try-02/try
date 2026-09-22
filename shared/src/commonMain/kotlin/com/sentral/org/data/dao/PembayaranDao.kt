@@ -1,6 +1,8 @@
 package com.sentral.org.data.dao
 
-import androidx.room3.*
+import androidx.room3.Dao
+import androidx.room3.Insert
+import androidx.room3.Query
 import com.sentral.org.data.entity.PembayaranEntity
 
 @Dao

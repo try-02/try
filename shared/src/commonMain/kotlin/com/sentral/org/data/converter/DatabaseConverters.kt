@@ -1,7 +1,7 @@
 package com.sentral.org.data.converter
 
 import androidx.room3.ColumnTypeConverter
-import com.sentral.org.data.model.*
+import com.sentral.org.data.model.Enums
 
 /**
  * Helper parsing enum yang aman: kalau string tidak cocok dengan enum value,

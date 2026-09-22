@@ -6,8 +6,35 @@ import androidx.room3.Database
 import androidx.room3.RoomDatabase
 import androidx.room3.RoomDatabaseConstructor
 import com.sentral.org.data.converter.DatabaseConverters
-import com.sentral.org.data.dao.*
-import com.sentral.org.data.entity.*
+import com.sentral.org.data.dao.ProdukDao
+import com.sentral.org.data.dao.PersediaanDao
+import com.sentral.org.data.dao.PergerakanPersediaanDao
+import com.sentral.org.data.dao.KasirDao
+import com.sentral.org.data.dao.ShiftDao
+import com.sentral.org.data.dao.PergerakanKasDao
+import com.sentral.org.data.dao.KeranjangDao
+import com.sentral.org.data.dao.ItemKeranjangDao
+import com.sentral.org.data.dao.TransaksiDao
+import com.sentral.org.data.dao.ItemTransaksiDao
+import com.sentral.org.data.dao.PembayaranDao
+import com.sentral.org.data.dao.ReturDao
+import com.sentral.org.data.dao.PrinterDao
+import com.sentral.org.data.dao.ProfilTokoDao
+import com.sentral.org.data.entity.ProdukEntity
+import com.sentral.org.data.entity.PersediaanEntity
+import com.sentral.org.data.entity.PergerakanPersediaanEntity
+import com.sentral.org.data.entity.KasirEntity
+import com.sentral.org.data.entity.ShiftEntity
+import com.sentral.org.data.entity.PergerakanKasEntity
+import com.sentral.org.data.entity.KeranjangEntity
+import com.sentral.org.data.entity.ItemKeranjangEntity
+import com.sentral.org.data.entity.TransaksiEntity
+import com.sentral.org.data.entity.ItemTransaksiEntity
+import com.sentral.org.data.entity.PembayaranEntity
+import com.sentral.org.data.entity.PengembalianEntity
+import com.sentral.org.data.entity.ItemPengembalianEntity
+import com.sentral.org.data.entity.PrinterEntity
+import com.sentral.org.data.entity.ProfilTokoEntity
 
 @Database(
     entities = [

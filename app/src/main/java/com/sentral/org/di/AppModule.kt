@@ -6,17 +6,46 @@ import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.sentral.org.data.DatabaseWarmup
 import com.sentral.org.data.PosDatabase
 import com.sentral.org.data.createPosDatabase
-import com.sentral.org.data.repository.*
-import com.sentral.org.data.repository.impl.*
+import com.sentral.org.data.concurrency.PosExecutionLock
+import com.sentral.org.data.concurrency.PosExecutionLockImpl
+import com.sentral.org.data.repository.impl.OfflineProdukRepository
+import com.sentral.org.data.repository.impl.OfflinePersediaanRepository
+import com.sentral.org.data.repository.impl.OfflineKasirRepository
+import com.sentral.org.data.repository.impl.OfflineShiftRepository
+import com.sentral.org.data.repository.impl.OfflineCartRepository
+import com.sentral.org.data.repository.impl.OfflineTransaksiRepository
+import com.sentral.org.data.repository.impl.OfflineReturRepository
+import com.sentral.org.data.repository.impl.OfflinePrinterRepository
+import com.sentral.org.data.repository.impl.OfflineProfilTokoRepository
+import com.sentral.org.data.repository.impl.OfflineLaporanRepository
+import com.sentral.org.data.repository.PersediaanRepository
+import com.sentral.org.data.repository.ProdukRepository
+import com.sentral.org.data.repository.KasirRepository
+import com.sentral.org.data.repository.CartRepository
+import com.sentral.org.data.repository.ShiftRepository
+import com.sentral.org.data.repository.TransaksiRepository
+import com.sentral.org.data.repository.ReturRepository
+import com.sentral.org.data.repository.PrinterRepository
+import com.sentral.org.data.repository.ProfilTokoRepository
+import com.sentral.org.data.repository.LaporanRepository
 import com.sentral.org.data.security.PinHasher
 import com.sentral.org.data.security.PinRateLimiter
 import com.sentral.org.data.security.createPinHasher
 import com.sentral.org.data.seed.ProductSeeder
-import com.sentral.org.data.service.*
 import com.sentral.org.data.service.AuthService
+import com.sentral.org.data.service.PosWriteService
+import com.sentral.org.data.service.InventoryMutationService
+import com.sentral.org.data.service.PersediaanService
+import com.sentral.org.data.service.CartService
+import com.sentral.org.data.service.ShiftService
+import com.sentral.org.data.service.CheckoutService
+import com.sentral.org.data.service.ReturService
+import com.sentral.org.data.service.VoidService
+import com.sentral.org.data.service.PrinterService
 import com.sentral.org.data.session.ActiveSesiKasirProvider
 import com.sentral.org.data.session.DevSessionBootstrap
 import com.sentral.org.data.session.SesiKasirProvider
+import com.sentral.org.domain.service.ProductManagementService
 import com.sentral.org.export.ExcelReportExporter
 import com.sentral.org.export.TransaksiExportUseCase
 import com.sentral.org.hardware.EscPosPrinterDriver
@@ -27,7 +56,17 @@ import com.sentral.org.ui.screen.riwayat.RiwayatViewModel
 import com.sentral.org.ui.screen.settings.PrinterSettingsViewModel
 import com.sentral.org.ui.screen.shift.BukaShiftViewModel
 import com.sentral.org.ui.screen.shift.TutupShiftViewModel
+import com.sentral.org.ui.screen.inventory.FormProdukViewModel
+import com.sentral.org.ui.screen.inventory.KelolaProdukViewModel
+import com.sentral.org.ui.screen.laporan.LaporanViewModel
+import com.sentral.org.ui.screen.settings.BackupRestoreViewModel
 import com.sentral.org.ui.viewmodel.AddPrinterViewModel
+import com.sentral.org.backup.service.RestoreService
+import com.sentral.org.backup.service.BackupService
+import com.sentral.org.backup.crypto.BackupCryptoEngine
+import com.sentral.org.backup.db.DatabaseFileSwap
+import com.sentral.org.backup.db.DatabaseValidator
+import com.sentral.org.backup.db.DatabaseSnapshotter
 import org.koin.android.ext.koin.androidApplication
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
@@ -37,9 +76,8 @@ import org.koin.dsl.module
 val appModule =
     module {
         // 1. Core, Concurrency & Database
-        single<com.sentral.org.data.concurrency.PosExecutionLock> {
-            com.sentral.org.data.concurrency
-                .PosExecutionLockImpl()
+        single<PosExecutionLock> {
+            PosExecutionLockImpl()
         }
         single {
             createPosDatabase(
@@ -54,23 +92,19 @@ val appModule =
 
         // Backup & Restore Core
         single {
-            com.sentral.org.backup.db
-                .DatabaseSnapshotter(get())
+            DatabaseSnapshotter(get())
         }
         single {
-            com.sentral.org.backup.db
-                .DatabaseValidator()
+            DatabaseValidator()
         }
         single {
-            com.sentral.org.backup.db
-                .DatabaseFileSwap(androidContext(), get())
+            DatabaseFileSwap(androidContext(), get())
         }
         single {
-            com.sentral.org.backup.crypto
-                .BackupCryptoEngine()
+            BackupCryptoEngine()
         }
         single {
-            com.sentral.org.backup.service.BackupService(
+            BackupService(
                 context = androidContext(),
                 snapshotter = get(),
                 validator = get(),
@@ -79,7 +113,7 @@ val appModule =
             )
         }
         single {
-            com.sentral.org.backup.service.RestoreService(
+            RestoreService(
                 context = androidContext(),
                 validator = get(),
                 crypto = get(),
@@ -88,7 +122,7 @@ val appModule =
             )
         }
         viewModel {
-            com.sentral.org.ui.screen.settings.BackupRestoreViewModel(
+            BackupRestoreViewModel(
                 backupService = get(),
                 restoreService = get(),
                 application = androidApplication(),
@@ -121,9 +155,8 @@ val appModule =
         single<ReturRepository> { OfflineReturRepository(get()) }
         single<PrinterRepository> { OfflinePrinterRepository(get()) }
         single<ProfilTokoRepository> { OfflineProfilTokoRepository(get()) }
-        single<com.sentral.org.data.repository.LaporanRepository> {
-            com.sentral.org.data.repository.impl
-                .OfflineLaporanRepository(get(), get())
+        single<LaporanRepository> {
+            OfflineLaporanRepository(get(), get())
         }
 
         // 4. Domain Services
@@ -131,7 +164,7 @@ val appModule =
         factory { PersediaanService(write = get(), products = get(), stock = get(), ledger = get()) }
         factory { CartService(write = get(), carts = get(), items = get(), products = get(), cashiers = get()) }
         single {
-            com.sentral.org.domain.service.ProductManagementService(
+            ProductManagementService(
                 write = get(),
                 produkDao = get(),
                 persediaanDao = get(),
@@ -279,18 +312,18 @@ val appModule =
             )
         }
         viewModel {
-            com.sentral.org.ui.screen.laporan.LaporanViewModel(
+            LaporanViewModel(
                 laporanRepo = get(),
             )
         }
         viewModel {
-            com.sentral.org.ui.screen.inventory.KelolaProdukViewModel(
+            KelolaProdukViewModel(
                 productService = get(),
                 sessionProvider = get(),
             )
         }
         viewModel { (handle: androidx.lifecycle.SavedStateHandle) ->
-            com.sentral.org.ui.screen.inventory.FormProdukViewModel(
+            FormProdukViewModel(
                 savedStateHandle = handle,
                 productService = get(),
                 produkDao = get(),
