@@ -1,6 +1,5 @@
 package com.sentral.org.ui.screen.inventory
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,7 +17,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -29,40 +27,25 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.sentral.org.data.entity.PergerakanPersediaanEntity
 import com.sentral.org.data.model.JenisPergerakanPersediaan
 import com.sentral.org.data.model.formatQuantity
-import com.sentral.org.domain.model.KartuStokFilter
-import com.sentral.org.domain.service.ProductManagementService
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun KartuStokSheet(
     produk: ProdukItemAdminUi,
+    ledgerList: List<KartuStokItemUi>,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
-    productService: ProductManagementService = koinInject(),
 ) {
     val sheetState = rememberBottomSheetState(
         initialValue = SheetValue.Hidden,
         enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
     )
-
-    val ledgerList by productService.observeKartuStok(
-        KartuStokFilter(produkId = produk.id)
-    ).collectAsStateWithLifecycle(initialValue = emptyList())
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -99,15 +82,13 @@ fun KartuStokSheet(
                     }
                 }
             } else {
-                val dateFormat = remember { SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()) }
-
                 LazyColumn(
                     contentPadding = PaddingValues(vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.weight(1f),
                 ) {
                     items(ledgerList, key = { it.id }) { row ->
-                        BarisKartuStok(row = row, dateFormat = dateFormat)
+                        BarisKartuStok(row = row)
                     }
                 }
             }
@@ -117,15 +98,13 @@ fun KartuStokSheet(
 
 @Composable
 private fun BarisKartuStok(
-    row: PergerakanPersediaanEntity,
-    dateFormat: SimpleDateFormat,
+    row: KartuStokItemUi,
+    modifier: Modifier = Modifier,
 ) {
-    val waktuStr = remember(row.dibuatPada) { dateFormat.format(Date(row.dibuatPada)) }
-
     Surface(
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceVariant,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
     ) {
         Column(Modifier.padding(12.dp)) {
             Row(
@@ -154,7 +133,7 @@ private fun BarisKartuStok(
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                     )
                 }
-                Text(waktuStr, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(row.waktuFormatted, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 
             Spacer(Modifier.height(6.dp))

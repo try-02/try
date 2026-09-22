@@ -29,7 +29,7 @@ class LaporanViewModel(
             laporanRepo.observeLaporan(start, end).map { data ->
                 LaporanUiState(
                     range = selectedRange,
-                    data = data.toUi(),
+                    data = data,
                     sedangMemuat = false,
                 )
             }

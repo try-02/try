@@ -25,7 +25,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-private data class FilterConfig(
+private data class ActiveSelections(
     val query: String,
     val status: StatusStokFilter,
     val kategori: String?,
@@ -54,17 +54,26 @@ class KelolaProdukViewModel(
     private val _event = Channel<KelolaProdukEvent>(Channel.BUFFERED)
     val event = _event.receiveAsFlow()
 
-    // Sub-Grup 1: Konfigurasi Filter & Urutan (4 Flow <= 5)
-    private val filterConfigFlow = combine(
+    // 1. Sinkronisasi instan teks input untuk UI (tanpa debounce)
+    private val activeSelectionsFlow = combine(
+        _query,
+        _filterStatus,
+        _filterKategori,
+        _urutan,
+    ) { q, status, kat, urut ->
+        ActiveSelections(query = q, status = status, kategori = kat, urutan = urut)
+    }
+
+    // 2. Stream database terpisah: hanya pencarian DB yang di-debounce 300ms
+    private val debouncedSearchConfigFlow = combine(
         _query.debounce(300L),
         _filterStatus,
         _filterKategori,
         _urutan,
     ) { q, status, kat, urut ->
-        FilterConfig(query = q, status = status, kategori = kat, urutan = urut)
+        ActiveSelections(query = q, status = status, kategori = kat, urutan = urut)
     }
 
-    // Sub-Grup 2: State Dialog (2 Flow <= 5)
     private val dialogTargetsFlow = combine(
         _dialogPenyesuaianTarget,
         _kartuStokTarget,
@@ -72,8 +81,8 @@ class KelolaProdukViewModel(
         DialogTargets(penyesuaian = penyesuaian, kartuStok = kartuStok)
     }
 
-    // Sub-Grup 3: Stream Produk Reaktif Terfilter & Terurut
-    private val produkListFlow = filterConfigFlow.flatMapLatest { config ->
+    // 3. Query Room SQLite berjalan di background via debounced stream
+    private val produkListFlow = debouncedSearchConfigFlow.flatMapLatest { config ->
         val hanyaAktif = (config.status != StatusStokFilter.NONAKTIF && config.status != StatusStokFilter.SEMUA)
         productService.observeKatalogAdmin(
             query = config.query.trim(),
@@ -101,18 +110,18 @@ class KelolaProdukViewModel(
         }
     }
 
-    // Kombinasi Akhir Type-Safe (4 Flow <= 5)
+    // 4. UI State menggabungkan input teks instan dengan hasil query
     val uiState: StateFlow<KelolaProdukUiState> = combine(
-        filterConfigFlow,
+        activeSelectionsFlow,
         productService.observeKategori(),
         produkListFlow,
         dialogTargetsFlow,
-    ) { config, categories, produkList, dialogs ->
+    ) { selections, categories, produkList, dialogs ->
         KelolaProdukUiState(
-            query = config.query,
-            filterStatus = config.status,
-            filterKategori = config.kategori,
-            urutan = config.urutan,
+            query = selections.query, // Sinkron instan dengan ketikan pengguna
+            filterStatus = selections.status,
+            filterKategori = selections.kategori,
+            urutan = selections.urutan,
             daftarKategori = categories,
             daftarProduk = produkList,
             sedangMemuat = false,

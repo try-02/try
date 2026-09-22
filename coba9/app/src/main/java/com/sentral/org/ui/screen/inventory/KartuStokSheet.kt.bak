@@ -52,6 +52,7 @@ import org.koin.compose.koinInject
 fun KartuStokSheet(
     produk: ProdukItemAdminUi,
     onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
     productService: ProductManagementService = koinInject(),
 ) {
     val sheetState = rememberBottomSheetState(
@@ -66,6 +67,7 @@ fun KartuStokSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
+        modifier = modifier,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         containerColor = MaterialTheme.colorScheme.surface,
     ) {

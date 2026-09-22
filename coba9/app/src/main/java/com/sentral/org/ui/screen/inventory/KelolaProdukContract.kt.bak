@@ -1,8 +1,5 @@
 package com.sentral.org.ui.screen.inventory
 
-import androidx.compose.runtime.Immutable
-import com.sentral.org.data.model.JenisPergerakanPersediaan
-
 enum class StatusStokFilter(val label: String) {
     SEMUA("Semua"),
     MENIPIS("Menipis (≤ 5)"),
@@ -32,18 +29,6 @@ data class ProdukItemAdminUi(
     val aktif: Boolean,
 )
 
-@Immutable
-data class KartuStokItemUi(
-    val id: Long,
-    val waktuFormatted: String,
-    val jenis: JenisPergerakanPersediaan,
-    val perubahanJumlah: Long,
-    val perubahanJumlahRusak: Long,
-    val saldoJumlahSebelum: Long,
-    val saldoJumlahSetelah: Long,
-    val keterangan: String,
-)
-
 data class KelolaProdukUiState(
     val query: String = "",
     val filterStatus: StatusStokFilter = StatusStokFilter.SEMUA,
@@ -54,7 +39,6 @@ data class KelolaProdukUiState(
     val sedangMemuat: Boolean = true,
     val dialogPenyesuaianTarget: ProdukItemAdminUi? = null,
     val kartuStokTarget: ProdukItemAdminUi? = null,
-    val kartuStokList: List<KartuStokItemUi> = emptyList(),
 )
 
 sealed interface KelolaProdukEvent {

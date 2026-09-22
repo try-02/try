@@ -51,8 +51,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sentral.org.data.model.LaporanPenjualan
 import com.sentral.org.data.model.MetodePembayaran
-import com.sentral.org.ui.screen.laporan.LaporanPenjualanUi
 import com.sentral.org.data.model.formatQuantity
 import com.sentral.org.ui.screen.pos.formatRupiah
 import org.koin.androidx.compose.koinViewModel
@@ -100,7 +100,7 @@ fun LaporanScreen(
 }
 
 @Composable
-private fun LaporanDashboardContent(data: LaporanPenjualanUi) {
+private fun LaporanDashboardContent(data: LaporanPenjualan) {
     LazyColumn(
         contentPadding = PaddingValues(vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -172,7 +172,7 @@ private fun LaporanDashboardContent(data: LaporanPenjualanUi) {
 }
 
 @Composable
-private fun HeroOmzetCard(data: LaporanPenjualanUi) {
+private fun HeroOmzetCard(data: LaporanPenjualan) {
     Card(
         shape = MaterialTheme.shapes.extraLarge,
         modifier = Modifier.fillMaxWidth(),
@@ -283,7 +283,7 @@ private fun MetricCard(
 }
 
 @Composable
-private fun MetodePembayaranSection(data: LaporanPenjualanUi) {
+private fun MetodePembayaranSection(data: LaporanPenjualan) {
     Surface(
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surface,
@@ -356,7 +356,7 @@ private fun AuditVolumeCard(selesai: Int, voidCount: Int) {
 }
 
 @Composable
-private fun TopProdukSection(data: LaporanPenjualanUi) {
+private fun TopProdukSection(data: LaporanPenjualan) {
     Surface(
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surface,

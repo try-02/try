@@ -207,6 +207,7 @@ fun KelolaProdukScreen(
     uiState.kartuStokTarget?.let { target ->
         KartuStokSheet(
             produk = target,
+            ledgerList = uiState.kartuStokList,
             onDismiss = { viewModel.tutupKartuStok() },
         )
     }

@@ -24,6 +24,12 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import com.sentral.org.data.entity.PergerakanPersediaanEntity
+import com.sentral.org.domain.model.KartuStokFilter
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import kotlinx.coroutines.flow.flowOf
 
 private data class ActiveSelections(
     val query: String,
@@ -32,9 +38,10 @@ private data class ActiveSelections(
     val urutan: UrutanProduk,
 )
 
-private data class DialogTargets(
+private data class DialogState(
     val penyesuaian: ProdukItemAdminUi?,
-    val kartuStok: ProdukItemAdminUi?,
+    val kartuStokTarget: ProdukItemAdminUi?,
+    val kartuStokList: List<KartuStokItemUi>,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -53,6 +60,8 @@ class KelolaProdukViewModel(
 
     private val _event = Channel<KelolaProdukEvent>(Channel.BUFFERED)
     val event = _event.receiveAsFlow()
+
+    private val dateFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
 
     // 1. Sinkronisasi instan teks input untuk UI (tanpa debounce)
     private val activeSelectionsFlow = combine(
@@ -74,11 +83,27 @@ class KelolaProdukViewModel(
         ActiveSelections(query = q, status = status, kategori = kat, urutan = urut)
     }
 
-    private val dialogTargetsFlow = combine(
+    // Stream kartu stok reaktif ketika target produk dipilih
+    private val kartuStokLedgerFlow = _kartuStokTarget.flatMapLatest { target ->
+        if (target == null) {
+            flowOf(emptyList())
+        } else {
+            productService.observeKartuStok(KartuStokFilter(produkId = target.id)).map { list ->
+                list.map { it.toUi(dateFormat) }
+            }
+        }
+    }
+
+    private val dialogStateFlow = combine(
         _dialogPenyesuaianTarget,
         _kartuStokTarget,
-    ) { penyesuaian, kartuStok ->
-        DialogTargets(penyesuaian = penyesuaian, kartuStok = kartuStok)
+        kartuStokLedgerFlow,
+    ) { penyesuaian, kartuTarget, ledgerList ->
+        DialogState(
+            penyesuaian = penyesuaian,
+            kartuStokTarget = kartuTarget,
+            kartuStokList = ledgerList,
+        )
     }
 
     // 3. Query Room SQLite berjalan di background via debounced stream
@@ -115,7 +140,7 @@ class KelolaProdukViewModel(
         activeSelectionsFlow,
         productService.observeKategori(),
         produkListFlow,
-        dialogTargetsFlow,
+        dialogStateFlow,
     ) { selections, categories, produkList, dialogs ->
         KelolaProdukUiState(
             query = selections.query, // Sinkron instan dengan ketikan pengguna
@@ -126,7 +151,8 @@ class KelolaProdukViewModel(
             daftarProduk = produkList,
             sedangMemuat = false,
             dialogPenyesuaianTarget = dialogs.penyesuaian,
-            kartuStokTarget = dialogs.kartuStok,
+            kartuStokTarget = dialogs.kartuStokTarget,
+            kartuStokList = dialogs.kartuStokList,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), KelolaProdukUiState())
 
@@ -268,5 +294,16 @@ class KelolaProdukViewModel(
         stokNormalScaled = stokNormal ?: 0L,
         stokRusakScaled = stokRusak ?: 0L,
         aktif = produk.aktif,
+    )
+
+    private fun PergerakanPersediaanEntity.toUi(format: SimpleDateFormat) = KartuStokItemUi(
+        id = id,
+        waktuFormatted = format.format(Date(dibuatPada)),
+        jenis = jenis,
+        perubahanJumlah = perubahanJumlah,
+        perubahanJumlahRusak = perubahanJumlahRusak,
+        saldoJumlahSebelum = saldoJumlahSebelum,
+        saldoJumlahSetelah = saldoJumlahSetelah,
+        keterangan = keterangan,
     )
 }
