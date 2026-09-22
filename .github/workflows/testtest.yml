@@ -46,7 +46,7 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: check
-        run: ./gradlew :app:help --stacktrace
+        run: ./gradlew :app:help --warning-mode=all --stacktrace
       # - name: Run Pure Unit Tests
       #  run: ./gradlew :shared:assemble --stacktrace
 #      - name: check
