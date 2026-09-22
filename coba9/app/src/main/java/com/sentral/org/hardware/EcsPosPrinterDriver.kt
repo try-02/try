@@ -195,7 +195,7 @@ class EscPosPrinterDriver(
         }
     }
 */
-private fun printLogo(
+private suspend fun printLogo(
     handle: PrinterHandle,
     logoUri: String?,
 ) {
