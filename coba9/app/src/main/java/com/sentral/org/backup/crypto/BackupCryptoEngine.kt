@@ -94,17 +94,11 @@ private fun decryptPayload(
 ) {
     try {
         FileOutputStream(destinationDbFile).use { fileOut ->
-            val buffer = ByteArray(BUFFER_SIZE)
-
-            while (true) {
-                val bytesRead = fileIn.read(buffer)
-                if (bytesRead == -1) break
-
-                cipher.update(buffer, 0, bytesRead)
-                    ?.let(fileOut::write)
-            }
-
-            fileOut.write(cipher.doFinal())
+            decryptChunks(
+                fileIn = fileIn,
+                fileOut = fileOut,
+                cipher = cipher,
+            )
             fileOut.flush()
         }
     } catch (e: IOException) {
@@ -114,6 +108,24 @@ private fun decryptPayload(
         destinationDbFile.delete()
         throw PosBackupException.WrongPasswordOrCorrupted(e)
     }
+}
+
+private fun decryptChunks(
+    fileIn: FileInputStream,
+    fileOut: FileOutputStream,
+    cipher: Cipher,
+) {
+    val buffer = ByteArray(BUFFER_SIZE)
+
+    while (true) {
+        val bytesRead = fileIn.read(buffer)
+        if (bytesRead == -1) break
+
+        cipher.update(buffer, 0, bytesRead)
+            ?.let(fileOut::write)
+    }
+
+    fileOut.write(cipher.doFinal())
 }
 
 fun decrypt(
