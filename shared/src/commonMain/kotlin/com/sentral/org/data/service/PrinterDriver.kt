@@ -6,11 +6,10 @@ import com.sentral.org.data.model.ReceiptData
 /**
  * Abstraksi driver printer. Implementasi konkret ada di platform module
  * (Android pakai DantSu ESCPOS, iOS bisa pakai SDK printer lain).
- * 
+ *
  * Semua method suspend karena melibatkan I/O yang lambat.
  */
 interface PrinterDriver {
-    
     /**
      * Nama unik driver untuk logging. Misal: "ESC/POS Bluetooth", "ESC/POS USB".
      */
@@ -38,12 +37,15 @@ interface PrinterDriver {
 }
 
 /**
- * Driver dummy untuk testing dan sebagai default saat belum ada printer 
+ * Driver dummy untuk testing dan sebagai default saat belum ada printer
  * terkonfigurasi. Selalu return success tanpa melakukan apa-apa.
  */
 class NoOpPrinterDriver : PrinterDriver {
     override val name: String = "NoOp"
+
     override suspend fun testConnection(): Boolean = true
+
     override suspend fun print(receipt: ReceiptData): PrintResult = PrintResult.Success
+
     override suspend fun disconnect() {}
 }

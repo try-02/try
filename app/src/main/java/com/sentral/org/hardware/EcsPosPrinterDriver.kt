@@ -1,5 +1,6 @@
 package com.sentral.org.hardware
 
+import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -24,15 +25,14 @@ import com.sentral.org.data.model.PrinterConnectionType
 import com.sentral.org.data.model.ReceiptData
 import com.sentral.org.data.service.PrinterDriver
 import com.sentral.org.data.service.ReceiptFormatter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
-import android.bluetooth.BluetoothManager
-import java.io.IOException
 
 /**
  * Implementasi PrinterDriver untuk Android menggunakan library DantSu ESC/POS v3.4.0.
@@ -57,7 +57,6 @@ class EscPosPrinterDriver(
     private val context: Context,
     private val printerConfig: PrinterEntity,
 ) : PrinterDriver {
-
     override val name: String = "ESC/POS ${printerConfig.tipeKoneksi}"
 
     companion object {
@@ -73,11 +72,14 @@ class EscPosPrinterDriver(
         // ===== Logo safety constants =====
         // Target width di pixels: 48mm × 203 DPI / 25.4 ≈ 384px
         private const val TARGET_LOGO_WIDTH = 384
-        private const val TARGET_LOGO_HEIGHT = 128  // Max height DantSu support
+        private const val TARGET_LOGO_HEIGHT = 128 // Max height DantSu support
+
         // Source gambar max: 4096×4096 (16MP). Di atas ini, skip.
         private const val MAX_SOURCE_DIMENSION = 4096
+
         // File size max: 10MB. Di atas ini, skip.
         private const val MAX_LOGO_FILE_SIZE_BYTES = 10L * 1024 * 1024
+
         // Timeout load logo: 5 detik
         private const val LOGO_LOAD_TIMEOUT_MS = 3000L
 
@@ -85,7 +87,7 @@ class EscPosPrinterDriver(
     }
 
     /**
-     * Pasangan printer + connection. Connection disimpan terpisah untuk 
+     * Pasangan printer + connection. Connection disimpan terpisah untuk
      * memungkinkan print logo via raw bytes (EscPosPrinter tidak expose API printImage).
      */
     private data class PrinterHandle(
@@ -93,76 +95,167 @@ class EscPosPrinterDriver(
         val connection: DeviceConnection,
     )
 
-    override suspend fun testConnection(): Boolean = withContext(Dispatchers.IO) {
-        var handle: PrinterHandle? = null
-        try {
-            handle = buildPrinterHandle() ?: return@withContext false
-            handle.printer.printFormattedText("[C]TEST CONNECTION\n")
-            true
-        } catch (e: EscPosConnectionException) {
-            log.e(e) { "testConnection failed: ${e.message}" }
-            false
-        } catch (e: EscPosEncodingException) {
-            log.e(e) { "testConnection failed: ${e.message}" }
-            false
-        } catch (e: EscPosParserException) {
-            log.e(e) { "testConnection failed: ${e.message}" }
-            false
-        } finally {
-            handle?.printer?.disconnectPrinter()
+    override suspend fun testConnection(): Boolean =
+        withContext(Dispatchers.IO) {
+            var handle: PrinterHandle? = null
+            try {
+                handle = buildPrinterHandle() ?: return@withContext false
+                handle.printer.printFormattedText("[C]TEST CONNECTION\n")
+                true
+            } catch (e: EscPosConnectionException) {
+                log.e(e) { "testConnection failed: ${e.message}" }
+                false
+            } catch (e: EscPosEncodingException) {
+                log.e(e) { "testConnection failed: ${e.message}" }
+                false
+            } catch (e: EscPosParserException) {
+                log.e(e) { "testConnection failed: ${e.message}" }
+                false
+            } finally {
+                handle?.printer?.disconnectPrinter()
+            }
         }
-    }
-    override suspend fun print(receipt: ReceiptData): PrintResult = withContext(Dispatchers.IO) {
-        // Timeout 30 detik untuk keseluruhan proses print
-        val result = withTimeoutOrNull(30000L) {
-            printInternal(receipt)
+
+    override suspend fun print(receipt: ReceiptData): PrintResult =
+        withContext(Dispatchers.IO) {
+            // Timeout 30 detik untuk keseluruhan proses print
+            val result =
+                withTimeoutOrNull(30000L) {
+                    printInternal(receipt)
+                }
+
+            result ?: PrintResult.Failure(
+                message = "Print timeout (>30 detik)",
+                isRetryable = true,
+            )
         }
-        
-        result ?: PrintResult.Failure(
-            message = "Print timeout (>30 detik)",
-            isRetryable = true,
-        )
-    }
-    
+
     /**
      * Internal print logic (dipisah untuk timeout wrapper).
-     
+
+     private suspend fun printInternal(receipt: ReceiptData): PrintResult {
+     var handle: PrinterHandle? = null
+     try {
+     log.i { "🖨️ print() called for receipt: ${receipt.transaksi.nomor}" }
+
+     handle = buildPrinterHandle()
+     ?: return PrintResult.Failure(
+     "Tidak dapat terhubung ke printer (koneksi tidak dikonfigurasi)",
+     isRetryable = true,
+     )
+
+     log.i { "🔌 Connected to printer: ${printerConfig.nama}" }
+
+     // ===== TAHAP 1: Print logo (kalau ada) via raw bytes ke connection =====
+     // Dilakukan SEBELUM printFormattedText agar logo muncul di paling atas struk.
+     // EscPosPrinter.printFormattedText akan call reset() yang reset state printer,
+     // tapi tidak menghapus bytes yang sudah tercetak di kertas → aman.
+     val logoUri = receipt.toko.logoUri
+     if (!logoUri.isNullOrBlank()) {
+     val logoBytes = loadAndConvertLogo(logoUri)
+     if (logoBytes != null) {
+     try {
+     // Kirim logo + 1 line break dalam satu batch untuk kurangi overhead Bluetooth
+     handle.connection.write(logoBytes)
+     handle.connection.write(byteArrayOf(0x0A))
+     handle.connection.send()
+     } catch (e: EscPosConnectionException) {
+     log.e(e) { "Failed to send logo: ${e.message}" }
+     }
+     }
+     }
+
+     // ===== TAHAP 2: Print teks struk (auto feed + cut di akhir) =====
+     val formattedText = buildFormattedReceipt(receipt, handle.printer.printerNbrCharactersPerLine)
+     handle.printer.printFormattedTextAndCut(formattedText, FEED_PAPER_MM)
+
+     return PrintResult.Success
+     } catch (e: EscPosConnectionException) {
+     return PrintResult.Failure(
+     message = "Koneksi printer terputus: ${e.message}",
+     isRetryable = true,
+     )
+     } catch (e: EscPosEncodingException) {
+     return PrintResult.Failure(
+     message = "Gagal encode teks struk: ${e.message}",
+     isRetryable = false,
+     )
+     } catch (e: EscPosParserException) {
+     return PrintResult.Failure(
+     message = "Format struk tidak valid: ${e.message}",
+     isRetryable = false,
+     )
+     } catch (e: EscPosBarcodeException) {
+     return PrintResult.Failure(
+     message = "Gagal render QR/barcode: ${e.message}",
+     isRetryable = false,
+     )
+     } catch (e: Exception) {
+     return PrintResult.Failure(
+     message = e.message ?: "Error cetak tidak diketahui",
+     isRetryable = isRetryableError(e),
+     )
+     } finally {
+     log.i { "🔌 Disconnecting printer" }
+     handle?.printer?.disconnectPrinter()
+     }
+     }
+*/
+    private suspend fun printLogo(
+        handle: PrinterHandle,
+        logoUri: String?,
+    ) {
+        if (logoUri.isNullOrBlank()) return
+
+        val logoBytes = loadAndConvertLogo(logoUri) ?: return
+
+        try {
+            handle.connection.write(logoBytes)
+            handle.connection.write(byteArrayOf(0x0A))
+            handle.connection.send()
+        } catch (e: EscPosConnectionException) {
+            log.e(e) {
+                "Failed to send logo: ${e.message}"
+            }
+        }
+    }
+
     private suspend fun printInternal(receipt: ReceiptData): PrintResult {
         var handle: PrinterHandle? = null
+
         try {
-            log.i { "🖨️ print() called for receipt: ${receipt.transaksi.nomor}" }
-            
+            log.i {
+                "🖨️ print() called for receipt: ${receipt.transaksi.nomor}"
+            }
+
             handle = buildPrinterHandle()
                 ?: return PrintResult.Failure(
                     "Tidak dapat terhubung ke printer (koneksi tidak dikonfigurasi)",
                     isRetryable = true,
                 )
-            
-            log.i { "🔌 Connected to printer: ${printerConfig.nama}" }
 
-            // ===== TAHAP 1: Print logo (kalau ada) via raw bytes ke connection =====
-            // Dilakukan SEBELUM printFormattedText agar logo muncul di paling atas struk.
-            // EscPosPrinter.printFormattedText akan call reset() yang reset state printer,
-            // tapi tidak menghapus bytes yang sudah tercetak di kertas → aman.
-            val logoUri = receipt.toko.logoUri
-            if (!logoUri.isNullOrBlank()) {
-                val logoBytes = loadAndConvertLogo(logoUri)
-                if (logoBytes != null) {
-                    try {
-                        // Kirim logo + 1 line break dalam satu batch untuk kurangi overhead Bluetooth
-                        handle.connection.write(logoBytes)
-                        handle.connection.write(byteArrayOf(0x0A))
-                        handle.connection.send()
-                    } catch (e: EscPosConnectionException) {
-                        log.e(e) { "Failed to send logo: ${e.message}" }
-                    }
-                }
+            log.i {
+                "🔌 Connected to printer: ${printerConfig.nama}"
             }
 
-            // ===== TAHAP 2: Print teks struk (auto feed + cut di akhir) =====
-            val formattedText = buildFormattedReceipt(receipt, handle.printer.printerNbrCharactersPerLine)
-            handle.printer.printFormattedTextAndCut(formattedText, FEED_PAPER_MM)
-            
+            // ===== TAHAP 1: Print logo =====
+            printLogo(
+                handle = handle,
+                logoUri = receipt.toko.logoUri,
+            )
+
+            // ===== TAHAP 2: Print teks =====
+            val formattedText =
+                buildFormattedReceipt(
+                    receipt,
+                    handle.printer.printerNbrCharactersPerLine,
+                )
+
+            handle.printer.printFormattedTextAndCut(
+                formattedText,
+                FEED_PAPER_MM,
+            )
+
             return PrintResult.Success
         } catch (e: EscPosConnectionException) {
             return PrintResult.Failure(
@@ -184,103 +277,17 @@ class EscPosPrinterDriver(
                 message = "Gagal render QR/barcode: ${e.message}",
                 isRetryable = false,
             )
-        } catch (e: Exception) {
-            return PrintResult.Failure(
-                message = e.message ?: "Error cetak tidak diketahui",
-                isRetryable = isRetryableError(e),
-            )
+/**
+             return PrintResult.Failure(
+             message = e.message ?: "Error cetak tidak diketahui",
+             isRetryable = isRetryableError(e),
+             ) */
         } finally {
             log.i { "🔌 Disconnecting printer" }
             handle?.printer?.disconnectPrinter()
         }
     }
-*/
-private suspend fun printLogo(
-    handle: PrinterHandle,
-    logoUri: String?,
-) {
-    if (logoUri.isNullOrBlank()) return
 
-    val logoBytes = loadAndConvertLogo(logoUri) ?: return
-
-    try {
-        handle.connection.write(logoBytes)
-        handle.connection.write(byteArrayOf(0x0A))
-        handle.connection.send()
-    } catch (e: EscPosConnectionException) {
-        log.e(e) {
-            "Failed to send logo: ${e.message}"
-        }
-    }
-}
-
-private suspend fun printInternal(receipt: ReceiptData): PrintResult {
-    var handle: PrinterHandle? = null
-
-    try {
-        log.i {
-            "🖨️ print() called for receipt: ${receipt.transaksi.nomor}"
-        }
-
-        handle = buildPrinterHandle()
-            ?: return PrintResult.Failure(
-                "Tidak dapat terhubung ke printer (koneksi tidak dikonfigurasi)",
-                isRetryable = true,
-            )
-
-        log.i {
-            "🔌 Connected to printer: ${printerConfig.nama}"
-        }
-
-        // ===== TAHAP 1: Print logo =====
-        printLogo(
-            handle = handle,
-            logoUri = receipt.toko.logoUri,
-        )
-
-        // ===== TAHAP 2: Print teks =====
-        val formattedText = buildFormattedReceipt(
-            receipt,
-            handle.printer.printerNbrCharactersPerLine,
-        )
-
-        handle.printer.printFormattedTextAndCut(
-            formattedText,
-            FEED_PAPER_MM,
-        )
-
-        return PrintResult.Success
-
-    } catch (e: EscPosConnectionException) {
-        return PrintResult.Failure(
-            message = "Koneksi printer terputus: ${e.message}",
-            isRetryable = true,
-        )
-    } catch (e: EscPosEncodingException) {
-        return PrintResult.Failure(
-            message = "Gagal encode teks struk: ${e.message}",
-            isRetryable = false,
-        )
-    } catch (e: EscPosParserException) {
-        return PrintResult.Failure(
-            message = "Format struk tidak valid: ${e.message}",
-            isRetryable = false,
-        )
-    } catch (e: EscPosBarcodeException) {
-        return PrintResult.Failure(
-            message = "Gagal render QR/barcode: ${e.message}",
-            isRetryable = false,
-        )
-/**
-        return PrintResult.Failure(
-            message = e.message ?: "Error cetak tidak diketahui",
-            isRetryable = isRetryableError(e),
-        ) */
-    } finally {
-        log.i { "🔌 Disconnecting printer" }
-        handle?.printer?.disconnectPrinter()
-    }
-}
     override suspend fun disconnect() {
         // Koneksi dikelola per-job, tidak ada state persisten
     }
@@ -293,37 +300,39 @@ private suspend fun printInternal(receipt: ReceiptData): PrintResult {
      */
     private fun buildPrinterHandle(): PrinterHandle? {
         val connectionType = safeConnectionType(printerConfig.tipeKoneksi) ?: return null
-        val connection: DeviceConnection = when (connectionType) {
-            PrinterConnectionType.BLUETOOTH -> {
-                val address = printerConfig.alamatBluetooth ?: return null
-                val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager ?: return null
-                val adapter = bluetoothManager.adapter ?: return null
-                val device = adapter.getRemoteDevice(address)
-                BluetoothConnection(device)
+        val connection: DeviceConnection =
+            when (connectionType) {
+                PrinterConnectionType.BLUETOOTH -> {
+                    val address = printerConfig.alamatBluetooth ?: return null
+                    val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager ?: return null
+                    val adapter = bluetoothManager.adapter ?: return null
+                    val device = adapter.getRemoteDevice(address)
+                    BluetoothConnection(device)
+                }
+
+                PrinterConnectionType.WIFI -> {
+                    val address = printerConfig.alamatWifi ?: return null
+                    val port = printerConfig.portWifi ?: 9100
+                    TcpConnection(address, port, TCP_TIMEOUT_MS)
+                }
+
+                PrinterConnectionType.USB -> {
+                    // TODO: USB permission flow di Tahap 3 (Settings Screen)
+                    return null
+                }
             }
-            PrinterConnectionType.WIFI -> {
-                val address = printerConfig.alamatWifi ?: return null
-                val port = printerConfig.portWifi ?: 9100
-                TcpConnection(address, port, TCP_TIMEOUT_MS)
-            }
-            PrinterConnectionType.USB -> {
-                // TODO: USB permission flow di Tahap 3 (Settings Screen)
-                return null
-            }
-        }
-        val printer = EscPosPrinter(
-            connection,
-            PRINTER_DPI,
-            PRINTER_WIDTH_MM,
-            printerConfig.karakterPerBaris,
-            CHARSET_UTF8,
-        )
+        val printer =
+            EscPosPrinter(
+                connection,
+                PRINTER_DPI,
+                PRINTER_WIDTH_MM,
+                printerConfig.karakterPerBaris,
+                CHARSET_UTF8,
+            )
         return PrinterHandle(printer, connection)
     }
 
-    private fun safeConnectionType(value: String): PrinterConnectionType? {
-        return PrinterConnectionType.entries.firstOrNull { it.name == value }
-    }
+    private fun safeConnectionType(value: String): PrinterConnectionType? = PrinterConnectionType.entries.firstOrNull { it.name == value }
 
     // ---------- Logo Loading (Memory-Safe) ----------
 
@@ -368,26 +377,30 @@ private suspend fun printInternal(receipt: ReceiptData): PrintResult {
                     }
 
                     // ===== GUARD 3: Hitung sample size untuk hemat memory saat decode =====
-                    val sampleSize = calculateSampleSize(
-                        bounds.outWidth,
-                        bounds.outHeight,
-                        TARGET_LOGO_WIDTH,
-                        TARGET_LOGO_HEIGHT,
-                    )
-                    val decodeOptions = BitmapFactory.Options().apply {
-                        inSampleSize = sampleSize
-                        inPreferredConfig = Bitmap.Config.ARGB_8888
-                    }
+                    val sampleSize =
+                        calculateSampleSize(
+                            bounds.outWidth,
+                            bounds.outHeight,
+                            TARGET_LOGO_WIDTH,
+                            TARGET_LOGO_HEIGHT,
+                        )
+                    val decodeOptions =
+                        BitmapFactory.Options().apply {
+                            inSampleSize = sampleSize
+                            inPreferredConfig = Bitmap.Config.ARGB_8888
+                        }
 
-                    val original: Bitmap = context.contentResolver.openInputStream(uri)?.use { stream ->
-                        BitmapFactory.decodeStream(stream, null, decodeOptions)
-                    } ?: return@withContext null
+                    val original: Bitmap =
+                        context.contentResolver.openInputStream(uri)?.use { stream ->
+                            BitmapFactory.decodeStream(stream, null, decodeOptions)
+                        } ?: return@withContext null
 
                     // ===== GUARD 4: Resize ke target (skala proporsional dua dimensi) =====
-                    val scale = minOf(
-                        TARGET_LOGO_WIDTH.toFloat() / original.width,
-                        TARGET_LOGO_HEIGHT.toFloat() / original.height,
-                    )
+                    val scale =
+                        minOf(
+                            TARGET_LOGO_WIDTH.toFloat() / original.width,
+                            TARGET_LOGO_HEIGHT.toFloat() / original.height,
+                        )
                     val targetWidth = (original.width * scale).roundToInt().coerceAtLeast(1)
                     val targetHeight = (original.height * scale).roundToInt().coerceAtLeast(1)
 
@@ -425,61 +438,72 @@ private suspend fun printInternal(receipt: ReceiptData): PrintResult {
     /**
      * Hitung ukuran file dari URI. Return null jika tidak bisa ditentukan (misal content:// tanpa size).
      */
-private fun getContentFileSize(uri: Uri): Long? {
-    return context.contentResolver.query(
-        uri,
-        null,
-        null,
-        null,
-        null,
-    )?.use { cursor ->
-        if (!cursor.moveToFirst()) {
-            return@use null
-        }
+    private fun getContentFileSize(uri: Uri): Long? {
+        return context.contentResolver
+            .query(
+                uri,
+                null,
+                null,
+                null,
+                null,
+            )?.use { cursor ->
+                if (!cursor.moveToFirst()) {
+                    return@use null
+                }
 
-        val sizeIndex = cursor.getColumnIndex(
-            android.provider.OpenableColumns.SIZE,
-        )
+                val sizeIndex =
+                    cursor.getColumnIndex(
+                        android.provider.OpenableColumns.SIZE,
+                    )
 
-        if (sizeIndex >= 0) {
-            cursor.getLong(sizeIndex)
-        } else {
+                if (sizeIndex >= 0) {
+                    cursor.getLong(sizeIndex)
+                } else {
+                    null
+                }
+            }
+    }
+
+    private fun getFileSize(uri: Uri): Long? {
+        return try {
+            when (uri.scheme) {
+                "file" -> {
+                    val path = uri.path ?: return null
+                    val size = java.io.File(path).length()
+                    size.takeIf { it > 0 }
+                }
+
+                "content" -> {
+                    getContentFileSize(uri)
+                }
+
+                else -> {
+                    null
+                }
+            }
+        } catch (e: SecurityException) {
+            log.e(e) {
+                "Cannot get file size for $uri: ${e.message}"
+            }
+            null
+        } catch (e: IllegalArgumentException) {
+            log.e(e) {
+                "Invalid URI for file size: $uri: ${e.message}"
+            }
             null
         }
     }
-}
-
-private fun getFileSize(uri: Uri): Long? {
-    return try {
-        when (uri.scheme) {
-            "file" -> {
-                val path = uri.path ?: return null
-                val size = java.io.File(path).length()
-                size.takeIf { it > 0 }
-            }
-
-            "content" -> getContentFileSize(uri)
-
-            else -> null
-        }
-    } catch (e: SecurityException) {
-        log.e(e) {
-            "Cannot get file size for $uri: ${e.message}"
-        }
-        null
-    } catch (e: IllegalArgumentException) {
-        log.e(e) {
-            "Invalid URI for file size: $uri: ${e.message}"
-        }
-        null
-    }
-}
 
     /**
      * Hitung sample size untuk BitmapFactory.decodeStream.
      * Sample size = 2^n yang membuat dimensi hasil (lebar dan tinggi) aman di memori.
      */
-    private fun calculateSampleSize(width: Int, height: Int, targetWidth: Int, targetHeight: Int): Int {
+    private fun calculateSampleSize(
+        width: Int,
+        height: Int,
+        targetWidth: Int,
+        targetHeight: Int,
+    ): Int {
         var sampleSize = 1
         if (width > targetWidth || height > targetHeight) {
             val halfWidth = width / 2
@@ -493,18 +517,23 @@ private fun getFileSize(uri: Uri): Long? {
 
     // ---------- Receipt Builder ----------
 
-    private fun buildFormattedReceipt(receipt: ReceiptData, charsPerLine: Int): String {
+    private fun buildFormattedReceipt(
+        receipt: ReceiptData,
+        charsPerLine: Int,
+    ): String {
         val sb = StringBuilder()
         val dateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
         val waktu = dateFormat.format(Date(receipt.transaksi.waktu))
 
         // ===== HEADER TOKO (CENTER, BOLD, BIG) =====
-        sb.append("[C]<b><font size='big'>")
+        sb
+            .append("[C]<b><font size='big'>")
             .append(escapeDantSuText(receipt.toko.nama))
             .append("</font></b>\n")
 
         if (receipt.toko.alamat.isNotBlank()) {
-            sb.append("[C]<font size='small'>")
+            sb
+                .append("[C]<font size='small'>")
                 .append(escapeDantSuText(receipt.toko.alamat))
                 .append("</font>\n")
         }
@@ -519,13 +548,21 @@ private fun getFileSize(uri: Uri): Long? {
 
         // ===== ITEMS =====
         receipt.items.forEach { item ->
-            val qtyStr = com.sentral.org.data.model.formatQuantity(item.jumlah)
+            val qtyStr =
+                com.sentral.org.data.model
+                    .formatQuantity(item.jumlah)
             val priceStr = ReceiptFormatter.formatMoney(item.hargaSatuan)
             val lineTotal = ReceiptFormatter.formatMoney(item.totalBaris)
 
             sb.append("[L]<b>").append(escapeDantSuText(truncate(item.nama, charsPerLine))).append("</b>\n")
-            sb.append("[L]").append(qtyStr).append(" x ").append(priceStr)
-                .append("[R]").append(lineTotal).append("\n")
+            sb
+                .append("[L]")
+                .append(qtyStr)
+                .append(" x ")
+                .append(priceStr)
+                .append("[R]")
+                .append(lineTotal)
+                .append("\n")
         }
 
         sb.append("[L]<u>").append("-".repeat(charsPerLine)).append("</u>\n")
@@ -541,17 +578,20 @@ private fun getFileSize(uri: Uri): Long? {
         }
 
         sb.append("[L]<u>").append("-".repeat(charsPerLine)).append("</u>\n")
-        sb.append("[L]<b><font size='big'>TOTAL</font></b>")
-            .append("[R]<b><font size='big'>").append(ReceiptFormatter.formatMoney(receipt.transaksi.total))
+        sb
+            .append("[L]<b><font size='big'>TOTAL</font></b>")
+            .append("[R]<b><font size='big'>")
+            .append(ReceiptFormatter.formatMoney(receipt.transaksi.total))
             .append("</font></b>\n")
         sb.append("[L]\n")
 
         // ===== PAYMENTS =====
         receipt.payments.forEach { payment ->
-            val metode = when (payment.metode) {
-                MetodePembayaran.CASH -> "TUNAI"
-                MetodePembayaran.QRIS -> "QRIS"
-            }
+            val metode =
+                when (payment.metode) {
+                    MetodePembayaran.CASH -> "TUNAI"
+                    MetodePembayaran.QRIS -> "QRIS"
+                }
             sb.append(alignedLineBold(metode, ReceiptFormatter.formatMoney(payment.jumlah)))
 
             val diterima = payment.diterima
@@ -569,7 +609,8 @@ private fun getFileSize(uri: Uri): Long? {
         // ===== QR CODE (OPSIONAL) =====
         if (receipt.toko.cetakQr) {
             val qrData = receipt.transaksi.nomor
-            sb.append("[C]<qrcode size='6'>")
+            sb
+                .append("[C]<qrcode size='6'>")
                 .append(escapeDantSuText(qrData))
                 .append("</qrcode>\n")
         }
@@ -583,25 +624,30 @@ private fun getFileSize(uri: Uri): Long? {
         return sb.toString()
     }
 
-    private fun escapeDantSuText(text: String): String {
-        return text
+    private fun escapeDantSuText(text: String): String =
+        text
             .replace("[", "&#91;")
             .replace("]", "&#93;")
             .replace("<", "&lt;")
             .replace(">", "&gt;")
-    }
 
-    private fun truncate(text: String, maxWidth: Int): String {
-        return if (text.length > maxWidth) text.take(maxWidth - 2) + ".." else text
-    }
+    private fun truncate(
+        text: String,
+        maxWidth: Int,
+    ): String = if (text.length > maxWidth) text.take(maxWidth - 2) + ".." else text
 
-    private fun alignedLine(label: String, value: String): String = "[L]$label[R]$value\n"
+    private fun alignedLine(
+        label: String,
+        value: String,
+    ): String = "[L]$label[R]$value\n"
 
-    private fun alignedLineBold(label: String, value: String): String = "[L]<b>$label</b>[R]<b>$value</b>\n"
+    private fun alignedLineBold(
+        label: String,
+        value: String,
+    ): String = "[L]<b>$label</b>[R]<b>$value</b>\n"
 
-    private fun isRetryableError(e: Exception): Boolean {
-        return e is IOException
-            || e is java.net.SocketTimeoutException
-            || e is EscPosConnectionException
-    }
+    private fun isRetryableError(e: Exception): Boolean =
+        e is IOException ||
+            e is java.net.SocketTimeoutException ||
+            e is EscPosConnectionException
 }

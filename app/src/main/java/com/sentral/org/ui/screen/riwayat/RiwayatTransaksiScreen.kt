@@ -80,10 +80,10 @@ import com.sentral.org.data.model.QUANTITY_SCALE
 import com.sentral.org.data.model.StatusTransaksi
 import com.sentral.org.data.model.TujuanStokPengembalian
 import com.sentral.org.ui.screen.pos.formatRupiah
+import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -100,16 +100,29 @@ fun RiwayatTransaksiScreen(
     LaunchedEffect(Unit) {
         viewModel.event.collect { event ->
             when (event) {
-                is RiwayatEvent.Pesan -> snackbarHostState.showSnackbar(event.teks)
-                is RiwayatEvent.ReprintSukses -> snackbarHostState.showSnackbar("Salinan struk ${event.nomorTransaksi} berhasil dicetak")
-                is RiwayatEvent.VoidSukses -> snackbarHostState.showSnackbar("Transaksi ${event.nomorTransaksi} berhasil dibatalkan (VOID)")
-                is RiwayatEvent.ReturSukses -> snackbarHostState.showSnackbar("Retur ${event.nomorTransaksi} berhasil (Refund ${formatRupiah(event.totalRefund)})")
+                is RiwayatEvent.Pesan -> {
+                    snackbarHostState.showSnackbar(event.teks)
+                }
+
+                is RiwayatEvent.ReprintSukses -> {
+                    snackbarHostState.showSnackbar("Salinan struk ${event.nomorTransaksi} berhasil dicetak")
+                }
+
+                is RiwayatEvent.VoidSukses -> {
+                    snackbarHostState.showSnackbar("Transaksi ${event.nomorTransaksi} berhasil dibatalkan (VOID)")
+                }
+
+                is RiwayatEvent.ReturSukses ->
+                    snackbarHostState
+                        .showSnackbar("Retur ${event.nomorTransaksi} berhasil (Refund ${formatRupiah(event.totalRefund)})")
+
                 is RiwayatEvent.FileSiapDibagikan -> {
-                    val sendIntent = Intent(Intent.ACTION_SEND).apply {
-                        type = event.mimeType
-                        putExtra(Intent.EXTRA_STREAM, event.uri)
-                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    }
+                    val sendIntent =
+                        Intent(Intent.ACTION_SEND).apply {
+                            type = event.mimeType
+                            putExtra(Intent.EXTRA_STREAM, event.uri)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
                     context.startActivity(Intent.createChooser(sendIntent, "Bagikan Laporan Transaksi"))
                 }
             }
@@ -137,9 +150,10 @@ fun RiwayatTransaksiScreen(
                 actions = {
                     if (uiState.sedangEkspor) {
                         CircularProgressIndicator(
-                            modifier = Modifier
-                                .size(24.dp)
-                                .padding(end = 16.dp),
+                            modifier =
+                                Modifier
+                                    .size(24.dp)
+                                    .padding(end = 16.dp),
                             strokeWidth = 2.dp,
                         )
                     } else {
@@ -152,17 +166,19 @@ fun RiwayatTransaksiScreen(
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                ),
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    ),
             )
         },
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding),
         ) {
             OutlinedTextField(
                 value = uiState.filter.query,
@@ -176,18 +192,20 @@ fun RiwayatTransaksiScreen(
                         }
                     }
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                 singleLine = true,
                 shape = MaterialTheme.shapes.medium,
             )
 
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 FilterChip(
@@ -216,9 +234,10 @@ fun RiwayatTransaksiScreen(
             )
 
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
             ) {
                 when (val refreshState = pagedTransaksi.loadState.refresh) {
                     is LoadState.Loading -> {
@@ -226,6 +245,7 @@ fun RiwayatTransaksiScreen(
                             CircularProgressIndicator()
                         }
                     }
+
                     is LoadState.Error -> {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -244,6 +264,7 @@ fun RiwayatTransaksiScreen(
                             }
                         }
                     }
+
                     is LoadState.NotLoading -> {
                         if (pagedTransaksi.itemCount == 0) {
                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -351,9 +372,10 @@ private fun KartuTransaksi(
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -368,19 +390,21 @@ private fun KartuTransaksi(
                 )
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = when (transaksi.status) {
-                        StatusTransaksi.SELESAI -> MaterialTheme.colorScheme.primaryContainer
-                        StatusTransaksi.VOID -> MaterialTheme.colorScheme.errorContainer
-                    },
+                    color =
+                        when (transaksi.status) {
+                            StatusTransaksi.SELESAI -> MaterialTheme.colorScheme.primaryContainer
+                            StatusTransaksi.VOID -> MaterialTheme.colorScheme.errorContainer
+                        },
                 ) {
                     Text(
                         transaksi.status.name,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
-                        color = when (transaksi.status) {
-                            StatusTransaksi.SELESAI -> MaterialTheme.colorScheme.onPrimaryContainer
-                            StatusTransaksi.VOID -> MaterialTheme.colorScheme.onErrorContainer
-                        },
+                        color =
+                            when (transaksi.status) {
+                                StatusTransaksi.SELESAI -> MaterialTheme.colorScheme.onPrimaryContainer
+                                StatusTransaksi.VOID -> MaterialTheme.colorScheme.onErrorContainer
+                            },
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                     )
                 }
@@ -430,10 +454,11 @@ private fun SheetDetailTransaksi(
     val waktuFormatted = remember(detail.dibuatPada) { dateFormat.format(Date(detail.dibuatPada)) }
     val isSelesai = detail.status == StatusTransaksi.SELESAI
 
-    val sheetState = rememberBottomSheetState(
-        initialValue = SheetValue.Hidden,
-        enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
-    )
+    val sheetState =
+        rememberBottomSheetState(
+            initialValue = SheetValue.Hidden,
+            enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
+        )
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -442,10 +467,11 @@ private fun SheetDetailTransaksi(
         containerColor = MaterialTheme.colorScheme.surface,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.85f)
-                .padding(20.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.85f)
+                    .padding(20.dp),
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -466,19 +492,21 @@ private fun SheetDetailTransaksi(
                 }
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = when (detail.status) {
-                        StatusTransaksi.SELESAI -> MaterialTheme.colorScheme.primaryContainer
-                        StatusTransaksi.VOID -> MaterialTheme.colorScheme.errorContainer
-                    },
+                    color =
+                        when (detail.status) {
+                            StatusTransaksi.SELESAI -> MaterialTheme.colorScheme.primaryContainer
+                            StatusTransaksi.VOID -> MaterialTheme.colorScheme.errorContainer
+                        },
                 ) {
                     Text(
                         detail.status.name,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
-                        color = when (detail.status) {
-                            StatusTransaksi.SELESAI -> MaterialTheme.colorScheme.onPrimaryContainer
-                            StatusTransaksi.VOID -> MaterialTheme.colorScheme.onErrorContainer
-                        },
+                        color =
+                            when (detail.status) {
+                                StatusTransaksi.SELESAI -> MaterialTheme.colorScheme.onPrimaryContainer
+                                StatusTransaksi.VOID -> MaterialTheme.colorScheme.onErrorContainer
+                            },
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                     )
                 }
@@ -496,9 +524,10 @@ private fun SheetDetailTransaksi(
             Spacer(Modifier.height(8.dp))
 
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(detail.items.size) { index ->
@@ -547,7 +576,12 @@ private fun SheetDetailTransaksi(
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Text("Total Akhir", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text(formatRupiah(detail.total), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            formatRupiah(detail.total),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
                     }
 
                     if (detail.alasanPembatalan != null) {
@@ -582,7 +616,12 @@ private fun SheetDetailTransaksi(
                         modifier = Modifier.weight(1f).height(44.dp),
                         shape = MaterialTheme.shapes.medium,
                     ) {
-                        Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
+                        Icon(
+                            Icons.Filled.Delete,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.error,
+                        )
                         Spacer(Modifier.width(4.dp))
                         Text("Void", color = MaterialTheme.colorScheme.error)
                     }
@@ -606,9 +645,10 @@ private fun SheetDetailTransaksi(
                 onClick = onReprint,
                 enabled = !sedangReprint,
                 shape = MaterialTheme.shapes.medium,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
             ) {
                 if (sedangReprint) {
@@ -696,10 +736,11 @@ private fun SheetFormRetur(
     onKonfirmasi: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val sheetState = rememberBottomSheetState(
-        initialValue = SheetValue.Hidden,
-        enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
-    )
+    val sheetState =
+        rememberBottomSheetState(
+            initialValue = SheetValue.Hidden,
+            enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
+        )
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -708,10 +749,11 @@ private fun SheetFormRetur(
         containerColor = MaterialTheme.colorScheme.surface,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.85f)
-                .padding(20.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.85f)
+                    .padding(20.dp),
         ) {
             Text(
                 "Pengembalian Barang (Retur)",
@@ -728,9 +770,10 @@ private fun SheetFormRetur(
             Spacer(Modifier.height(10.dp))
 
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 items(items.size) { index ->
@@ -768,7 +811,8 @@ private fun SheetFormRetur(
                                         Icon(Icons.Filled.Remove, contentDescription = null, modifier = Modifier.size(18.dp))
                                     }
                                     Text(
-                                        com.sentral.org.data.model.formatQuantity(row.qtyPilihanScaled),
+                                        com.sentral.org.data.model
+                                            .formatQuantity(row.qtyPilihanScaled),
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold,
                                         modifier = Modifier.width(32.dp),
@@ -828,9 +872,10 @@ private fun SheetFormRetur(
             Button(
                 onClick = onKonfirmasi,
                 enabled = !sedangMemproses && items.any { it.qtyPilihanScaled > 0 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
                 shape = MaterialTheme.shapes.medium,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
             ) {

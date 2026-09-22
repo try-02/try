@@ -8,38 +8,68 @@ import kotlinx.coroutines.flow.Flow
 interface KeranjangDao {
     @Insert
     suspend fun insert(entity: KeranjangEntity): Long
-    @Query("""
+
+    @Query(
+        """
         SELECT * FROM keranjang
         WHERE id = :id LIMIT 1
-    """)
+    """,
+    )
     suspend fun getById(id: Long): KeranjangEntity?
-    @Query("""
+
+    @Query(
+        """
         SELECT * FROM keranjang
         WHERE status IN ('AKTIF','DITAHAN')
         ORDER BY diperbarui_pada DESC
-    """)
+    """,
+    )
     fun observeOpen(): Flow<List<KeranjangEntity>>
-    @Query("""
+
+    @Query(
+        """
         UPDATE keranjang SET status = 'DITAHAN', ditahan_pada = :now, diperbarui_pada = :now
         WHERE id = :id AND
         status = 'AKTIF'
-    """)
-    suspend fun hold(id: Long, now: Long): Int
-    @Query("""
+    """,
+    )
+    suspend fun hold(
+        id: Long,
+        now: Long,
+    ): Int
+
+    @Query(
+        """
         UPDATE keranjang SET status = 'AKTIF', diperbarui_pada = :now 
         WHERE id = :id AND
         status = 'DITAHAN'
-    """)
-    suspend fun resume(id: Long, now: Long): Int
-    @Query("""
+    """,
+    )
+    suspend fun resume(
+        id: Long,
+        now: Long,
+    ): Int
+
+    @Query(
+        """
         UPDATE keranjang SET status = 'DIBATALKAN', dibatalkan_pada = :now, diperbarui_pada = :now
         WHERE id = :id AND
         status IN ('AKTIF','DITAHAN')
-    """)
-    suspend fun cancel(id: Long, now: Long): Int
-    @Query("""
+    """,
+    )
+    suspend fun cancel(
+        id: Long,
+        now: Long,
+    ): Int
+
+    @Query(
+        """
         UPDATE keranjang SET status = 'SELESAI', diselesaikan_pada = :now, diperbarui_pada = :now
         WHERE id = :id AND status = 'AKTIF'
-    """)
-    suspend fun complete(id: Long, now: Long): Int
+    """,
+    )
+    suspend fun complete(
+        id: Long,
+        now: Long,
+    ): Int
 }

@@ -19,7 +19,6 @@ class BukaShiftViewModel(
     private val kasirDao: KasirDao,
     private val sessionProvider: ActiveSesiKasirProvider,
 ) : ViewModel() {
-
     private val _uiState = MutableStateFlow(BukaShiftUiState())
     val uiState: StateFlow<BukaShiftUiState> = _uiState.asStateFlow()
 
@@ -85,25 +84,26 @@ class BukaShiftViewModel(
             _uiState.update { it.copy(sedangMemproses = true) }
             val now = currentTimeMillis()
 
-            shiftService.open(
-                cashierId = kasirId,
-                openingCash = modalAwal,
-                now = now,
-                note = state.catatan.trim(),
-            ).fold(
-                onSuccess = {
-                    _uiState.update { it.copy(sedangMemproses = false) }
-                    _event.send(BukaShiftEvent.ShiftBerhasilDibuka)
-                },
-                onFailure = { error ->
-                    _uiState.update {
-                        it.copy(
-                            sedangMemproses = false,
-                            pesanError = error.message ?: "Gagal membuka shift",
-                        )
-                    }
-                },
-            )
+            shiftService
+                .open(
+                    cashierId = kasirId,
+                    openingCash = modalAwal,
+                    now = now,
+                    note = state.catatan.trim(),
+                ).fold(
+                    onSuccess = {
+                        _uiState.update { it.copy(sedangMemproses = false) }
+                        _event.send(BukaShiftEvent.ShiftBerhasilDibuka)
+                    },
+                    onFailure = { error ->
+                        _uiState.update {
+                            it.copy(
+                                sedangMemproses = false,
+                                pesanError = error.message ?: "Gagal membuka shift",
+                            )
+                        }
+                    },
+                )
         }
     }
 }

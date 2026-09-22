@@ -49,6 +49,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,7 +62,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sentral.org.data.entity.KasirEntity
 import org.koin.androidx.compose.koinViewModel
-import androidx.compose.runtime.rememberUpdatedState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -80,17 +80,20 @@ fun LoginKasirScreen(
     LaunchedEffect(Unit) {
         viewModel.event.collect { event ->
             when (event) {
-                is LoginKasirEvent.NavigasiKePosUtama ->
+                is LoginKasirEvent.NavigasiKePosUtama -> {
                     currentOnLoginSuksesKePos()
+                }
 
-                is LoginKasirEvent.NavigasiKeBukaShift ->
+                is LoginKasirEvent.NavigasiKeBukaShift -> {
                     currentOnLoginSuksesKeBukaShift(
                         event.kasirId,
-                        event.namaKasir
+                        event.namaKasir,
                     )
+                }
 
-                is LoginKasirEvent.Pesan ->
+                is LoginKasirEvent.Pesan -> {
                     snackbarHostState.showSnackbar(event.teks)
+                }
             }
         }
     }
@@ -108,17 +111,19 @@ fun LoginKasirScreen(
                         fontWeight = FontWeight.Bold,
                     )
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                ),
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                    ),
             )
         },
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 24.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Spacer(Modifier.height(8.dp))
@@ -147,7 +152,7 @@ fun LoginKasirScreen(
 
                 item {
                     KartuTambahKasir(
-                        onClick = { viewModel.bukaDialogTambahKasir() }
+                        onClick = { viewModel.bukaDialogTambahKasir() },
                     )
                 }
             }
@@ -162,13 +167,17 @@ fun LoginKasirScreen(
                 repeat(6) { index ->
                     val isFilled = index < uiState.pinInput.length
                     Box(
-                        modifier = Modifier
-                            .size(16.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (isFilled) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.surfaceVariant
-                            ),
+                        modifier =
+                            Modifier
+                                .size(16.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (isFilled) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceVariant
+                                    },
+                                ),
                     )
                 }
             }
@@ -215,9 +224,7 @@ fun LoginKasirScreen(
 }
 
 @Composable
-private fun KartuTambahKasir(
-    onClick: () -> Unit,
-) {
+private fun KartuTambahKasir(onClick: () -> Unit) {
     Surface(
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceVariant,
@@ -314,10 +321,11 @@ private fun KartuAkunKasir(
     Surface(
         shape = MaterialTheme.shapes.medium,
         color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
-        border = BorderStroke(
-            1.5.dp,
-            if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
-        ),
+        border =
+            BorderStroke(
+                1.5.dp,
+                if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+            ),
         modifier = Modifier.clickable(onClick = onClick),
     ) {
         Row(
@@ -357,12 +365,13 @@ private fun NumpadPin(
     sedangMemproses: Boolean,
     isLocked: Boolean,
 ) {
-    val tombolBaris = listOf(
-        listOf("1", "2", "3"),
-        listOf("4", "5", "6"),
-        listOf("7", "8", "9"),
-        listOf("⌫", "0", "OK"),
-    )
+    val tombolBaris =
+        listOf(
+            listOf("1", "2", "3"),
+            listOf("4", "5", "6"),
+            listOf("7", "8", "9"),
+            listOf("⌫", "0", "OK"),
+        )
 
     Column(
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -376,26 +385,28 @@ private fun NumpadPin(
                 baris.forEach { t ->
                     Surface(
                         shape = RoundedCornerShape(16.dp),
-                        color = when (t) {
-                            "OK" -> MaterialTheme.colorScheme.primary
-                            "⌫" -> MaterialTheme.colorScheme.surfaceVariant
-                            else -> MaterialTheme.colorScheme.surface
-                        },
+                        color =
+                            when (t) {
+                                "OK" -> MaterialTheme.colorScheme.primary
+                                "⌫" -> MaterialTheme.colorScheme.surfaceVariant
+                                else -> MaterialTheme.colorScheme.surface
+                            },
                         tonalElevation = 2.dp,
                         border = if (t != "OK" && t != "⌫") BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant) else null,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(60.dp)
-                            .clickable(
-                                enabled = !sedangMemproses && !isLocked,
-                                onClick = {
-                                    when (t) {
-                                        "⌫" -> onHapus()
-                                        "OK" -> onSubmit()
-                                        else -> onTekan(t)
-                                    }
-                                },
-                            ),
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .height(60.dp)
+                                .clickable(
+                                    enabled = !sedangMemproses && !isLocked,
+                                    onClick = {
+                                        when (t) {
+                                            "⌫" -> onHapus()
+                                            "OK" -> onSubmit()
+                                            else -> onTekan(t)
+                                        }
+                                    },
+                                ),
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             if (t == "OK" && sedangMemproses) {

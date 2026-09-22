@@ -22,30 +22,45 @@ fun formatQuantity(scaled: Long): String {
     val absScaled = if (isNegatif) -scaled else scaled
     val bulat = absScaled / QUANTITY_SCALE
     val sisa = absScaled % QUANTITY_SCALE
-    val teks = if (sisa == 0L) {
-        bulat.toString()
-    } else {
-        val desimal = (sisa.toDouble() / QUANTITY_SCALE).toString().substringAfter('.')
-        "$bulat,${desimal.trimEnd('0')}"
-    }
+    val teks =
+        if (sisa == 0L) {
+            bulat.toString()
+        } else {
+            val desimal = (sisa.toDouble() / QUANTITY_SCALE).toString().substringAfter('.')
+            "$bulat,${desimal.trimEnd('0')}"
+        }
     return if (isNegatif) "-$teks" else teks
 }
 
 @JvmInline
-value class Quantity(val scaled: Long) {
-    init { require(scaled > 0) { "Quantity harus > 0" } }
+value class Quantity(
+    val scaled: Long,
+) {
+    init {
+        require(scaled > 0) { "Quantity harus > 0" }
+    }
 }
 
 @JvmInline
-value class Money(val rupiah: Long) {
-    init { require(rupiah >= 0) { "Money tidak boleh negatif" } }
+value class Money(
+    val rupiah: Long,
+) {
+    init {
+        require(rupiah >= 0) { "Money tidak boleh negatif" }
+    }
 }
 
 sealed interface DiscountInput {
     data object None : DiscountInput
-    data class Nominal(val rupiah: Long) : DiscountInput
+
+    data class Nominal(
+        val rupiah: Long,
+    ) : DiscountInput
+
     /** Percentage scaled by 1000: 10_000 = 10.0%, 12500 = 12.5%, 100000 = 100%. */
-    data class Percentage(val scaledPercent: Long) : DiscountInput
+    data class Percentage(
+        val scaledPercent: Long,
+    ) : DiscountInput
 }
 
 data class CartLine(

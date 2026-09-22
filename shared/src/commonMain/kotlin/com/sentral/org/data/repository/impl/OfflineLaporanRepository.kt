@@ -27,33 +27,37 @@ class OfflineLaporanRepository(
     private val transaksiDao: TransaksiDao,
     private val returDao: ReturDao,
 ) : LaporanRepository {
-
-    override fun observeLaporan(start: Long, end: Long): Flow<LaporanPenjualan> {
+    override fun observeLaporan(
+        start: Long,
+        end: Long,
+    ): Flow<LaporanPenjualan> {
         // Kelompok 1: Metrik finansial agregat (4 flow <= 5)
-        val financialFlow = combine(
-            transaksiDao.observeSalesAggregate(start, end),
-            transaksiDao.observeHppPenjualan(start, end),
-            returDao.observeTotalRefund(start, end),
-            returDao.observeHppRetur(start, end),
-        ) { sales, hppSales, totalRefund, hppRetur ->
-            FinancialRaw(
-                sales = sales,
-                hppPenjualan = hppSales,
-                totalRefund = totalRefund,
-                hppRetur = hppRetur,
-            )
-        }
+        val financialFlow =
+            combine(
+                transaksiDao.observeSalesAggregate(start, end),
+                transaksiDao.observeHppPenjualan(start, end),
+                returDao.observeTotalRefund(start, end),
+                returDao.observeHppRetur(start, end),
+            ) { sales, hppSales, totalRefund, hppRetur ->
+                FinancialRaw(
+                    sales = sales,
+                    hppPenjualan = hppSales,
+                    totalRefund = totalRefund,
+                    hppRetur = hppRetur,
+                )
+            }
 
         // Kelompok 2: Rincian metode pembayaran & top produk (2 flow <= 5)
-        val breakdownFlow = combine(
-            transaksiDao.observePaymentAggregate(start, end),
-            transaksiDao.observeTopProducts(start, end),
-        ) { payments, topProducts ->
-            BreakdownRaw(
-                payments = payments,
-                topProducts = topProducts,
-            )
-        }
+        val breakdownFlow =
+            combine(
+                transaksiDao.observePaymentAggregate(start, end),
+                transaksiDao.observeTopProducts(start, end),
+            ) { payments, topProducts ->
+                BreakdownRaw(
+                    payments = payments,
+                    topProducts = topProducts,
+                )
+            }
 
         // Gabungkan 2 sub-grup secara type-safe ke LaporanCalculator
         return combine(financialFlow, breakdownFlow) { fin, brk ->

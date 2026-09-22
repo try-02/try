@@ -8,7 +8,9 @@ import androidx.sqlite.driver.bundled.BundledSQLiteDriver
  * Menggunakan BundledSQLiteDriver() sehingga berjalan lancar di JVM/Host tanpa butuh Android emulator.
  */
 fun createInMemoryPosDatabase(): PosDatabase {
-    val builder = Room.inMemoryDatabaseBuilder<PosDatabase>()
-        .setDriver(BundledSQLiteDriver())
+    val builder =
+        Room
+            .inMemoryDatabaseBuilder<PosDatabase>()
+            .setDriver(BundledSQLiteDriver())
     return createPosDatabase(builder)
 }

@@ -6,7 +6,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class NomorTransaksiGeneratorTest {
-
     @Test
     fun `mengikuti pola TRX-tanggal-jam-segmen acak`() {
         val nomor = NomorTransaksiGenerator.buat(1_700_000_000_000L)

@@ -13,6 +13,10 @@ data class BukaShiftUiState(
 
 sealed interface BukaShiftEvent {
     data object ShiftBerhasilDibuka : BukaShiftEvent
+
     data object KembaliKeLogin : BukaShiftEvent
-    data class Pesan(val teks: String) : BukaShiftEvent
+
+    data class Pesan(
+        val teks: String,
+    ) : BukaShiftEvent
 }

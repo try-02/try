@@ -6,7 +6,6 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class MoneyMathTest {
-
     // ---------- lineTotal ----------
 
     @Test
@@ -172,13 +171,14 @@ class MoneyMathTest {
 
     @Test
     fun invariantAlokasiPadaKombinasiBobotBeragam() {
-        val skenario = listOf(
-            listOf(1L),
-            listOf(1L, 2L, 3L, 5L, 8L, 13L),
-            listOf(9_999L, 1L),
-            listOf(333L, 333L, 333L, 1L),
-            List(7) { (it + 1) * 111L },
-        )
+        val skenario =
+            listOf(
+                listOf(1L),
+                listOf(1L, 2L, 3L, 5L, 8L, 13L),
+                listOf(9_999L, 1L),
+                listOf(333L, 333L, 333L, 1L),
+                List(7) { (it + 1) * 111L },
+            )
         val amounts = listOf(1L, 7L, 999L, 123_456L)
 
         for (weights in skenario) {

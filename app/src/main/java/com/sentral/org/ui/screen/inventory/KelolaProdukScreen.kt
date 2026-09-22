@@ -52,6 +52,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -61,7 +62,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sentral.org.data.model.formatQuantity
 import com.sentral.org.ui.screen.pos.formatRupiah
 import org.koin.androidx.compose.koinViewModel
-import androidx.compose.runtime.rememberUpdatedState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -80,11 +80,13 @@ fun KelolaProdukScreen(
     LaunchedEffect(Unit) {
         viewModel.event.collect { event ->
             when (event) {
-                is KelolaProdukEvent.Pesan ->
+                is KelolaProdukEvent.Pesan -> {
                     snackbarHostState.showSnackbar(event.teks)
+                }
 
-                is KelolaProdukEvent.NavigasiKeForm ->
+                is KelolaProdukEvent.NavigasiKeForm -> {
                     currentOnEditProduk(event.produkId ?: 0L)
+                }
             }
         }
     }
@@ -115,9 +117,10 @@ fun KelolaProdukScreen(
         },
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding),
         ) {
             // Search Bar
             OutlinedTextField(
@@ -132,9 +135,10 @@ fun KelolaProdukScreen(
                         }
                     }
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                 singleLine = true,
                 shape = MaterialTheme.shapes.medium,
             )
@@ -142,10 +146,11 @@ fun KelolaProdukScreen(
             // Status Filter Chips
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
             ) {
                 StatusStokFilter.entries.forEach { s ->
                     FilterChip(
@@ -166,7 +171,12 @@ fun KelolaProdukScreen(
             } else if (uiState.daftarProduk.isEmpty()) {
                 Box(Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Filled.Inventory2, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(
+                            Icons.Filled.Inventory2,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                         Spacer(Modifier.height(12.dp))
                         Text("Tidak ada produk ditemukan", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     }
@@ -234,33 +244,46 @@ private fun KartuProdukAdmin(
                 verticalAlignment = Alignment.Top,
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text(item.nama, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text("SKU: ${item.sku}${if (!item.barcode.isNullOrBlank()) " | ${item.barcode}" else ""}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        item.nama,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        "SKU: ${item.sku}${if (!item.barcode.isNullOrBlank()) " | ${item.barcode}" else ""}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
                 Surface(
                     shape = RoundedCornerShape(6.dp),
-                    color = when {
-                        !item.aktif -> MaterialTheme.colorScheme.surfaceVariant
-                        item.stokNormalScaled <= 0 -> MaterialTheme.colorScheme.errorContainer
-                        item.stokNormalScaled <= 5_000L -> MaterialTheme.colorScheme.tertiaryContainer
-                        else -> MaterialTheme.colorScheme.secondaryContainer
-                    },
+                    color =
+                        when {
+                            !item.aktif -> MaterialTheme.colorScheme.surfaceVariant
+                            item.stokNormalScaled <= 0 -> MaterialTheme.colorScheme.errorContainer
+                            item.stokNormalScaled <= 5_000L -> MaterialTheme.colorScheme.tertiaryContainer
+                            else -> MaterialTheme.colorScheme.secondaryContainer
+                        },
                 ) {
                     Text(
-                        text = when {
-                            !item.aktif -> "Non-Aktif"
-                            item.stokNormalScaled <= 0 -> "Habis"
-                            item.stokNormalScaled <= 5_000L -> "Menipis"
-                            else -> "Aman"
-                        },
+                        text =
+                            when {
+                                !item.aktif -> "Non-Aktif"
+                                item.stokNormalScaled <= 0 -> "Habis"
+                                item.stokNormalScaled <= 5_000L -> "Menipis"
+                                else -> "Aman"
+                            },
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
-                        color = when {
-                            !item.aktif -> MaterialTheme.colorScheme.onSurfaceVariant
-                            item.stokNormalScaled <= 0 -> MaterialTheme.colorScheme.onErrorContainer
-                            item.stokNormalScaled <= 5_000L -> MaterialTheme.colorScheme.onTertiaryContainer
-                            else -> MaterialTheme.colorScheme.onSecondaryContainer
-                        },
+                        color =
+                            when {
+                                !item.aktif -> MaterialTheme.colorScheme.onSurfaceVariant
+                                item.stokNormalScaled <= 0 -> MaterialTheme.colorScheme.onErrorContainer
+                                item.stokNormalScaled <= 5_000L -> MaterialTheme.colorScheme.onTertiaryContainer
+                                else -> MaterialTheme.colorScheme.onSecondaryContainer
+                            },
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                     )
                 }
@@ -273,13 +296,30 @@ private fun KartuProdukAdmin(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Column {
-                    Text("Harga Jual: ${formatRupiah(item.harga)}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
-                    Text("HPP/Modal: ${formatRupiah(item.hargaModal)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        "Harga Jual: ${formatRupiah(item.harga)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Text(
+                        "HPP/Modal: ${formatRupiah(item.hargaModal)}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text("Stok: ${formatQuantity(item.stokNormalScaled)} unit", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Stok: ${formatQuantity(item.stokNormalScaled)} unit",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold,
+                    )
                     if (item.stokRusakScaled > 0L) {
-                        Text("Rusak: ${formatQuantity(item.stokRusakScaled)} unit", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+                        Text(
+                            "Rusak: ${formatQuantity(item.stokRusakScaled)} unit",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
                     }
                 }
             }
@@ -299,10 +339,20 @@ private fun KartuProdukAdmin(
                         Icon(Icons.Filled.Edit, contentDescription = "Ubah Produk", modifier = Modifier.size(18.dp))
                     }
                     IconButton(onClick = onPenyesuaian, modifier = Modifier.size(36.dp)) {
-                        Icon(Icons.Filled.Tune, contentDescription = "Sesuaikan Stok", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                        Icon(
+                            Icons.Filled.Tune,
+                            contentDescription = "Sesuaikan Stok",
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
                     }
                     IconButton(onClick = onKartuStok, modifier = Modifier.size(36.dp)) {
-                        Icon(Icons.Filled.History, contentDescription = "Kartu Stok", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.secondary)
+                        Icon(
+                            Icons.Filled.History,
+                            contentDescription = "Kartu Stok",
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.secondary,
+                        )
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {

@@ -8,18 +8,22 @@ import androidx.room3.PrimaryKey
 import com.sentral.org.data.model.JenisDiskon
 import com.sentral.org.data.model.StatusTransaksi
 
-@Entity(tableName = "transaksi", foreignKeys = [
-    ForeignKey(entity = KasirEntity::class, parentColumns = ["id"], childColumns = ["kasir_id"], onDelete = ForeignKey.RESTRICT),
-    ForeignKey(entity = ShiftEntity::class, parentColumns = ["id"], childColumns = ["shift_id"], onDelete = ForeignKey.RESTRICT),
-], indices = [
-    Index(value = ["nomor_transaksi"], unique = true, name = "unik_transaksi_nomor"),
-    Index("kasir_id"), 
-    Index("shift_id"), 
-    Index("dibuat_pada"), 
-    Index("status"),
-    Index(value = ["dibuat_pada", "id"], name = "indeks_transaksi_waktu_id"),
-    Index(value = ["status", "dibuat_pada", "id"], name = "indeks_transaksi_status_waktu_id"),
-])
+@Entity(
+    tableName = "transaksi",
+    foreignKeys = [
+        ForeignKey(entity = KasirEntity::class, parentColumns = ["id"], childColumns = ["kasir_id"], onDelete = ForeignKey.RESTRICT),
+        ForeignKey(entity = ShiftEntity::class, parentColumns = ["id"], childColumns = ["shift_id"], onDelete = ForeignKey.RESTRICT),
+    ],
+    indices = [
+        Index(value = ["nomor_transaksi"], unique = true, name = "unik_transaksi_nomor"),
+        Index("kasir_id"),
+        Index("shift_id"),
+        Index("dibuat_pada"),
+        Index("status"),
+        Index(value = ["dibuat_pada", "id"], name = "indeks_transaksi_waktu_id"),
+        Index(value = ["status", "dibuat_pada", "id"], name = "indeks_transaksi_status_waktu_id"),
+    ],
+)
 data class TransaksiEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     @ColumnInfo(name = "nomor_transaksi") val nomorTransaksi: String,

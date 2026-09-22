@@ -50,25 +50,52 @@ data class PosBakHeader(
 
 sealed interface BackupState {
     data object Idle : BackupState
+
     data object CheckingLock : BackupState
+
     data object CreatingSnapshot : BackupState
+
     data object Encrypting : BackupState
+
     data object Verifying : BackupState
-    data class Success(val fileName: String, val sizeBytes: Long, val metadata: BackupMetadata) : BackupState
-    data class Error(val message: String) : BackupState
+
+    data class Success(
+        val fileName: String,
+        val sizeBytes: Long,
+        val metadata: BackupMetadata,
+    ) : BackupState
+
+    data class Error(
+        val message: String,
+    ) : BackupState
 }
 
 sealed interface RestoreState {
     data object Idle : RestoreState
+
     data object DownloadingToStaging : RestoreState
+
     data object ValidatingHeader : RestoreState
+
     data object Decrypting : RestoreState
+
     data object CheckingIntegrity : RestoreState
+
     data object CheckingSchema : RestoreState
-    data class PreviewReady(val metadata: BackupMetadata) : RestoreState
+
+    data class PreviewReady(
+        val metadata: BackupMetadata,
+    ) : RestoreState
+
     data object ReplacingDatabase : RestoreState
-    data class Success(val metadata: BackupMetadata) : RestoreState
-    data class Error(val message: String) : RestoreState
+
+    data class Success(
+        val metadata: BackupMetadata,
+    ) : RestoreState
+
+    data class Error(
+        val message: String,
+    ) : RestoreState
 }
 
 data class BackupRecordInfo(

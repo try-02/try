@@ -9,9 +9,20 @@ import com.sentral.org.data.security.PinRateLimiter
 import com.sentral.org.data.session.ActiveSesiKasirProvider
 
 sealed interface AuthResult {
-    data class Success(val kasirId: Long, val namaKasir: String, val hasOpenShift: Boolean) : AuthResult
-    data class Failed(val sisaPercobaan: Int) : AuthResult
-    data class Locked(val sisaDetik: Long) : AuthResult
+    data class Success(
+        val kasirId: Long,
+        val namaKasir: String,
+        val hasOpenShift: Boolean,
+    ) : AuthResult
+
+    data class Failed(
+        val sisaPercobaan: Int,
+    ) : AuthResult
+
+    data class Locked(
+        val sisaDetik: Long,
+    ) : AuthResult
+
     data object KasirTidakAktif : AuthResult
 }
 
@@ -26,7 +37,10 @@ class AuthService(
      * Memverifikasi PIN kasir dengan KDF PBKDF2, menerapkan rate-limit brute-force,
      * dan mengecek status shift otoritatif langsung dari SQLite.
      */
-    suspend fun login(kasirId: Long, rawPin: String): AuthResult {
+    suspend fun login(
+        kasirId: Long,
+        rawPin: String,
+    ): AuthResult {
         // 1. Cek apakah kasir sedang terkunci sementara (Rate Limit Lockout)
         val lockedSeconds = rateLimiter.cekStatus(kasirId)
         if (lockedSeconds != null) {
@@ -39,11 +53,12 @@ class AuthService(
 
         // 3. Verifikasi hash PIN (fallback 123456 jika data seed awal belum memiliki hash)
         val storedHash = kasir.pinHash
-        val isPinValid = if (storedHash.isNullOrBlank()) {
-            rawPin == "123456"
-        } else {
-            pinHasher.verifyPin(rawPin, storedHash)
-        }
+        val isPinValid =
+            if (storedHash.isNullOrBlank()) {
+                rawPin == "123456"
+            } else {
+                pinHasher.verifyPin(rawPin, storedHash)
+            }
 
         if (!isPinValid) {
             return when (val check = rateLimiter.catatGagal(kasirId)) {

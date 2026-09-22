@@ -47,19 +47,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-/** import com.sentral.org.data.model.ShiftSummary */
 import com.sentral.org.ui.screen.pos.formatRupiah
+import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import org.koin.androidx.compose.koinViewModel
-import androidx.compose.runtime.rememberUpdatedState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,11 +76,13 @@ fun TutupShiftScreen(
     LaunchedEffect(Unit) {
         viewModel.event.collect { event ->
             when (event) {
-                TutupShiftEvent.ShiftSelesaiDanKeluar ->
+                TutupShiftEvent.ShiftSelesaiDanKeluar -> {
                     currentOnShiftDitutup()
+                }
 
-                is TutupShiftEvent.Pesan ->
+                is TutupShiftEvent.Pesan -> {
                     snackbarHostState.showSnackbar(event.teks)
+                }
             }
         }
     }
@@ -121,17 +122,19 @@ fun TutupShiftScreen(
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                ),
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                    ),
             )
         },
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 24.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             when (uiState.step) {
@@ -147,6 +150,7 @@ fun TutupShiftScreen(
                         onVerifikasi = { viewModel.hitungRekonsiliasi() },
                     )
                 }
+
                 TutupShiftStep.REKONSILIASI -> {
                     uiState.summary?.let { summary ->
                         PanelRekonsiliasi(
@@ -270,9 +274,10 @@ private fun ColumnScope.PanelBlindCount(
         onClick = onVerifikasi,
         enabled = !sedangMemproses,
         shape = MaterialTheme.shapes.medium,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(52.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(52.dp),
         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
     ) {
         if (sedangMemproses) {
@@ -300,11 +305,12 @@ private fun ColumnScope.PanelRekonsiliasi(
     // Kartu Hasil Selisih
     Surface(
         shape = RoundedCornerShape(16.dp),
-        color = when {
-            selisih == 0L -> MaterialTheme.colorScheme.primaryContainer
-            selisih < 0L -> MaterialTheme.colorScheme.errorContainer
-            else -> MaterialTheme.colorScheme.tertiaryContainer
-        },
+        color =
+            when {
+                selisih == 0L -> MaterialTheme.colorScheme.primaryContainer
+                selisih < 0L -> MaterialTheme.colorScheme.errorContainer
+                else -> MaterialTheme.colorScheme.tertiaryContainer
+            },
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(
@@ -312,17 +318,19 @@ private fun ColumnScope.PanelRekonsiliasi(
             modifier = Modifier.padding(16.dp),
         ) {
             Icon(
-                imageVector = when {
-                    selisih == 0L -> Icons.Filled.CheckCircle
-                    selisih < 0L -> Icons.Filled.Warning
-                    else -> Icons.Filled.Info
-                },
+                imageVector =
+                    when {
+                        selisih == 0L -> Icons.Filled.CheckCircle
+                        selisih < 0L -> Icons.Filled.Warning
+                        else -> Icons.Filled.Info
+                    },
                 contentDescription = null,
-                tint = when {
-                    selisih == 0L -> MaterialTheme.colorScheme.onPrimaryContainer
-                    selisih < 0L -> MaterialTheme.colorScheme.onErrorContainer
-                    else -> MaterialTheme.colorScheme.onTertiaryContainer
-                },
+                tint =
+                    when {
+                        selisih == 0L -> MaterialTheme.colorScheme.onPrimaryContainer
+                        selisih < 0L -> MaterialTheme.colorScheme.onErrorContainer
+                        else -> MaterialTheme.colorScheme.onTertiaryContainer
+                    },
                 modifier = Modifier.size(36.dp),
             )
             Spacer(Modifier.height(6.dp))
@@ -384,9 +392,10 @@ private fun ColumnScope.PanelRekonsiliasi(
         OutlinedButton(
             onClick = onHitungUlang,
             enabled = !sedangMemproses,
-            modifier = Modifier
-                .weight(1f)
-                .height(52.dp),
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .height(52.dp),
             shape = MaterialTheme.shapes.medium,
         ) {
             Text("Hitung Ulang")
@@ -395,9 +404,10 @@ private fun ColumnScope.PanelRekonsiliasi(
         Button(
             onClick = onKonfirmasiTutup,
             enabled = !sedangMemproses,
-            modifier = Modifier
-                .weight(1.5f)
-                .height(52.dp),
+            modifier =
+                Modifier
+                    .weight(1.5f)
+                    .height(52.dp),
             shape = MaterialTheme.shapes.medium,
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
         ) {
@@ -414,12 +424,17 @@ private fun ColumnScope.PanelRekonsiliasi(
 }
 
 @Composable
-private fun BarisRincian(label: String, nilai: String, tebal: Boolean = false) {
+private fun BarisRincian(
+    label: String,
+    nilai: String,
+    tebal: Boolean = false,
+) {
     Row(
         horizontalArrangement = Arrangement.SpaceBetween,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 2.dp),
     ) {
         Text(
             label,
@@ -439,12 +454,13 @@ private fun NumpadTutupShift(
     onTekan: (String) -> Unit,
     onHapus: () -> Unit,
 ) {
-    val tombolBaris = listOf(
-        listOf("1", "2", "3"),
-        listOf("4", "5", "6"),
-        listOf("7", "8", "9"),
-        listOf("000", "0", "⌫"),
-    )
+    val tombolBaris =
+        listOf(
+            listOf("1", "2", "3"),
+            listOf("4", "5", "6"),
+            listOf("7", "8", "9"),
+            listOf("000", "0", "⌫"),
+        )
 
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -461,12 +477,13 @@ private fun NumpadTutupShift(
                         color = if (t == "⌫") MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface,
                         tonalElevation = 2.dp,
                         border = if (t != "⌫") BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant) else null,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(52.dp)
-                            .clickable {
-                                if (t == "⌫") onHapus() else onTekan(t)
-                            },
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .height(52.dp)
+                                .clickable {
+                                    if (t == "⌫") onHapus() else onTekan(t)
+                                },
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             if (t == "⌫") {

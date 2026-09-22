@@ -40,17 +40,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import com.sentral.org.data.model.MoneyMath
-import com.sentral.org.data.model.QUANTITY_SCALE
-import com.sentral.org.data.model.formatQuantity
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.vector.ImageVector
+import com.sentral.org.data.model.MoneyMath
+import com.sentral.org.data.model.QUANTITY_SCALE
+import com.sentral.org.data.model.formatQuantity
 import com.sentral.org.ui.screen.pos.formatRupiah
 
 // ============================================================
@@ -71,26 +71,27 @@ fun DialogKonfirmasi(
     AlertDialog(
         onDismissRequest = onTutup,
         shape = MaterialTheme.shapes.extraLarge,
-        icon = if (ikonHapus) {
-            {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.errorContainer,
-                    modifier = Modifier.size(48.dp),
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            Icons.Filled.Delete,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.size(24.dp),
-                        )
+        icon =
+            if (ikonHapus) {
+                {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        modifier = Modifier.size(48.dp),
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Filled.Delete,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.size(24.dp),
+                            )
+                        }
                     }
                 }
-            }
-        } else {
-            null
-        },
+            } else {
+                null
+            },
         title = {
             Text(
                 judul,
@@ -112,9 +113,10 @@ fun DialogKonfirmasi(
                     onTutup()
                 },
                 shape = MaterialTheme.shapes.medium,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error,
-                ),
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                    ),
                 modifier = Modifier.height(44.dp),
             ) {
                 Text(teksKonfirmasi, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
@@ -180,17 +182,20 @@ fun DialogPembayaran(
                     1 -> {
                         // --- Panel QRIS (expressif dengan gradient) ---
                         Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(
-                                    brush = Brush.linearGradient(
-                                        colors = listOf(
-                                            MaterialTheme.colorScheme.secondaryContainer,
-                                            MaterialTheme.colorScheme.primaryContainer,
-                                        )
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .background(
+                                        brush =
+                                            Brush.linearGradient(
+                                                colors =
+                                                    listOf(
+                                                        MaterialTheme.colorScheme.secondaryContainer,
+                                                        MaterialTheme.colorScheme.primaryContainer,
+                                                    ),
+                                            ),
+                                        shape = MaterialTheme.shapes.large,
                                     ),
-                                    shape = MaterialTheme.shapes.large,
-                                )
                         ) {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -245,18 +250,29 @@ fun DialogPembayaran(
                                     if (teksInput.isBlank()) "Rp 0" else formatRupiah(diterima),
                                     textAlign = TextAlign.End,
                                     style = MaterialTheme.typography.headlineMedium,
-                                    color = if (cukup) MaterialTheme.colorScheme.secondary
-                                    else MaterialTheme.colorScheme.onSurface,
+                                    color =
+                                        if (cukup) {
+                                            MaterialTheme.colorScheme.secondary
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurface
+                                        },
                                     fontWeight = FontWeight.Bold,
                                     modifier = Modifier.fillMaxWidth(),
                                 )
                                 if (diterima > 0) {
                                     Spacer(Modifier.height(4.dp))
                                     Text(
-                                        if (cukup) "Kembalian: ${formatRupiah(selisih)}"
-                                        else "Kurang ${formatRupiah(-selisih)}",
-                                        color = if (cukup) MaterialTheme.colorScheme.secondary
-                                        else MaterialTheme.colorScheme.error,
+                                        if (cukup) {
+                                            "Kembalian: ${formatRupiah(selisih)}"
+                                        } else {
+                                            "Kurang ${formatRupiah(-selisih)}"
+                                        },
+                                        color =
+                                            if (cukup) {
+                                                MaterialTheme.colorScheme.secondary
+                                            } else {
+                                                MaterialTheme.colorScheme.error
+                                            },
                                         style = MaterialTheme.typography.labelLarge,
                                         fontWeight = FontWeight.SemiBold,
                                         modifier = Modifier.fillMaxWidth(),
@@ -279,13 +295,13 @@ fun DialogPembayaran(
                                 },
                                 modifier = Modifier.weight(1f),
                             ) /**
-                            ChipNominal("Pas", dipilih = cukup && diterima == total, modifier = Modifier.weight(1f)) {
-                                teksInput = total.toString()
-                            }
-                            ChipNominal("50rb", dipilih = diterima == 50_000L, modifier = Modifier.weight(1f)) { teksInput = "50000" }
-                            ChipNominal("100rb", dipilih = diterima == 100_000L, modifier = Modifier.weight(1f)) { teksInput = "100000" }
-                            ChipNominal("200rb", dipilih = diterima == 200_000L, modifier = Modifier.weight(1f)) { teksInput = "200000" }
-                            */
+                             ChipNominal("Pas", dipilih = cukup && diterima == total, modifier = Modifier.weight(1f)) {
+                             teksInput = total.toString()
+                             }
+                             ChipNominal("50rb", dipilih = diterima == 50_000L, modifier = Modifier.weight(1f)) { teksInput = "50000" }
+                             ChipNominal("100rb", dipilih = diterima == 100_000L, modifier = Modifier.weight(1f)) { teksInput = "100000" }
+                             ChipNominal("200rb", dipilih = diterima == 200_000L, modifier = Modifier.weight(1f)) { teksInput = "200000" }
+                             */
                             ChipNominal(
                                 label = "50rb",
                                 dipilih = diterima == 50_000L,
@@ -380,22 +396,24 @@ private fun ChipNominal(
 ) {
     Surface(
         shape = MaterialTheme.shapes.medium,
-        color = if (dipilih) {
-            MaterialTheme.colorScheme.primaryContainer
-        } else {
-            MaterialTheme.colorScheme.surfaceVariant
-        },
+        color =
+            if (dipilih) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            },
         modifier = modifier.clickable(onClick = onClick),
     ) {
         Text(
             label,
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold,
-            color = if (dipilih) {
-                MaterialTheme.colorScheme.onPrimaryContainer
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            },
+            color =
+                if (dipilih) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
             textAlign = TextAlign.Center,
         )
@@ -404,12 +422,13 @@ private fun ChipNominal(
 
 @Composable
 private fun Numpad(onTekan: (String) -> Unit) {
-    val tombol = listOf(
-        listOf("7", "8", "9"),
-        listOf("4", "5", "6"),
-        listOf("1", "2", "3"),
-        listOf("C", "0", "⌫"),
-    )
+    val tombol =
+        listOf(
+            listOf("7", "8", "9"),
+            listOf("4", "5", "6"),
+            listOf("1", "2", "3"),
+            listOf("C", "0", "⌫"),
+        )
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         tombol.forEach { barisTombol ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -417,12 +436,17 @@ private fun Numpad(onTekan: (String) -> Unit) {
                     val aksiHapus = t == "C" || t == "⌫"
                     Surface(
                         shape = MaterialTheme.shapes.medium,
-                        color = if (aksiHapus) MaterialTheme.colorScheme.errorContainer
-                        else MaterialTheme.colorScheme.surfaceVariant,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(52.dp)
-                            .clickable(onClick = { onTekan(t) }),
+                        color =
+                            if (aksiHapus) {
+                                MaterialTheme.colorScheme.errorContainer
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant
+                            },
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .height(52.dp)
+                                .clickable(onClick = { onTekan(t) }),
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             if (t == "⌫") {
@@ -437,8 +461,12 @@ private fun Numpad(onTekan: (String) -> Unit) {
                                     t,
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (aksiHapus) MaterialTheme.colorScheme.onErrorContainer
-                                    else MaterialTheme.colorScheme.onSurface,
+                                    color =
+                                        if (aksiHapus) {
+                                            MaterialTheme.colorScheme.onErrorContainer
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurface
+                                        },
                                 )
                             }
                         }
@@ -461,17 +489,20 @@ fun DialogCheckoutBerhasil(
         shape = MaterialTheme.shapes.extraLarge,
         icon = {
             Box(
-                modifier = Modifier
-                    .size(72.dp)
-                    .background(
-                        brush = Brush.linearGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.secondary,
-                                MaterialTheme.colorScheme.primary,
-                            )
+                modifier =
+                    Modifier
+                        .size(72.dp)
+                        .background(
+                            brush =
+                                Brush.linearGradient(
+                                    colors =
+                                        listOf(
+                                            MaterialTheme.colorScheme.secondary,
+                                            MaterialTheme.colorScheme.primary,
+                                        ),
+                                ),
+                            shape = CircleShape,
                         ),
-                        shape = CircleShape,
-                    ),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -551,15 +582,17 @@ fun DialogUbahJumlah(
     }
 
     // Normalisasi input ke kuantitas scaled (mis. 0.5 -> 500)
-    val parsedScaled: Long = remember(inputTeks) {
-        val clean = inputTeks.replace(',', '.').trim()
-        val num = clean.toDoubleOrNull() ?: 0.0
-        if (num > 0.0) (num * QUANTITY_SCALE).toLong() else 0L
-    }
+    val parsedScaled: Long =
+        remember(inputTeks) {
+            val clean = inputTeks.replace(',', '.').trim()
+            val num = clean.toDoubleOrNull() ?: 0.0
+            if (num > 0.0) (num * QUANTITY_SCALE).toLong() else 0L
+        }
 
-    val totalBaris = remember(parsedScaled, hargaSatuan) {
-        if (parsedScaled > 0) MoneyMath.lineTotal(hargaSatuan, parsedScaled) else 0L
-    }
+    val totalBaris =
+        remember(parsedScaled, hargaSatuan) {
+            if (parsedScaled > 0) MoneyMath.lineTotal(hargaSatuan, parsedScaled) else 0L
+        }
 
     AlertDialog(
         onDismissRequest = onTutup,
@@ -605,9 +638,10 @@ fun DialogUbahJumlah(
                         Surface(
                             shape = MaterialTheme.shapes.small,
                             color = MaterialTheme.colorScheme.surfaceVariant,
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable { inputTeks = preset },
+                            modifier =
+                                Modifier
+                                    .weight(1f)
+                                    .clickable { inputTeks = preset },
                         ) {
                             Text(
                                 text = preset,

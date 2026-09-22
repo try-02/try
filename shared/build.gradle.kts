@@ -18,7 +18,7 @@ kotlin {
         compileSdk = 37
         minSdk = 26
         withHostTest {
-            }
+        }
         compilerOptions {
             jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
         }
@@ -36,7 +36,7 @@ kotlin {
             // Database (Room 3 KMP)
             implementation(libs.room3.runtime)
             implementation(libs.room3.paging)
-            implementation(libs.sqlite.bundled)      // cross-platform, konsisten
+            implementation(libs.sqlite.bundled) // cross-platform, konsisten
             // Async
             implementation(libs.coroutines.core)
             // DI (Koin core KMP)

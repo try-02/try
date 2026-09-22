@@ -16,7 +16,16 @@ data class LoginKasirUiState(
 )
 
 sealed interface LoginKasirEvent {
-    data class NavigasiKePosUtama(val namaKasir: String) : LoginKasirEvent
-    data class NavigasiKeBukaShift(val kasirId: Long, val namaKasir: String) : LoginKasirEvent
-    data class Pesan(val teks: String) : LoginKasirEvent
+    data class NavigasiKePosUtama(
+        val namaKasir: String,
+    ) : LoginKasirEvent
+
+    data class NavigasiKeBukaShift(
+        val kasirId: Long,
+        val namaKasir: String,
+    ) : LoginKasirEvent
+
+    data class Pesan(
+        val teks: String,
+    ) : LoginKasirEvent
 }

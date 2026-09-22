@@ -13,7 +13,6 @@ class ActiveSesiKasirProvider(
     private val kasirDao: KasirDao,
     private val shiftDao: ShiftDao,
 ) : SesiKasirProvider {
-
     // Runtime pointer kasir yang sedang login
     private val _kasirLoginId = MutableStateFlow<Long?>(null)
     val kasirLoginId: StateFlow<Long?> = _kasirLoginId.asStateFlow()
@@ -23,35 +22,36 @@ class ActiveSesiKasirProvider(
     /**
      * Sumber Kebenaran Mutlak: Selalu periksa DB SQLite apakah shift kasir masih TERBUKA.
      */
-    override suspend fun sesiAktif(): SesiKasir? = mutex.withLock {
-        val activeKasirId = _kasirLoginId.value
+    override suspend fun sesiAktif(): SesiKasir? =
+        mutex.withLock {
+            val activeKasirId = _kasirLoginId.value
 
-        if (activeKasirId != null) {
-            // Skenario normal: Kasir sedang login di memori
-            val shift = shiftDao.getOpenForKasir(activeKasirId)
-            if (shift != null && shift.status == StatusShift.TERBUKA) {
-                return SesiKasir(
-                    kasirId = shift.kasirId,
-                    namaKasir = shift.namaKasir,
-                    shiftId = shift.id,
-                )
+            if (activeKasirId != null) {
+                // Skenario normal: Kasir sedang login di memori
+                val shift = shiftDao.getOpenForKasir(activeKasirId)
+                if (shift != null && shift.status == StatusShift.TERBUKA) {
+                    return SesiKasir(
+                        kasirId = shift.kasirId,
+                        namaKasir = shift.namaKasir,
+                        shiftId = shift.id,
+                    )
+                }
+            } else {
+                // Skenario Pemulihan (App Restart / Process Death):
+                // Cek apakah ada shift yang masih menggantung TERBUKA di DB
+                val latestOpen = shiftDao.getLatestOpen()
+                if (latestOpen != null && latestOpen.status == StatusShift.TERBUKA) {
+                    _kasirLoginId.value = latestOpen.kasirId
+                    return SesiKasir(
+                        kasirId = latestOpen.kasirId,
+                        namaKasir = latestOpen.namaKasir,
+                        shiftId = latestOpen.id,
+                    )
+                }
             }
-        } else {
-            // Skenario Pemulihan (App Restart / Process Death):
-            // Cek apakah ada shift yang masih menggantung TERBUKA di DB
-            val latestOpen = shiftDao.getLatestOpen()
-            if (latestOpen != null && latestOpen.status == StatusShift.TERBUKA) {
-                _kasirLoginId.value = latestOpen.kasirId
-                return SesiKasir(
-                    kasirId = latestOpen.kasirId,
-                    namaKasir = latestOpen.namaKasir,
-                    shiftId = latestOpen.id,
-                )
-            }
+
+            return null
         }
-
-        return null
-    }
 
     /** Login kasir setelah verifikasi PIN berhasil */
     fun setKasirLogin(kasirId: Long) {

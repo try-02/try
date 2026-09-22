@@ -42,6 +42,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -50,7 +51,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sentral.org.ui.screen.pos.formatRupiah
 import org.koin.androidx.compose.koinViewModel
-import androidx.compose.runtime.rememberUpdatedState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,14 +69,17 @@ fun BukaShiftScreen(
     LaunchedEffect(Unit) {
         viewModel.event.collect { event ->
             when (event) {
-                BukaShiftEvent.ShiftBerhasilDibuka ->
+                BukaShiftEvent.ShiftBerhasilDibuka -> {
                     currentOnShiftBerhasil()
+                }
 
-                BukaShiftEvent.KembaliKeLogin ->
+                BukaShiftEvent.KembaliKeLogin -> {
                     currentOnGantiKasir()
+                }
 
-                is BukaShiftEvent.Pesan ->
+                is BukaShiftEvent.Pesan -> {
                     snackbarHostState.showSnackbar(event.teks)
+                }
             }
         }
     }
@@ -103,17 +106,19 @@ fun BukaShiftScreen(
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                ),
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                    ),
             )
         },
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 24.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Spacer(Modifier.height(8.dp))
@@ -190,23 +195,23 @@ fun BukaShiftScreen(
             Spacer(Modifier.height(12.dp))
 
             /** Chips Nominal Cepat
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                ChipNominalCepat("0", dipilih = uiState.modalAwalNominal == 0L, modifier = Modifier.weight(1f)) {
-                    viewModel.setNominalCepat(0L)
-                }
-                ChipNominalCepat("100rb", dipilih = uiState.modalAwalNominal == 100_000L, modifier = Modifier.weight(1f)) {
-                    viewModel.setNominalCepat(100_000L)
-                }
-                ChipNominalCepat("200rb", dipilih = uiState.modalAwalNominal == 200_000L, modifier = Modifier.weight(1f)) {
-                    viewModel.setNominalCepat(200_000L)
-                }
-                ChipNominalCepat("500rb", dipilih = uiState.modalAwalNominal == 500_000L, modifier = Modifier.weight(1f)) {
-                    viewModel.setNominalCepat(500_000L)
-                }
-            } */
+             Row(
+             horizontalArrangement = Arrangement.spacedBy(8.dp),
+             modifier = Modifier.fillMaxWidth(),
+             ) {
+             ChipNominalCepat("0", dipilih = uiState.modalAwalNominal == 0L, modifier = Modifier.weight(1f)) {
+             viewModel.setNominalCepat(0L)
+             }
+             ChipNominalCepat("100rb", dipilih = uiState.modalAwalNominal == 100_000L, modifier = Modifier.weight(1f)) {
+             viewModel.setNominalCepat(100_000L)
+             }
+             ChipNominalCepat("200rb", dipilih = uiState.modalAwalNominal == 200_000L, modifier = Modifier.weight(1f)) {
+             viewModel.setNominalCepat(200_000L)
+             }
+             ChipNominalCepat("500rb", dipilih = uiState.modalAwalNominal == 500_000L, modifier = Modifier.weight(1f)) {
+             viewModel.setNominalCepat(500_000L)
+             }
+             } */
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth(),
@@ -279,9 +284,10 @@ fun BukaShiftScreen(
                 onClick = { viewModel.submitBukaShift() },
                 enabled = !uiState.sedangMemproses,
                 shape = MaterialTheme.shapes.medium,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
             ) {
                 if (uiState.sedangMemproses) {
@@ -313,27 +319,30 @@ private fun ChipNominalCepat(
 ) {
     Surface(
         shape = MaterialTheme.shapes.medium,
-        color = if (dipilih) {
-            MaterialTheme.colorScheme.primaryContainer
-        } else {
-            MaterialTheme.colorScheme.surfaceVariant
-        },
-        border = if (dipilih) {
-            BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
-        } else {
-            null
-        },
+        color =
+            if (dipilih) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            },
+        border =
+            if (dipilih) {
+                BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
+            } else {
+                null
+            },
         modifier = modifier.clickable(onClick = onClick),
     ) {
         Text(
             label,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
-            color = if (dipilih) {
-                MaterialTheme.colorScheme.onPrimaryContainer
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            },
+            color =
+                if (dipilih) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
             modifier = Modifier.padding(vertical = 10.dp),
             textAlign = TextAlign.Center,
         )
@@ -345,12 +354,13 @@ private fun NumpadModal(
     onTekan: (String) -> Unit,
     onHapus: () -> Unit,
 ) {
-    val tombolBaris = listOf(
-        listOf("1", "2", "3"),
-        listOf("4", "5", "6"),
-        listOf("7", "8", "9"),
-        listOf("000", "0", "⌫"),
-    )
+    val tombolBaris =
+        listOf(
+            listOf("1", "2", "3"),
+            listOf("4", "5", "6"),
+            listOf("7", "8", "9"),
+            listOf("000", "0", "⌫"),
+        )
 
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -367,12 +377,13 @@ private fun NumpadModal(
                         color = if (t == "⌫") MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface,
                         tonalElevation = 2.dp,
                         border = if (t != "⌫") BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant) else null,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(52.dp)
-                            .clickable {
-                                if (t == "⌫") onHapus() else onTekan(t)
-                            },
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .height(52.dp)
+                                .clickable {
+                                    if (t == "⌫") onHapus() else onTekan(t)
+                                },
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             if (t == "⌫") {

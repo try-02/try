@@ -9,15 +9,21 @@ import com.sentral.org.data.entity.PergerakanKasEntity
 interface PergerakanKasDao {
     @Insert
     suspend fun insert(entity: PergerakanKasEntity): Long
-    @Query("""
+
+    @Query(
+        """
         SELECT * FROM pergerakan_kas
         WHERE shift_id = :shiftId
         ORDER BY dibuat_pada, id
-    """)
+    """,
+    )
     suspend fun getByShift(shiftId: Long): List<PergerakanKasEntity>
-    @Query("""
+
+    @Query(
+        """
         SELECT COALESCE(SUM(jumlah_delta),0) FROM pergerakan_kas
         WHERE shift_id = :shiftId
-    """)
+    """,
+    )
     suspend fun getExpectedCash(shiftId: Long): Long
 }

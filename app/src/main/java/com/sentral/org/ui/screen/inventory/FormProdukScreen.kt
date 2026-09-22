@@ -37,6 +37,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -45,7 +46,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sentral.org.ui.screen.pos.scanner.BarcodeScannerOverlay
 import org.koin.androidx.compose.koinViewModel
-import androidx.compose.runtime.rememberUpdatedState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,11 +62,13 @@ fun FormProdukScreen(
     LaunchedEffect(Unit) {
         viewModel.event.collect { event ->
             when (event) {
-                is FormProdukEvent.Pesan ->
+                is FormProdukEvent.Pesan -> {
                     snackbarHostState.showSnackbar(event.teks)
+                }
 
-                FormProdukEvent.SimpanSukses ->
+                FormProdukEvent.SimpanSukses -> {
                     currentOnBack()
+                }
             }
         }
     }
@@ -88,11 +90,12 @@ fun FormProdukScreen(
         },
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 20.dp)
-                .verticalScroll(rememberScrollState()),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(horizontal = 20.dp)
+                    .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Spacer(Modifier.height(4.dp))

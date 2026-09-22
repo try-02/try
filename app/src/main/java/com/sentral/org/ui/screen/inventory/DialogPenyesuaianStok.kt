@@ -31,7 +31,9 @@ import androidx.compose.ui.unit.dp
 import com.sentral.org.data.model.QUANTITY_SCALE
 import com.sentral.org.data.model.formatQuantity
 
-enum class ModePenyesuaian(val label: String) {
+enum class ModePenyesuaian(
+    val label: String,
+) {
     RESTOCK("Restock"),
     OPNAME("Opname"),
     RUSAK("Rusak"),
@@ -52,14 +54,16 @@ fun DialogPenyesuaianStok(
     var inputAlasan by rememberSaveable { mutableStateOf("") }
     var pesanError by remember { mutableStateOf<String?>(null) }
 
-    val parsedQtyScaled: Long = remember(inputJumlah) {
-        val num = inputJumlah.replace(',', '.').toDoubleOrNull() ?: 0.0
-        (num * QUANTITY_SCALE).toLong()
-    }
+    val parsedQtyScaled: Long =
+        remember(inputJumlah) {
+            val num = inputJumlah.replace(',', '.').toDoubleOrNull() ?: 0.0
+            (num * QUANTITY_SCALE).toLong()
+        }
 
-    val selisihOpname: Long = remember(parsedQtyScaled, selectedTab, produk.stokNormalScaled) {
-        if (selectedTab == 1) parsedQtyScaled - produk.stokNormalScaled else 0L
-    }
+    val selisihOpname: Long =
+        remember(parsedQtyScaled, selectedTab, produk.stokNormalScaled) {
+            if (selectedTab == 1) parsedQtyScaled - produk.stokNormalScaled else 0L
+        }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -98,12 +102,13 @@ fun DialogPenyesuaianStok(
 
                 Spacer(Modifier.height(4.dp))
 
-                val labelInput = when (selectedTab) {
-                    0 -> "Jumlah Masuk (Unit / Kg)"
-                    1 -> "Stok Fisik Dihitung (Unit / Kg)"
-                    2 -> "Jumlah Barang Rusak (Unit / Kg)"
-                    else -> "Jumlah Dimusnahkan (Unit / Kg)"
-                }
+                val labelInput =
+                    when (selectedTab) {
+                        0 -> "Jumlah Masuk (Unit / Kg)"
+                        1 -> "Stok Fisik Dihitung (Unit / Kg)"
+                        2 -> "Jumlah Barang Rusak (Unit / Kg)"
+                        else -> "Jumlah Dimusnahkan (Unit / Kg)"
+                    }
 
                 OutlinedTextField(
                     value = inputJumlah,
@@ -121,29 +126,38 @@ fun DialogPenyesuaianStok(
 
                 if (selectedTab == 1 && inputJumlah.isNotBlank()) {
                     // Penentuan palet 3-state: Defisit (Merah), Pas (Lavender), Surplus (Hijau Lime)
-                    val (containerColor, contentColor, labelStatus) = when {
-                        selisihOpname < 0L -> Triple(
-                            MaterialTheme.colorScheme.errorContainer,
-                            MaterialTheme.colorScheme.onErrorContainer,
-                            "Defisit (Fisik Kurang)",
-                        )
-                        selisihOpname > 0L -> Triple(
-                            MaterialTheme.colorScheme.secondaryContainer,
-                            MaterialTheme.colorScheme.onSecondaryContainer,
-                            "Surplus (Fisik Lebih)",
-                        )
-                        else -> Triple(
-                            MaterialTheme.colorScheme.primaryContainer,
-                            MaterialTheme.colorScheme.onPrimaryContainer,
-                            "Cocok (Fisik Pas)",
-                        )
-                    }
+                    val (containerColor, contentColor, labelStatus) =
+                        when {
+                            selisihOpname < 0L -> {
+                                Triple(
+                                    MaterialTheme.colorScheme.errorContainer,
+                                    MaterialTheme.colorScheme.onErrorContainer,
+                                    "Defisit (Fisik Kurang)",
+                                )
+                            }
 
-                    val tanda = when {
-                        selisihOpname > 0L -> "+${formatQuantity(selisihOpname)}"
-                        selisihOpname < 0L -> formatQuantity(selisihOpname) // Otomatis menghasilkan "-X"
-                        else -> "0"
-                    }
+                            selisihOpname > 0L -> {
+                                Triple(
+                                    MaterialTheme.colorScheme.secondaryContainer,
+                                    MaterialTheme.colorScheme.onSecondaryContainer,
+                                    "Surplus (Fisik Lebih)",
+                                )
+                            }
+
+                            else ->
+                                Triple(
+                                    MaterialTheme.colorScheme.primaryContainer,
+                                    MaterialTheme.colorScheme.onPrimaryContainer,
+                                    "Cocok (Fisik Pas)",
+                                )
+                        }
+
+                    val tanda =
+                        when {
+                            selisihOpname > 0L -> "+${formatQuantity(selisihOpname)}"
+                            selisihOpname < 0L -> formatQuantity(selisihOpname) // Otomatis menghasilkan "-X"
+                            else -> "0"
+                        }
 
                     Surface(
                         shape = MaterialTheme.shapes.medium,
@@ -180,7 +194,10 @@ fun DialogPenyesuaianStok(
 
                 OutlinedTextField(
                     value = inputAlasan,
-                    onValueChange = { inputAlasan = it; pesanError = null },
+                    onValueChange = {
+                        inputAlasan = it
+                        pesanError = null
+                    },
                     label = { Text("Alasan / Keterangan (Wajib)") },
                     placeholder = {
                         Text(
@@ -189,7 +206,7 @@ fun DialogPenyesuaianStok(
                                 1 -> "Misal: Hasil opname rak B"
                                 2 -> "Misal: Kemasan sobek / kedaluwarsa"
                                 else -> "Misal: Dibuang ke limbah"
-                            }
+                            },
                         )
                     },
                     singleLine = true,

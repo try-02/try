@@ -22,15 +22,16 @@ data class PrinterItemUi(
     val gagalStatusBerturut: Int,
 )
 
-fun PrinterEntity.toUi() = PrinterItemUi(
-    id = id,
-    nama = nama,
-    tipeKoneksi = tipeKoneksi,
-    karakterPerBaris = karakterPerBaris,
-    isDefault = isDefault,
-    dinonaktifkanOtomatis = dinonaktifkanOtomatis,
-    gagalStatusBerturut = gagalStatusBerturut,
-)
+fun PrinterEntity.toUi() =
+    PrinterItemUi(
+        id = id,
+        nama = nama,
+        tipeKoneksi = tipeKoneksi,
+        karakterPerBaris = karakterPerBaris,
+        isDefault = isDefault,
+        dinonaktifkanOtomatis = dinonaktifkanOtomatis,
+        gagalStatusBerturut = gagalStatusBerturut,
+    )
 
 data class PrinterSettingsUiState(
     val printers: List<PrinterItemUi> = emptyList(),
@@ -41,27 +42,29 @@ class PrinterSettingsViewModel(
     private val printerRepo: PrinterRepository,
     private val profilRepo: ProfilTokoRepository,
 ) : ViewModel() {
-
-    val uiState: StateFlow<PrinterSettingsUiState> = kotlinx.coroutines.flow.combine(
-        printerRepo.observeAll().map { list -> list.map { it.toUi() } },
-        profilRepo.observe(),
-    ) { printers, profil ->
-        PrinterSettingsUiState(
-            printers = printers,
-            cetakOtomatis = profil?.cetakOtomatis ?: true,
-        )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PrinterSettingsUiState())
+    val uiState: StateFlow<PrinterSettingsUiState> =
+        kotlinx.coroutines.flow
+            .combine(
+                printerRepo.observeAll().map { list -> list.map { it.toUi() } },
+                profilRepo.observe(),
+            ) { printers, profil ->
+                PrinterSettingsUiState(
+                    printers = printers,
+                    cetakOtomatis = profil?.cetakOtomatis ?: true,
+                )
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PrinterSettingsUiState())
 
     fun toggleCetakOtomatis(aktif: Boolean) {
         viewModelScope.launch {
-            val current = profilRepo.get() ?: ProfilTokoEntity(
-                id = 1,
-                namaToko = "Toko POS",
-                alamat = "",
-                catatanFooter = "",
-                logoUri = null,
-                cetakOtomatis = aktif,
-            )
+            val current =
+                profilRepo.get() ?: ProfilTokoEntity(
+                    id = 1,
+                    namaToko = "Toko POS",
+                    alamat = "",
+                    catatanFooter = "",
+                    logoUri = null,
+                    cetakOtomatis = aktif,
+                )
             profilRepo.save(current.copy(cetakOtomatis = aktif))
         }
     }

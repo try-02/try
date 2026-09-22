@@ -6,8 +6,14 @@ import kotlinx.coroutines.sync.withLock
 
 sealed interface PinCheckResult {
     data object Success : PinCheckResult
-    data class Failed(val sisaPercobaan: Int) : PinCheckResult
-    data class Locked(val sisaDetikTerkunci: Long) : PinCheckResult
+
+    data class Failed(
+        val sisaPercobaan: Int,
+    ) : PinCheckResult
+
+    data class Locked(
+        val sisaDetikTerkunci: Long,
+    ) : PinCheckResult
 }
 
 class PinRateLimiter {
@@ -21,36 +27,39 @@ class PinRateLimiter {
     }
 
     /** Memeriksa apakah kasir sedang dalam masa terkunci */
-    suspend fun cekStatus(kasirId: Long): Long? = mutex.withLock {
-        val now = currentTimeMillis()
-        val lockedUntil = lockoutUntil[kasirId] ?: return@withLock null
-        if (now < lockedUntil) {
-            (lockedUntil - now) / 1000L
-        } else {
-            lockoutUntil.remove(kasirId)
-            failedAttempts.remove(kasirId)
-            null
+    suspend fun cekStatus(kasirId: Long): Long? =
+        mutex.withLock {
+            val now = currentTimeMillis()
+            val lockedUntil = lockoutUntil[kasirId] ?: return@withLock null
+            if (now < lockedUntil) {
+                (lockedUntil - now) / 1000L
+            } else {
+                lockoutUntil.remove(kasirId)
+                failedAttempts.remove(kasirId)
+                null
+            }
         }
-    }
 
     /** Catat kegagalan input PIN */
-    suspend fun catatGagal(kasirId: Long): PinCheckResult = mutex.withLock {
-        val now = currentTimeMillis()
-        val current = (failedAttempts[kasirId] ?: 0) + 1
-        failedAttempts[kasirId] = current
+    suspend fun catatGagal(kasirId: Long): PinCheckResult =
+        mutex.withLock {
+            val now = currentTimeMillis()
+            val current = (failedAttempts[kasirId] ?: 0) + 1
+            failedAttempts[kasirId] = current
 
-        if (current >= MAX_FAILED_ATTEMPTS) {
-            val lockTime = now + LOCKOUT_DURATION_MS
-            lockoutUntil[kasirId] = lockTime
-            PinCheckResult.Locked(LOCKOUT_DURATION_MS / 1000L)
-        } else {
-            PinCheckResult.Failed(MAX_FAILED_ATTEMPTS - current)
+            if (current >= MAX_FAILED_ATTEMPTS) {
+                val lockTime = now + LOCKOUT_DURATION_MS
+                lockoutUntil[kasirId] = lockTime
+                PinCheckResult.Locked(LOCKOUT_DURATION_MS / 1000L)
+            } else {
+                PinCheckResult.Failed(MAX_FAILED_ATTEMPTS - current)
+            }
         }
-    }
 
     /** Reset catatan saat PIN berhasil */
-    suspend fun catatSukses(kasirId: Long): Unit = mutex.withLock {
-        failedAttempts.remove(kasirId)
-        lockoutUntil.remove(kasirId)
-    }
+    suspend fun catatSukses(kasirId: Long): Unit =
+        mutex.withLock {
+            failedAttempts.remove(kasirId)
+            lockoutUntil.remove(kasirId)
+        }
 }

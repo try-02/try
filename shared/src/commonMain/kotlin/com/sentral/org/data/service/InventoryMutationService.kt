@@ -2,8 +2,8 @@ package com.sentral.org.data.service
 
 import com.sentral.org.data.dao.PergerakanPersediaanDao
 import com.sentral.org.data.dao.PersediaanDao
-import com.sentral.org.data.entity.PersediaanEntity
 import com.sentral.org.data.entity.PergerakanPersediaanEntity
+import com.sentral.org.data.entity.PersediaanEntity
 import com.sentral.org.data.model.JenisPergerakanPersediaan
 import com.sentral.org.data.model.PosDataException
 
@@ -45,7 +45,7 @@ class InventoryMutationService(
                     jumlah = 0,
                     jumlahRusak = 0,
                     diperbaruiPada = now,
-                )
+                ),
             )
             before = persediaanDao.getByProdukId(productId)
                 ?: throw PosDataException.NotFound("Gagal inisialisasi persediaan produk $productId")
@@ -53,7 +53,7 @@ class InventoryMutationService(
 
         if (!allowNegativeStock && before.jumlah + normalDelta < 0) {
             throw PosDataException.InsufficientStock(
-                "Stok produk $productId tidak cukup (sisa ${before.jumlah}, diminta ${-normalDelta})"
+                "Stok produk $productId tidak cukup (sisa ${before.jumlah}, diminta ${-normalDelta})",
             )
         }
 
@@ -64,8 +64,9 @@ class InventoryMutationService(
             throw PosDataException.InsufficientDamagedStock("Stok rusak tidak mencukupi untuk produk $productId")
         }
 
-        val after = persediaanDao.getByProdukId(productId)
-            ?: throw PosDataException.NotFound("Persediaan produk $productId hilang setelah mutasi")
+        val after =
+            persediaanDao.getByProdukId(productId)
+                ?: throw PosDataException.NotFound("Persediaan produk $productId hilang setelah mutasi")
 
         check(after.jumlah == before.jumlah + normalDelta)
         check(after.jumlahRusak == before.jumlahRusak + damagedDelta)
@@ -87,7 +88,7 @@ class InventoryMutationService(
                 shiftId = shiftId,
                 keterangan = note,
                 dibuatPada = now,
-            )
+            ),
         )
     }
 }

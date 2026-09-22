@@ -14,38 +14,38 @@ import com.sentral.org.data.model.JenisPergerakanPersediaan
             entity = ProdukEntity::class,
             parentColumns = ["id"],
             childColumns = ["produk_id"],
-            onDelete = ForeignKey.RESTRICT
+            onDelete = ForeignKey.RESTRICT,
         ),
         ForeignKey(
             entity = TransaksiEntity::class,
             parentColumns = ["id"],
             childColumns = ["transaksi_id"],
-            onDelete = ForeignKey.RESTRICT
+            onDelete = ForeignKey.RESTRICT,
         ),
         ForeignKey(
             entity = ItemTransaksiEntity::class,
             parentColumns = ["id"],
             childColumns = ["item_transaksi_id"],
-            onDelete = ForeignKey.RESTRICT
+            onDelete = ForeignKey.RESTRICT,
         ),
         ForeignKey(
             entity = PengembalianEntity::class,
             parentColumns = ["id"],
             childColumns = ["pengembalian_id"],
-            onDelete = ForeignKey.RESTRICT
+            onDelete = ForeignKey.RESTRICT,
         ),
         ForeignKey(
             entity = ItemPengembalianEntity::class,
             parentColumns = ["id"],
             childColumns = ["item_pengembalian_id"],
-            onDelete = ForeignKey.RESTRICT
+            onDelete = ForeignKey.RESTRICT,
         ),
         ForeignKey(
             entity = ShiftEntity::class,
             parentColumns = ["id"],
             childColumns = ["shift_id"],
-            onDelete = ForeignKey.RESTRICT
-        )
+            onDelete = ForeignKey.RESTRICT,
+        ),
     ],
     indices = [
         Index("produk_id"),
@@ -55,9 +55,9 @@ import com.sentral.org.data.model.JenisPergerakanPersediaan
         Index("item_pengembalian_id"),
         Index("shift_id"),
         Index(
-            value = ["produk_id", "dibuat_pada", "id"]
-        )
-    ]
+            value = ["produk_id", "dibuat_pada", "id"],
+        ),
+    ],
 )
 data class PergerakanPersediaanEntity(
     @PrimaryKey(autoGenerate = true)

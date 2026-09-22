@@ -59,10 +59,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sentral.org.backup.model.BackupMetadata
+import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,29 +74,36 @@ fun BackupRestoreScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    val createDocLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/octet-stream")
-    ) { uri: Uri? ->
-        uri?.let { viewModel.eksekusiBackupKeUri(it) }
-    }
+    val createDocLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.CreateDocument("application/octet-stream"),
+        ) { uri: Uri? ->
+            uri?.let { viewModel.eksekusiBackupKeUri(it) }
+        }
 
-    val openDocLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri: Uri? ->
-        uri?.let { viewModel.onFileBackupDipilih(it) }
-    }
+    val openDocLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.OpenDocument(),
+        ) { uri: Uri? ->
+            uri?.let { viewModel.onFileBackupDipilih(it) }
+        }
 
     LaunchedEffect(Unit) {
         viewModel.event.collect { event ->
             when (event) {
-                is BackupRestoreEvent.Pesan -> snackbarHostState.showSnackbar(event.teks)
+                is BackupRestoreEvent.Pesan -> {
+                    snackbarHostState.showSnackbar(event.teks)
+                }
+
                 BackupRestoreEvent.MintaPilihLokasiExport -> {
                     val timeStamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.ROOT).format(Date())
                     createDocLauncher.launch("POS-Backup-$timeStamp.posbak")
                 }
+
                 BackupRestoreEvent.MintaPilihFileImport -> {
                     openDocLauncher.launch(arrayOf("*/*"))
                 }
+
                 BackupRestoreEvent.RestartAplikasi -> {}
             }
         }
@@ -120,17 +127,19 @@ fun BackupRestoreScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                ),
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                    ),
             )
         },
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 20.dp, vertical = 12.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
         ) {
             // Kartu Ringkasan Status Backup
             KartuStatusBackup(uiState.recordInfo.lastBackupTimestamp, uiState.recordInfo.lastBackupFileName)
@@ -245,7 +254,10 @@ fun BackupRestoreScreen(
 }
 
 @Composable
-private fun KartuStatusBackup(lastTs: Long?, fileName: String?) {
+private fun KartuStatusBackup(
+    lastTs: Long?,
+    fileName: String?,
+) {
     val dateFormat = remember { SimpleDateFormat("dd MMMM yyyy, HH:mm", Locale.getDefault()) }
     val waktuStr = remember(lastTs) { lastTs?.let { dateFormat.format(Date(it)) } ?: "Belum pernah" }
 
@@ -421,7 +433,11 @@ private fun DialogPreviewRestore(
                         Text("Kasir: ${metadata.totalCashiers}", style = MaterialTheme.typography.bodySmall)
                         Text("Shift: ${metadata.totalShifts}", style = MaterialTheme.typography.bodySmall)
                         if (metadata.note.isNotBlank()) {
-                            Text("Catatan: ${metadata.note}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                            Text(
+                                "Catatan: ${metadata.note}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
                         }
                     }
                 }

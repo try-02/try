@@ -17,36 +17,51 @@ class CartService(
     private val products: ProdukDao,
     private val cashiers: KasirDao,
 ) {
-    suspend fun buatKeranjang(kasirId: Long, now: Long): Result<Long> = suspendRunCatching {
-        write.run {
-            val kasir = cashiers.getById(kasirId)
-                ?: throw PosDataException.NotFound("Kasir tidak ditemukan")
-            if (!kasir.aktif) throw PosDataException.Validation("Kasir tidak aktif")
-            carts.insert(
-                KeranjangEntity(
-                    nama = "Keranjang",
-                    status = StatusKeranjang.AKTIF,
-                    kasirId = kasir.id,
-                    namaKasir = kasir.nama,
-                    dibuatPada = now,
-                    diperbaruiPada = now,
-                    ditahanPada = null,
-                    diselesaikanPada = null,
-                    dibatalkanPada = null,
+    suspend fun buatKeranjang(
+        kasirId: Long,
+        now: Long,
+    ): Result<Long> =
+        suspendRunCatching {
+            write.run {
+                val kasir =
+                    cashiers.getById(kasirId)
+                        ?: throw PosDataException.NotFound("Kasir tidak ditemukan")
+                if (!kasir.aktif) throw PosDataException.Validation("Kasir tidak aktif")
+                carts.insert(
+                    KeranjangEntity(
+                        nama = "Keranjang",
+                        status = StatusKeranjang.AKTIF,
+                        kasirId = kasir.id,
+                        namaKasir = kasir.nama,
+                        dibuatPada = now,
+                        diperbaruiPada = now,
+                        ditahanPada = null,
+                        diselesaikanPada = null,
+                        dibatalkanPada = null,
+                    ),
                 )
-            )
+            }
         }
-    }
 
     /** @param quantity TER-SKALA QUANTITY_SCALE — gunakan quantityOf(2) untuk 2 buah. */
-    suspend fun addProduct(cartId: Long, productId: Long, quantity: Long, now: Long): Result<Unit> =
+    suspend fun addProduct(
+        cartId: Long,
+        productId: Long,
+        quantity: Long,
+        now: Long,
+    ): Result<Unit> =
         suspendRunCatching {
             require(quantity > 0)
             write.run { tulisDelta(cartId, productId, quantity, now) }
         }
 
     /** @param delta TER-SKALA, boleh negatif. Jika hasil <= 0, baris otomatis dihapus. */
-    suspend fun ubahJumlah(cartId: Long, productId: Long, delta: Long, now: Long): Result<Unit> =
+    suspend fun ubahJumlah(
+        cartId: Long,
+        productId: Long,
+        delta: Long,
+        now: Long,
+    ): Result<Unit> =
         suspendRunCatching {
             require(delta != 0L)
             write.run { tulisDelta(cartId, productId, delta, now) }
@@ -56,7 +71,12 @@ class CartService(
      * Menetapkan nilai kuantitas mutlak (ter-skala QUANTITY_SCALE).
      * Jika target <= 0, item otomatis dihapus dari keranjang.
      */
-    suspend fun setJumlah(cartId: Long, productId: Long, targetScaled: Long, now: Long): Result<Unit> =
+    suspend fun setJumlah(
+        cartId: Long,
+        productId: Long,
+        targetScaled: Long,
+        now: Long,
+    ): Result<Unit> =
         suspendRunCatching {
             require(targetScaled >= 0) { "Target kuantitas tidak boleh negatif" }
             write.run {
@@ -71,8 +91,9 @@ class CartService(
                             items.changeQuantity(cartId, productId, delta, now)
                         }
                     } else {
-                        val product = products.getById(productId)
-                            ?: throw PosDataException.NotFound("Produk tidak ditemukan")
+                        val product =
+                            products.getById(productId)
+                                ?: throw PosDataException.NotFound("Produk tidak ditemukan")
                         if (!product.aktif) throw PosDataException.Validation("Produk tidak aktif")
                         items.insert(
                             ItemKeranjangEntity(
@@ -83,14 +104,18 @@ class CartService(
                                 jumlah = targetScaled,
                                 ditambahkanPada = now,
                                 diperbaruiPada = now,
-                            )
+                            ),
                         )
                     }
                 }
             }
         }
 
-    suspend fun hapusBaris(cartId: Long, productId: Long, now: Long): Result<Unit> =
+    suspend fun hapusBaris(
+        cartId: Long,
+        productId: Long,
+        now: Long,
+    ): Result<Unit> =
         suspendRunCatching {
             write.run {
                 pastikanAktif(cartId)
@@ -98,19 +123,36 @@ class CartService(
             }
         }
 
-    suspend fun hold(cartId: Long, now: Long): Result<Unit> = transition { carts.hold(cartId, now) }
-    suspend fun resume(cartId: Long, now: Long): Result<Unit> = transition { carts.resume(cartId, now) }
-    suspend fun cancel(cartId: Long, now: Long): Result<Unit> = transition { carts.cancel(cartId, now) }
+    suspend fun hold(
+        cartId: Long,
+        now: Long,
+    ): Result<Unit> = transition { carts.hold(cartId, now) }
+
+    suspend fun resume(
+        cartId: Long,
+        now: Long,
+    ): Result<Unit> = transition { carts.resume(cartId, now) }
+
+    suspend fun cancel(
+        cartId: Long,
+        now: Long,
+    ): Result<Unit> = transition { carts.cancel(cartId, now) }
 
     /**
      * Satu jalur untuk tambah/kurang: UPDATE dahulu (transaksi tulis = penulis tunggal).
      * 0 baris terdampak berarti: delta negatif -> baris habis, hapus;
      * delta positif -> item belum ada, INSERT baru.
      */
-    private suspend fun tulisDelta(cartId: Long, productId: Long, delta: Long, now: Long) {
+    private suspend fun tulisDelta(
+        cartId: Long,
+        productId: Long,
+        delta: Long,
+        now: Long,
+    ) {
         pastikanAktif(cartId)
-        val product = products.getById(productId)
-            ?: throw PosDataException.NotFound("Produk tidak ditemukan")
+        val product =
+            products.getById(productId)
+                ?: throw PosDataException.NotFound("Produk tidak ditemukan")
         // Hanya tolak penambahan unit baru bila produk nonaktif.
         // Pengurangan/penghapusan (delta < 0) tetap diizinkan agar kasir tidak terjebak.
         if (delta > 0 && !product.aktif) throw PosDataException.Validation("Produk tidak aktif")
@@ -129,21 +171,23 @@ class CartService(
                         jumlah = delta,
                         ditambahkanPada = now,
                         diperbaruiPada = now,
-                    )
+                    ),
                 )
             }
         }
     }
 
     private suspend fun pastikanAktif(cartId: Long) {
-        val cart = carts.getById(cartId)
-            ?: throw PosDataException.NotFound("Keranjang tidak ditemukan")
+        val cart =
+            carts.getById(cartId)
+                ?: throw PosDataException.NotFound("Keranjang tidak ditemukan")
         if (cart.status != StatusKeranjang.AKTIF) {
             throw PosDataException.InvalidState("Keranjang harus AKTIF")
         }
     }
 
-    private suspend fun transition(operation: suspend () -> Int): Result<Unit> = suspendRunCatching {
-        write.run { check(operation() == 1) { "Status keranjang sudah berubah" } }
-    }
+    private suspend fun transition(operation: suspend () -> Int): Result<Unit> =
+        suspendRunCatching {
+            write.run { check(operation() == 1) { "Status keranjang sudah berubah" } }
+        }
 }

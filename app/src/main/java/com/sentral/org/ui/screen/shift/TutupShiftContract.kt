@@ -31,5 +31,8 @@ data class TutupShiftUiState(
 
 sealed interface TutupShiftEvent {
     data object ShiftSelesaiDanKeluar : TutupShiftEvent
-    data class Pesan(val teks: String) : TutupShiftEvent
+
+    data class Pesan(
+        val teks: String,
+    ) : TutupShiftEvent
 }

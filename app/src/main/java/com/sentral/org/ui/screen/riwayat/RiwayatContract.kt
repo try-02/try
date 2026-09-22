@@ -18,14 +18,15 @@ data class TransaksiItemUi(
     val status: StatusTransaksi,
 )
 
-fun TransaksiEntity.toUiModel() = TransaksiItemUi(
-    id = id,
-    nomorTransaksi = nomorTransaksi,
-    namaKasir = namaKasir,
-    dibuatPada = dibuatPada,
-    total = total,
-    status = status,
-)
+fun TransaksiEntity.toUiModel() =
+    TransaksiItemUi(
+        id = id,
+        nomorTransaksi = nomorTransaksi,
+        namaKasir = namaKasir,
+        dibuatPada = dibuatPada,
+        total = total,
+        status = status,
+    )
 
 /** Model item rincian transaksi untuk Sheet Detail */
 data class ItemTransaksiDetailUi(
@@ -49,25 +50,27 @@ data class TransaksiDetailUi(
     val items: List<ItemTransaksiDetailUi>,
 )
 
-fun TransaksiDenganDetail.toUiModel() = TransaksiDetailUi(
-    id = transaksi.id,
-    nomorTransaksi = transaksi.nomorTransaksi,
-    namaKasir = transaksi.namaKasir,
-    dibuatPada = transaksi.dibuatPada,
-    total = transaksi.total,
-    status = transaksi.status,
-    alasanPembatalan = transaksi.alasanPembatalan,
-    items = items.map {
-        ItemTransaksiDetailUi(
-            id = it.id,
-            namaProduk = it.namaProduk,
-            jumlah = it.jumlah,
-            hargaSatuan = it.hargaSatuan,
-            diskonItem = it.diskonItem,
-            totalBaris = it.totalBaris,
-        )
-    },
-)
+fun TransaksiDenganDetail.toUiModel() =
+    TransaksiDetailUi(
+        id = transaksi.id,
+        nomorTransaksi = transaksi.nomorTransaksi,
+        namaKasir = transaksi.namaKasir,
+        dibuatPada = transaksi.dibuatPada,
+        total = transaksi.total,
+        status = transaksi.status,
+        alasanPembatalan = transaksi.alasanPembatalan,
+        items =
+            items.map {
+                ItemTransaksiDetailUi(
+                    id = it.id,
+                    namaProduk = it.namaProduk,
+                    jumlah = it.jumlah,
+                    hargaSatuan = it.hargaSatuan,
+                    diskonItem = it.diskonItem,
+                    totalBaris = it.totalBaris,
+                )
+            },
+    )
 
 /** Model baris item untuk form input retur */
 data class ItemReturUi(
@@ -86,11 +89,9 @@ data class RiwayatUiState(
     val sedangReprint: Boolean = false,
     val sedangEkspor: Boolean = false,
     val sedangMemprosesAksi: Boolean = false,
-
     // Dialog Void
     val dialogVoidTerbuka: Boolean = false,
     val alasanVoidInput: String = "",
-
     // Sheet Retur
     val dialogReturTerbuka: Boolean = false,
     val daftarItemRetur: List<ItemReturUi> = emptyList(),
@@ -100,12 +101,26 @@ data class RiwayatUiState(
 
 /** Event satu kali jalan (Side Effect) untuk Snackbar atau aksi eksternal. */
 sealed interface RiwayatEvent {
-    data class Pesan(val teks: String, val jenis: Jenis = Jenis.INFO) : RiwayatEvent {
+    data class Pesan(
+        val teks: String,
+        val jenis: Jenis = Jenis.INFO,
+    ) : RiwayatEvent {
         enum class Jenis { INFO, SUKSES, GALAT }
     }
-    data class ReprintSukses(val nomorTransaksi: String) : RiwayatEvent
-    data class VoidSukses(val nomorTransaksi: String) : RiwayatEvent
-    data class ReturSukses(val nomorTransaksi: String, val totalRefund: Long) : RiwayatEvent
+
+    data class ReprintSukses(
+        val nomorTransaksi: String,
+    ) : RiwayatEvent
+
+    data class VoidSukses(
+        val nomorTransaksi: String,
+    ) : RiwayatEvent
+
+    data class ReturSukses(
+        val nomorTransaksi: String,
+        val totalRefund: Long,
+    ) : RiwayatEvent
+
     data class FileSiapDibagikan(
         val uri: Uri,
         val mimeType: String = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

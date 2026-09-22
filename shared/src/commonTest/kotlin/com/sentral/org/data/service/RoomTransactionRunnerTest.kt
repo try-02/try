@@ -17,7 +17,6 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class RoomTransactionRunnerTest {
-
     private lateinit var db: PosDatabase
     private lateinit var runner: RoomTransactionRunner
 
@@ -33,55 +32,88 @@ class RoomTransactionRunnerTest {
     }
 
     @Test
-    fun suksesMengcommitSeluruhTulisan() = runTest {
-        val (kasirId, shiftId) = runner.run {
-            val k = db.kasirDao().insert(
-                KasirEntity(nama = "Kasir Commit", pinHash = null, aktif = true, dibuatPada = 1)
-            )
-            val s = db.shiftDao().insert(
-                ShiftEntity(
-                    kasirId = k, namaKasir = "Kasir Commit", status = StatusShift.TERBUKA,
-                    kasAwal = 5, dimulaiPada = 1, kasDiharapkan = null, kasAktual = null,
-                    selisihKas = null, ditutupPada = null, catatan = "",
-                )
-            )
-            k to s
+    fun suksesMengcommitSeluruhTulisan() =
+        runTest {
+            val (kasirId, shiftId) =
+                runner.run {
+                    val k =
+                        db.kasirDao().insert(
+                            KasirEntity(nama = "Kasir Commit", pinHash = null, aktif = true, dibuatPada = 1),
+                        )
+                    val s =
+                        db.shiftDao().insert(
+                            ShiftEntity(
+                                kasirId = k,
+                                namaKasir = "Kasir Commit",
+                                status = StatusShift.TERBUKA,
+                                kasAwal = 5,
+                                dimulaiPada = 1,
+                                kasDiharapkan = null,
+                                kasAktual = null,
+                                selisihKas = null,
+                                ditutupPada = null,
+                                catatan = "",
+                            ),
+                        )
+                    k to s
+                }
+            assertNotNull(db.kasirDao().getById(kasirId))
+            assertNotNull(db.shiftDao().getById(shiftId))
         }
-        assertNotNull(db.kasirDao().getById(kasirId))
-        assertNotNull(db.shiftDao().getById(shiftId))
-    }
 
     @Test
-    fun gagalDiTengahJalanMembuangSeluruhTulisanParsial() = runTest {
-        var kasirId = 0L
-        var shiftId = 0L
+    fun gagalDiTengahJalanMembuangSeluruhTulisanParsial() =
+        runTest {
+            var kasirId = 0L
+            var shiftId = 0L
 
-        val hasil = runCatching {
-            runner.run {
-                kasirId = db.kasirDao().insert(
-                    KasirEntity(nama = "Kasir Rollback", pinHash = null, aktif = true, dibuatPada = 1)
-                )
-                shiftId = db.shiftDao().insert(
-                    ShiftEntity(
-                        kasirId = kasirId, namaKasir = "Kasir Rollback", status = StatusShift.TERBUKA,
-                        kasAwal = 5, dimulaiPada = 1, kasDiharapkan = null, kasAktual = null,
-                        selisihKas = null, ditutupPada = null, catatan = "",
-                    )
-                )
-                db.pergerakanKasDao().insert(
-                    PergerakanKasEntity(
-                        shiftId = shiftId, jenis = JenisPergerakanKas.KAS_AWAL, jumlahDelta = 5,
-                        transaksiId = null, pengembalianId = null, keterangan = "parsial",
-                        dibuatPada = 1,
-                    )
-                )
-                error("Ledakan simulasi di tengah transaksi")
-            }
+            val hasil =
+                runCatching {
+                    runner.run {
+                        kasirId =
+                            db.kasirDao().insert(
+                                KasirEntity(nama = "Kasir Rollback", pinHash = null, aktif = true, dibuatPada = 1),
+                            )
+                        shiftId =
+                            db.shiftDao().insert(
+                                ShiftEntity(
+                                    kasirId = kasirId,
+                                    namaKasir = "Kasir Rollback",
+                                    status = StatusShift.TERBUKA,
+                                    kasAwal = 5,
+                                    dimulaiPada = 1,
+                                    kasDiharapkan = null,
+                                    kasAktual = null,
+                                    selisihKas = null,
+                                    ditutupPada = null,
+                                    catatan = "",
+                                ),
+                            )
+                        db.pergerakanKasDao().insert(
+                            PergerakanKasEntity(
+                                shiftId = shiftId,
+                                jenis = JenisPergerakanKas.KAS_AWAL,
+                                jumlahDelta = 5,
+                                transaksiId = null,
+                                pengembalianId = null,
+                                keterangan = "parsial",
+                                dibuatPada = 1,
+                            ),
+                        )
+                        error("Ledakan simulasi di tengah transaksi")
+                    }
+                }
+
+            assertTrue(hasil.isFailure)
+            assertNull(db.kasirDao().getById(kasirId), "kasir harus ikut ter-roll-back")
+            assertNull(db.shiftDao().getById(shiftId), "shift harus ikut ter-roll-back")
+            assertTrue(
+                db
+                    .kasirDao()
+                    .observeAktif()
+                    .first()
+                    .isEmpty(),
+                "tidak boleh ada kasir tersisa",
+            )
         }
-
-        assertTrue(hasil.isFailure)
-        assertNull(db.kasirDao().getById(kasirId), "kasir harus ikut ter-roll-back")
-        assertNull(db.shiftDao().getById(shiftId), "shift harus ikut ter-roll-back")
-        assertTrue(db.kasirDao().observeAktif().first().isEmpty(), "tidak boleh ada kasir tersisa")
-    }
 }

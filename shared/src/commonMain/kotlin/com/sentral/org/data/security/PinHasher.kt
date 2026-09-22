@@ -8,7 +8,10 @@ interface PinHasher {
     fun hashPin(rawPin: String): String
 
     /** Memverifikasi rawPin terhadap format hash MCF yang tersimpan di DB */
-    fun verifyPin(rawPin: String, storedHash: String): Boolean
+    fun verifyPin(
+        rawPin: String,
+        storedHash: String,
+    ): Boolean
 }
 
 /** Factory function expect untuk KMP */

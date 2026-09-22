@@ -11,9 +11,6 @@ import com.sentral.org.domain.model.CreateProductRequest
 import com.sentral.org.domain.model.UpdateProductRequest
 import com.sentral.org.domain.service.ProductManagementService
 import com.sentral.org.shared.currentTimeMillis
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,6 +19,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class FormProdukViewModel(
     savedStateHandle: SavedStateHandle,
@@ -29,15 +29,15 @@ class FormProdukViewModel(
     private val produkDao: ProdukDao,
     private val sessionProvider: ActiveSesiKasirProvider,
 ) : ViewModel() {
-
     private val targetProdukId: Long? = savedStateHandle.get<Long>("produkId")?.takeIf { it > 0 }
 
-    private val _uiState = MutableStateFlow(
-        FormProdukUiState(
-            produkId = targetProdukId,
-            isEditMode = targetProdukId != null,
+    private val _uiState =
+        MutableStateFlow(
+            FormProdukUiState(
+                produkId = targetProdukId,
+                isEditMode = targetProdukId != null,
+            ),
         )
-    )
     val uiState: StateFlow<FormProdukUiState> = _uiState.asStateFlow()
 
     private val _event = Channel<FormProdukEvent>(Channel.BUFFERED)
@@ -70,20 +70,43 @@ class FormProdukViewModel(
         }
     }
 
-    fun setNama(v: String) { _uiState.update { it.copy(nama = v, pesanError = null) } }
-    fun setSku(v: String) { _uiState.update { it.copy(sku = v, pesanError = null) } }
-    fun setBarcode(v: String) { _uiState.update { it.copy(barcode = v, pesanError = null) } }
-    fun setHargaJual(v: String) { _uiState.update { it.copy(hargaJualInput = v.filter { c -> c.isDigit() }, pesanError = null) } }
-    fun setHargaModal(v: String) { _uiState.update { it.copy(hargaModalInput = v.filter { c -> c.isDigit() }, pesanError = null) } }
-    fun setKategori(v: String) { _uiState.update { it.copy(kategori = v, pesanError = null) } }
+    fun setNama(v: String) {
+        _uiState.update { it.copy(nama = v, pesanError = null) }
+    }
+
+    fun setSku(v: String) {
+        _uiState.update { it.copy(sku = v, pesanError = null) }
+    }
+
+    fun setBarcode(v: String) {
+        _uiState.update { it.copy(barcode = v, pesanError = null) }
+    }
+
+    fun setHargaJual(v: String) {
+        _uiState.update { it.copy(hargaJualInput = v.filter { c -> c.isDigit() }, pesanError = null) }
+    }
+
+    fun setHargaModal(v: String) {
+        _uiState.update { it.copy(hargaModalInput = v.filter { c -> c.isDigit() }, pesanError = null) }
+    }
+
+    fun setKategori(v: String) {
+        _uiState.update { it.copy(kategori = v, pesanError = null) }
+    }
+
     fun setStokAwal(v: String) {
         if (v.isEmpty() || v.matches(Regex("^\\d*([.,]\\d{0,3})?$"))) {
             _uiState.update { it.copy(stokAwalInput = v, pesanError = null) }
         }
     }
 
-    fun bukaScanner() { _uiState.update { it.copy(scannerTerbuka = true) } }
-    fun tutupScanner() { _uiState.update { it.copy(scannerTerbuka = false) } }
+    fun bukaScanner() {
+        _uiState.update { it.copy(scannerTerbuka = true) }
+    }
+
+    fun tutupScanner() {
+        _uiState.update { it.copy(scannerTerbuka = false) }
+    }
 
     fun onBarcodeHasilScan(barcode: String) {
         _uiState.update { it.copy(barcode = barcode.trim(), scannerTerbuka = false) }
@@ -119,35 +142,37 @@ class FormProdukViewModel(
             val now = currentTimeMillis()
             val sesi = sessionProvider.sesiAktif()
 
-            val result = if (s.isEditMode && targetProdukId != null) {
-                productService.updateProduct(
-                    UpdateProductRequest(
-                        id = targetProdukId,
-                        nama = namaClean,
-                        sku = skuClean,
-                        barcode = s.barcode.trim().ifBlank { null },
-                        harga = hargaJual,
-                        hargaModal = hargaModal,
-                        kategori = s.kategori.trim(),
-                    ),
-                    now,
-                )
-            } else {
-                productService.createProduct(
-                    CreateProductRequest(
-                        nama = namaClean,
-                        sku = skuClean,
-                        barcode = s.barcode.trim().ifBlank { null },
-                        harga = hargaJual,
-                        hargaModal = hargaModal,
-                        kategori = s.kategori.trim(),
-                        stokAwalScaled = stokAwalScaled,
-                        operator = sesi?.namaKasir ?: "Admin",
-                        shiftId = sesi?.shiftId,
-                    ),
-                    now,
-                ).map { }
-            }
+            val result =
+                if (s.isEditMode && targetProdukId != null) {
+                    productService.updateProduct(
+                        UpdateProductRequest(
+                            id = targetProdukId,
+                            nama = namaClean,
+                            sku = skuClean,
+                            barcode = s.barcode.trim().ifBlank { null },
+                            harga = hargaJual,
+                            hargaModal = hargaModal,
+                            kategori = s.kategori.trim(),
+                        ),
+                        now,
+                    )
+                } else {
+                    productService
+                        .createProduct(
+                            CreateProductRequest(
+                                nama = namaClean,
+                                sku = skuClean,
+                                barcode = s.barcode.trim().ifBlank { null },
+                                harga = hargaJual,
+                                hargaModal = hargaModal,
+                                kategori = s.kategori.trim(),
+                                stokAwalScaled = stokAwalScaled,
+                                operator = sesi?.namaKasir ?: "Admin",
+                                shiftId = sesi?.shiftId,
+                            ),
+                            now,
+                        ).map { }
+                }
 
             result.fold(
                 onSuccess = {
@@ -156,7 +181,7 @@ class FormProdukViewModel(
                 },
                 onFailure = { err ->
                     _uiState.update { it.copy(sedangMenyimpan = false, pesanError = err.message ?: "Gagal menyimpan") }
-                }
+                },
             )
         }
     }

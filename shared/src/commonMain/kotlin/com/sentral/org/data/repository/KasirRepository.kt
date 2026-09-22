@@ -5,5 +5,6 @@ import kotlinx.coroutines.flow.Flow
 
 interface KasirRepository {
     fun observeAktif(): Flow<List<KasirEntity>>
+
     suspend fun getById(id: Long): KasirEntity?
 }

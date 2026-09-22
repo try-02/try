@@ -39,6 +39,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
@@ -46,6 +47,7 @@ import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PointOfSale
+import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Remove
@@ -54,9 +56,6 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.ShoppingCartCheckout
 import androidx.compose.material.icons.filled.Storefront
-import androidx.compose.material.icons.filled.Print
-import androidx.compose.material.icons.filled.Backup
-import com.sentral.org.ui.screen.pos.scanner.BarcodeScannerOverlay
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
@@ -74,6 +73,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -81,7 +81,6 @@ import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.SheetValue
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
@@ -90,6 +89,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -108,17 +108,18 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sentral.org.data.entity.KeranjangEntity
 import com.sentral.org.data.entity.ProdukEntity
+import com.sentral.org.data.model.PrinterStatus.DINONAKTIFKAN
+import com.sentral.org.data.model.PrinterStatus.ERROR
+import com.sentral.org.data.model.PrinterStatus.SIAP
+import com.sentral.org.data.model.PrinterStatus.SIBUK
 import com.sentral.org.data.model.QUANTITY_SCALE
 import com.sentral.org.data.model.StatusKeranjang
+import com.sentral.org.ui.screen.pos.scanner.BarcodeScannerOverlay
 import org.koin.androidx.compose.koinViewModel
 
-import com.sentral.org.data.model.PrinterStatus.SIBUK
-import com.sentral.org.data.model.PrinterStatus.ERROR
-import com.sentral.org.data.model.PrinterStatus.DINONAKTIFKAN
-import com.sentral.org.data.model.PrinterStatus.SIAP
-import androidx.compose.runtime.rememberUpdatedState
-
-private enum class TabBawah(val label: String) {
+private enum class TabBawah(
+    val label: String,
+) {
     PRODUK("Kasir"),
     PESANAN("Pesanan"),
     LAPORAN("Laporan"),
@@ -162,33 +163,50 @@ fun PosUtamaScreen(
     LaunchedEffect(Unit) {
         viewModel.event.collect { event ->
             when (event) {
-                is KasirEvent.Pesan -> snackbarHostState.showSnackbar(event.teks)
-                is KasirEvent.HapusBaris -> snackbarHostState.showSnackbar(
-                    message = "\"${event.nama}\" dihapus",
-                    actionLabel = "UNDO",
-                ).let { hasil ->
-                    if (hasil == androidx.compose.material3.SnackbarResult.ActionPerformed) {
-                        viewModel.restoreBaris(event.produkId, event.jumlahScaled)
-                    }
+                is KasirEvent.Pesan -> {
+                    snackbarHostState.showSnackbar(event.teks)
                 }
+
+                is KasirEvent.HapusBaris -> {
+                    snackbarHostState
+                        .showSnackbar(
+                            message = "\"${event.nama}\" dihapus",
+                            actionLabel = "UNDO",
+                        ).let { hasil ->
+                            if (hasil == androidx.compose.material3.SnackbarResult.ActionPerformed) {
+                                viewModel.restoreBaris(event.produkId, event.jumlahScaled)
+                            }
+                        }
+                }
+
                 is KasirEvent.CheckoutBerhasil -> hasilCheckout = event
             }
         }
     }
 
-    val semuaKategori = remember(state.produk) {
-        state.produk.map { it.kategori }.filter { it.isNotBlank() }.distinct().sorted()
-    }
-    val produkTersaring = remember(state.produk, kataKunci.value, kategoriTerpilih.value) {
-        state.produk.filter { p ->
-            (kategoriTerpilih.value == null ||
-                p.kategori.equals(kategoriTerpilih.value, ignoreCase = true)) &&
-                (kataKunci.value.isBlank() ||
-                    p.nama.contains(kataKunci.value, ignoreCase = true) ||
-                    p.sku.contains(kataKunci.value, ignoreCase = true) ||
-                    p.barcode?.contains(kataKunci.value, ignoreCase = true) == true)
+    val semuaKategori =
+        remember(state.produk) {
+            state.produk
+                .map { it.kategori }
+                .filter { it.isNotBlank() }
+                .distinct()
+                .sorted()
         }
-    }
+    val produkTersaring =
+        remember(state.produk, kataKunci.value, kategoriTerpilih.value) {
+            state.produk.filter { p ->
+                (
+                    kategoriTerpilih.value == null ||
+                        p.kategori.equals(kategoriTerpilih.value, ignoreCase = true)
+                ) &&
+                    (
+                        kataKunci.value.isBlank() ||
+                            p.nama.contains(kataKunci.value, ignoreCase = true) ||
+                            p.sku.contains(kataKunci.value, ignoreCase = true) ||
+                            p.barcode?.contains(kataKunci.value, ignoreCase = true) == true
+                    )
+            }
+        }
 
     val adaKeranjang = state.baris.isNotEmpty()
 
@@ -201,11 +219,12 @@ fun PosUtamaScreen(
                 // TopAppBar Bold & Expressive
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .windowInsetsPadding(WindowInsets.statusBars)
-                        .fillMaxWidth()
-                        .height(64.dp)
-                        .padding(horizontal = 16.dp),
+                    modifier =
+                        Modifier
+                            .windowInsetsPadding(WindowInsets.statusBars)
+                            .fillMaxWidth()
+                            .height(64.dp)
+                            .padding(horizontal = 16.dp),
                 ) {
                     // Avatar toko dengan gradient
                     Surface(
@@ -215,8 +234,13 @@ fun PosUtamaScreen(
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Text(
-                                profil?.namaToko?.trim()?.take(1)?.uppercase()
-                                    .orEmpty().ifEmpty { "P" },
+                                profil
+                                    ?.namaToko
+                                    ?.trim()
+                                    ?.take(1)
+                                    ?.uppercase()
+                                    .orEmpty()
+                                    .ifEmpty { "P" },
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onPrimary,
@@ -238,7 +262,7 @@ fun PosUtamaScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    
+
                     // Actions dengan spacing lebih lega
                     IconButton(onClick = { scannerTerbuka = true }) {
                         Icon(
@@ -259,13 +283,19 @@ fun PosUtamaScreen(
                             Icon(Icons.Filled.ShoppingBag, contentDescription = "Keranjang")
                         }
                     }
-                    
+
                     IconButton(onClick = { onNavigateToPrinterSettings() }) {
                         BadgedBox(
                             badge = {
                                 when (printerStatus) {
-                                    SIBUK -> Badge { Text("●", color = MaterialTheme.colorScheme.secondary) }
-                                    ERROR, DINONAKTIFKAN -> Badge { Text("!", color = MaterialTheme.colorScheme.onError) }
+                                    SIBUK -> {
+                                        Badge { Text("●", color = MaterialTheme.colorScheme.secondary) }
+                                    }
+
+                                    DINONAKTIFKAN -> {
+                                        Badge { Text("!", color = MaterialTheme.colorScheme.onError) }
+                                    }
+
                                     else -> {}
                                 }
                             },
@@ -273,15 +303,16 @@ fun PosUtamaScreen(
                             Icon(
                                 imageVector = Icons.Filled.Print,
                                 contentDescription = "Printer",
-                                tint = when (printerStatus) {
-                                    SIAP -> MaterialTheme.colorScheme.primary
-                                    SIBUK -> MaterialTheme.colorScheme.secondary
-                                    ERROR, DINONAKTIFKAN -> MaterialTheme.colorScheme.error
-                                },
+                                tint =
+                                    when (printerStatus) {
+                                        SIAP -> MaterialTheme.colorScheme.primary
+                                        SIBUK -> MaterialTheme.colorScheme.secondary
+                                        ERROR, DINONAKTIFKAN -> MaterialTheme.colorScheme.error
+                                    },
                             )
                         }
                     }
-                    
+
                     IconButton(onClick = onNavigateToRiwayat) {
                         Icon(Icons.Filled.History, contentDescription = "Riwayat")
                     }
@@ -294,15 +325,20 @@ fun PosUtamaScreen(
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp)
-                            .padding(horizontal = 16.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .height(56.dp)
+                                .padding(horizontal = 16.dp),
                     ) {
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = if (!adaKeranjang) MaterialTheme.colorScheme.surfaceVariant
-                            else MaterialTheme.colorScheme.primaryContainer,
+                            color =
+                                if (!adaKeranjang) {
+                                    MaterialTheme.colorScheme.surfaceVariant
+                                } else {
+                                    MaterialTheme.colorScheme.primaryContainer
+                                },
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -312,16 +348,24 @@ fun PosUtamaScreen(
                                     Icons.Filled.ShoppingBag,
                                     contentDescription = null,
                                     modifier = Modifier.size(18.dp),
-                                    tint = if (!adaKeranjang) MaterialTheme.colorScheme.onSurfaceVariant
-                                    else MaterialTheme.colorScheme.onPrimaryContainer,
+                                    tint =
+                                        if (!adaKeranjang) {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        } else {
+                                            MaterialTheme.colorScheme.onPrimaryContainer
+                                        },
                                 )
                                 Spacer(Modifier.width(8.dp))
                                 Text(
                                     "${state.jumlahJenisItem} item",
                                     style = MaterialTheme.typography.labelLarge,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = if (!adaKeranjang) MaterialTheme.colorScheme.onSurfaceVariant
-                                    else MaterialTheme.colorScheme.onPrimaryContainer,
+                                    color =
+                                        if (!adaKeranjang) {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        } else {
+                                            MaterialTheme.colorScheme.onPrimaryContainer
+                                        },
                                 )
                             }
                         }
@@ -330,8 +374,12 @@ fun PosUtamaScreen(
                             formatRupiah(state.subtotal),
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
-                            color = if (!adaKeranjang) MaterialTheme.colorScheme.onSurfaceVariant
-                            else MaterialTheme.colorScheme.primary,
+                            color =
+                                if (!adaKeranjang) {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                } else {
+                                    MaterialTheme.colorScheme.primary
+                                },
                         )
                     }
                 }
@@ -350,16 +398,23 @@ fun PosUtamaScreen(
                         onClick = { tab = index },
                         icon = {
                             when (t) {
-                                TabBawah.PRODUK -> Icon(Icons.Filled.Storefront, contentDescription = null)
-                                TabBawah.PESANAN -> BadgedBox(
-                                    badge = {
-                                        val ditahan = state.keranjangTerbuka.count { it.status == StatusKeranjang.DITAHAN }
-                                        if (ditahan > 0) Badge { Text("$ditahan") }
-                                    },
-                                ) {
-                                    Icon(Icons.AutoMirrored.Filled.ReceiptLong, contentDescription = null)
+                                TabBawah.PRODUK -> {
+                                    Icon(Icons.Filled.Storefront, contentDescription = null)
                                 }
+
+                                TabBawah.PESANAN -> {
+                                    BadgedBox(
+                                        badge = {
+                                            val ditahan = state.keranjangTerbuka.count { it.status == StatusKeranjang.DITAHAN }
+                                            if (ditahan > 0) Badge { Text("$ditahan") }
+                                        },
+                                    ) {
+                                        Icon(Icons.AutoMirrored.Filled.ReceiptLong, contentDescription = null)
+                                    }
+                                }
+
                                 TabBawah.LAPORAN -> Icon(Icons.Filled.Insights, contentDescription = null)
+
                                 TabBawah.PENGATURAN -> Icon(Icons.Filled.Settings, contentDescription = null)
                             }
                         },
@@ -371,45 +426,59 @@ fun PosUtamaScreen(
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             when (tab) {
-                0 -> PanelProduk(
-                    produk = produkTersaring,
-                    semuaKategori = semuaKategori,
-                    stokPerProduk = stokPerProduk,
-                    kataKunci = kataKunci.value,
-                    onUbahKataKunci = { kataKunci.value = it },
-                    kategoriTerpilih = kategoriTerpilih.value,
-                    onPilihKategori = {
-                        kategoriTerpilih.value = when {
-                            it.isEmpty() -> null
-                            kategoriTerpilih.value == it -> null
-                            else -> it
-                        }
-                    },
-                    onProdukDipilih = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        viewModel.tambahProduk(it)
-                    },
-                    onBukaScanner = { scannerTerbuka = true },
-                    modifier = Modifier.fillMaxSize(),
-                )
+                0 -> {
+                    PanelProduk(
+                        produk = produkTersaring,
+                        semuaKategori = semuaKategori,
+                        stokPerProduk = stokPerProduk,
+                        kataKunci = kataKunci.value,
+                        onUbahKataKunci = { kataKunci.value = it },
+                        kategoriTerpilih = kategoriTerpilih.value,
+                        onPilihKategori = {
+                            kategoriTerpilih.value =
+                                when {
+                                    it.isEmpty() -> null
+                                    kategoriTerpilih.value == it -> null
+                                    else -> it
+                                }
+                        },
+                        onProdukDipilih = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            viewModel.tambahProduk(it)
+                        },
+                        onBukaScanner = { scannerTerbuka = true },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
 
-                1 -> TabPesananAktif(
-                    keranjang = state.keranjangTerbuka,
-                    keranjangAktifId = state.keranjangAktifId,
-                    onPilih = { viewModel.pilihKeranjang(it); tab = 0 },
-                    onLanjutkan = { viewModel.lanjutkanKeranjang(it); tab = 0 },
-                    modifier = Modifier.fillMaxSize(),
-                )
+                1 -> {
+                    TabPesananAktif(
+                        keranjang = state.keranjangTerbuka,
+                        keranjangAktifId = state.keranjangAktifId,
+                        onPilih = {
+                            viewModel.pilihKeranjang(it)
+                            tab = 0
+                        },
+                        onLanjutkan = {
+                            viewModel.lanjutkanKeranjang(it)
+                            tab = 0
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
 
-                2 -> com.sentral.org.ui.screen.laporan.LaporanScreen(
-                    modifier = Modifier.fillMaxSize(),
-                )
+                2 -> {
+                    com.sentral.org.ui.screen.laporan.LaporanScreen(
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
 
                 else -> {
                     Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(24.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Text(
@@ -424,9 +493,10 @@ fun PosUtamaScreen(
                         Surface(
                             shape = MaterialTheme.shapes.large,
                             color = MaterialTheme.colorScheme.surfaceVariant,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable(onClick = onNavigateToTutupShift),
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable(onClick = onNavigateToTutupShift),
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -468,9 +538,10 @@ fun PosUtamaScreen(
                         Surface(
                             shape = MaterialTheme.shapes.large,
                             color = MaterialTheme.colorScheme.surfaceVariant,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable(onClick = onNavigateToPrinterSettings),
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable(onClick = onNavigateToPrinterSettings),
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -512,9 +583,10 @@ fun PosUtamaScreen(
                         Surface(
                             shape = MaterialTheme.shapes.large,
                             color = MaterialTheme.colorScheme.surfaceVariant,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onNavigateToBackupRestore() },
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onNavigateToBackupRestore() },
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -556,9 +628,10 @@ fun PosUtamaScreen(
                         Surface(
                             shape = MaterialTheme.shapes.large,
                             color = MaterialTheme.colorScheme.surfaceVariant,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onNavigateToKelolaProduk() },
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onNavigateToKelolaProduk() },
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -598,10 +671,11 @@ fun PosUtamaScreen(
             }
 
             if (sheetKeranjangTerbuka) {
-                val sheetState = rememberBottomSheetState(
-                    initialValue = SheetValue.Hidden,
-                    enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
-                )
+                val sheetState =
+                    rememberBottomSheetState(
+                        initialValue = SheetValue.Hidden,
+                        enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
+                    )
                 ModalBottomSheet(
                     onDismissRequest = { sheetKeranjangTerbuka = false },
                     sheetState = sheetState,
@@ -629,9 +703,10 @@ fun PosUtamaScreen(
                             sheetKeranjangTerbuka = false
                             dialogBayarTerbuka = true
                         },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .fillMaxHeight(0.85f),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .fillMaxHeight(0.85f),
                     )
                 }
             }
@@ -671,8 +746,9 @@ fun PosUtamaScreen(
     if (konfirmasiBatal) {
         DialogKonfirmasi(
             judul = "Batalkan keranjang?",
-            deskripsi = "Semua item di keranjang #${state.keranjangAktifId ?: "-"} akan " +
-                "dihapus dan keranjang tidak bisa dipakai lagi.",
+            deskripsi =
+                "Semua item di keranjang #${state.keranjangAktifId ?: "-"} akan " +
+                    "dihapus dan keranjang tidak bisa dipakai lagi.",
             teksKonfirmasi = "Ya, Batalkan",
             ikonHapus = true,
             onKonfirmasi = viewModel::batalkanKeranjang,
@@ -726,11 +802,15 @@ private fun TabPesananAktif(
                 shape = MaterialTheme.shapes.large,
                 color = MaterialTheme.colorScheme.surface,
                 tonalElevation = 2.dp,
-                border = BorderStroke(
-                    2.dp,
-                    if (k.id == keranjangAktifId) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.outlineVariant,
-                ),
+                border =
+                    BorderStroke(
+                        2.dp,
+                        if (k.id == keranjangAktifId) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.outlineVariant
+                        },
+                    ),
                 modifier = Modifier.fillMaxWidth().clickable { onPilih(k.id) },
             ) {
                 Row(
@@ -739,16 +819,24 @@ private fun TabPesananAktif(
                 ) {
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = if (ditahan) MaterialTheme.colorScheme.tertiaryContainer
-                        else MaterialTheme.colorScheme.secondaryContainer,
+                        color =
+                            if (ditahan) {
+                                MaterialTheme.colorScheme.tertiaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.secondaryContainer
+                            },
                         modifier = Modifier.size(48.dp),
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 if (ditahan) Icons.Filled.Pause else Icons.Filled.ShoppingBag,
                                 contentDescription = null,
-                                tint = if (ditahan) MaterialTheme.colorScheme.onTertiaryContainer
-                                else MaterialTheme.colorScheme.onSecondaryContainer,
+                                tint =
+                                    if (ditahan) {
+                                        MaterialTheme.colorScheme.onTertiaryContainer
+                                    } else {
+                                        MaterialTheme.colorScheme.onSecondaryContainer
+                                    },
                                 modifier = Modifier.size(24.dp),
                             )
                         }
@@ -763,8 +851,12 @@ private fun TabPesananAktif(
                         Text(
                             if (ditahan) "Ditahan" else "Aktif",
                             style = MaterialTheme.typography.labelMedium,
-                            color = if (ditahan) MaterialTheme.colorScheme.tertiary
-                            else MaterialTheme.colorScheme.secondary,
+                            color =
+                                if (ditahan) {
+                                    MaterialTheme.colorScheme.tertiary
+                                } else {
+                                    MaterialTheme.colorScheme.secondary
+                                },
                             fontWeight = FontWeight.SemiBold,
                         )
                     }
@@ -869,9 +961,10 @@ private fun PanelProduk(
                     }
                 }
             },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
             singleLine = true,
             textStyle = MaterialTheme.typography.bodyLarge,
             shape = MaterialTheme.shapes.medium,
@@ -881,10 +974,11 @@ private fun PanelProduk(
         if (semuaKategori.isNotEmpty()) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
             ) {
                 FilterChip(
                     selected = kategoriTerpilih == null,
@@ -953,10 +1047,13 @@ private fun KartuProdukSpotify(
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp,
-        modifier = Modifier
-            .graphicsLayer { scaleX = skala; scaleY = skala }
-            .fillMaxWidth()
-            .clickable(interactionSource = interaction, indication = null, onClick = onTap),
+        modifier =
+            Modifier
+                .graphicsLayer {
+                    scaleX = skala
+                    scaleY = skala
+                }.fillMaxWidth()
+                .clickable(interactionSource = interaction, indication = null, onClick = onTap),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -964,28 +1061,35 @@ private fun KartuProdukSpotify(
         ) {
             // Avatar dengan gradient (Spotify-style)
             Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .background(
-                        brush = Brush.linearGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.primary,
-                                MaterialTheme.colorScheme.tertiary,
-                            )
+                modifier =
+                    Modifier
+                        .size(64.dp)
+                        .background(
+                            brush =
+                                Brush.linearGradient(
+                                    colors =
+                                        listOf(
+                                            MaterialTheme.colorScheme.primary,
+                                            MaterialTheme.colorScheme.tertiary,
+                                        ),
+                                ),
+                            shape = RoundedCornerShape(12.dp),
                         ),
-                        shape = RoundedCornerShape(12.dp),
-                    ),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    nama.trim().take(1).uppercase().ifBlank { "?" },
+                    nama
+                        .trim()
+                        .take(1)
+                        .uppercase()
+                        .ifBlank { "?" },
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Black,
                     color = Color.White,
                 )
             }
             Spacer(Modifier.width(16.dp))
-            
+
             // Info produk
             Column(Modifier.weight(1f)) {
                 Text(
@@ -1009,27 +1113,29 @@ private fun KartuProdukSpotify(
                     fontWeight = FontWeight.Bold,
                 )
             }
-            
+
             // Stok badge
             if (stok != null) {
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = when {
-                        stok == 0L -> MaterialTheme.colorScheme.errorContainer
-                        stok in 1..5L -> MaterialTheme.colorScheme.tertiaryContainer
-                        else -> MaterialTheme.colorScheme.secondaryContainer
-                    },
+                    color =
+                        when {
+                            stok == 0L -> MaterialTheme.colorScheme.errorContainer
+                            stok in 1..5L -> MaterialTheme.colorScheme.tertiaryContainer
+                            else -> MaterialTheme.colorScheme.secondaryContainer
+                        },
                     modifier = Modifier.padding(start = 8.dp),
                 ) {
                     Text(
                         "Stok: $stok",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = when {
-                            stok == 0L -> MaterialTheme.colorScheme.onErrorContainer
-                            stok in 1..5L -> MaterialTheme.colorScheme.onTertiaryContainer
-                            else -> MaterialTheme.colorScheme.onSecondaryContainer
-                        },
+                        color =
+                            when {
+                                stok == 0L -> MaterialTheme.colorScheme.onErrorContainer
+                                stok in 1..5L -> MaterialTheme.colorScheme.onTertiaryContainer
+                                else -> MaterialTheme.colorScheme.onSecondaryContainer
+                            },
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                     )
                 }
@@ -1076,10 +1182,11 @@ private fun PanelKeranjang(
         if (state.keranjangTerbuka.isNotEmpty()) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
             ) {
                 state.keranjangTerbuka.forEach { keranjang ->
                     val ditahan = keranjang.status == StatusKeranjang.DITAHAN
@@ -1089,9 +1196,12 @@ private fun PanelKeranjang(
                             if (ditahan) onLanjutkan(keranjang.id) else onPilihKeranjang(keranjang.id)
                         },
                         label = { Text("#${keranjang.id}", style = MaterialTheme.typography.labelLarge) },
-                        leadingIcon = if (ditahan) {
-                            { Icon(Icons.Filled.Pause, contentDescription = "Ditahan", modifier = Modifier.size(14.dp)) }
-                        } else null,
+                        leadingIcon =
+                            if (ditahan) {
+                                { Icon(Icons.Filled.Pause, contentDescription = "Ditahan", modifier = Modifier.size(14.dp)) }
+                            } else {
+                                null
+                            },
                         shape = MaterialTheme.shapes.small,
                         modifier = Modifier.height(36.dp),
                     )
@@ -1113,17 +1223,18 @@ private fun PanelKeranjang(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
 /**                itemsIndexed(state.baris, key = { _, b -> b.itemId }) { _, baris ->
-                    val dismissState = rememberSwipeToDismissBoxState(
-                        positionalThreshold = { distance -> distance * 0.5f },
-                    ) */
-                    itemsIndexed(state.baris, key = { _, b -> b.itemId }) { _, baris ->
-                    val dismissState = rememberSwipeToDismissBoxState(
-                        positionalThreshold = { distance ->
-                            distance * 0.5f
-                        },
-                    )
+                 val dismissState = rememberSwipeToDismissBoxState(
+                 positionalThreshold = { distance -> distance * 0.5f },
+                 ) */
+                itemsIndexed(state.baris, key = { _, b -> b.itemId }) { _, baris ->
+                    val dismissState =
+                        rememberSwipeToDismissBoxState(
+                            positionalThreshold = { distance ->
+                                distance * 0.5f
+                            },
+                        )
                     val currentOnHapusBaris by rememberUpdatedState(
-                        onHapusBaris
+                        onHapusBaris,
                     )
                     LaunchedEffect(
                         dismissState.currentValue,
@@ -1310,11 +1421,14 @@ private fun BarisItem(
                         )
                     }
                     Text(
-                        text = com.sentral.org.data.model.formatQuantity(baris.jumlahScaled),
+                        text =
+                            com.sentral.org.data.model
+                                .formatQuantity(baris.jumlahScaled),
                         textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .padding(horizontal = 4.dp)
-                            .clickable(onClick = onKlikJumlah),
+                        modifier =
+                            Modifier
+                                .padding(horizontal = 4.dp)
+                                .clickable(onClick = onKlikJumlah),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,

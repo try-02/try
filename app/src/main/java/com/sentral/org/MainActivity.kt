@@ -12,7 +12,6 @@ import com.sentral.org.ui.navigation.PosNavHost
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class MainActivity : ComponentActivity() {
-
     // Koin menyediakan MainViewModel beserta DatabaseWarmup-nya.
     private val mainViewModel: MainViewModel by viewModel()
 
@@ -21,10 +20,10 @@ class MainActivity : ComponentActivity() {
         // Tahan splash sampai koneksi database benar-benar terbuka.
         splashScreen.setKeepOnScreenCondition { !mainViewModel.isReady.value }
         super.onCreate(savedInstanceState)
-        
+
         // Enable edge-to-edge agar konten bisa mengisi area system bars
         enableEdgeToEdge()
-        
+
         setContent {
             val isReady by mainViewModel.isReady.collectAsStateWithLifecycle()
             val startDestination by mainViewModel.startDestination.collectAsStateWithLifecycle()

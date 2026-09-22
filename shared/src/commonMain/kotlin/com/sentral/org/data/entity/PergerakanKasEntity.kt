@@ -14,27 +14,27 @@ import com.sentral.org.data.model.JenisPergerakanKas
             entity = ShiftEntity::class,
             parentColumns = ["id"],
             childColumns = ["shift_id"],
-            onDelete = ForeignKey.RESTRICT
+            onDelete = ForeignKey.RESTRICT,
         ),
         ForeignKey(
             entity = TransaksiEntity::class,
             parentColumns = ["id"],
             childColumns = ["transaksi_id"],
-            onDelete = ForeignKey.RESTRICT
+            onDelete = ForeignKey.RESTRICT,
         ),
         ForeignKey(
             entity = PengembalianEntity::class,
             parentColumns = ["id"],
             childColumns = ["pengembalian_id"],
-            onDelete = ForeignKey.RESTRICT
-        )
+            onDelete = ForeignKey.RESTRICT,
+        ),
     ],
     indices = [
         Index("shift_id"),
         Index("transaksi_id"),
         Index("pengembalian_id"),
-        Index("dibuat_pada")
-    ]
+        Index("dibuat_pada"),
+    ],
 )
 data class PergerakanKasEntity(
     @PrimaryKey(autoGenerate = true)

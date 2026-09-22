@@ -2,6 +2,7 @@ package com.sentral.org.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.sqlite.SQLiteException
 import co.touchlab.kermit.Logger
 import com.sentral.org.data.DatabaseWarmup
 import com.sentral.org.data.session.SesiKasirProvider
@@ -10,14 +11,12 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import androidx.sqlite.SQLiteException
 import java.io.IOException
 
 class MainViewModel(
     private val warmup: DatabaseWarmup,
     private val sessionProvider: SesiKasirProvider,
 ) : ViewModel() {
-
     private companion object {
         private val log = Logger.withTag("MainViewModel")
     }
@@ -33,7 +32,12 @@ class MainViewModel(
             try {
                 warmup.warm()
                 val sesi = sessionProvider.sesiAktif()
-                _startDestination.value = if (sesi != null) { PosRoute.PosUtama } else { PosRoute.LoginKasir }
+                _startDestination.value =
+                    if (sesi != null) {
+                        PosRoute.PosUtama
+                    } else {
+                        PosRoute.LoginKasir
+                    }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: androidx.sqlite.SQLiteException) {

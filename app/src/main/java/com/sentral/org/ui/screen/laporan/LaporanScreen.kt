@@ -19,16 +19,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.automirrored.filled.ShowChart
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PointOfSale
 import androidx.compose.material.icons.filled.QrCode2
-import androidx.compose.material.icons.automirrored.filled.ReceiptLong
-import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.automirrored.filled.TrendingDown
-import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -52,8 +52,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sentral.org.data.model.MetodePembayaran
-import com.sentral.org.ui.screen.laporan.LaporanPenjualanUi
 import com.sentral.org.data.model.formatQuantity
+import com.sentral.org.ui.screen.laporan.LaporanPenjualanUi
 import com.sentral.org.ui.screen.pos.formatRupiah
 import org.koin.androidx.compose.koinViewModel
 
@@ -65,9 +65,10 @@ fun LaporanScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier =
+            modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
     ) {
         // Filter Chips Periode
         Row(
@@ -180,17 +181,19 @@ private fun HeroOmzetCard(data: LaporanPenjualanUi) {
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.primaryContainer,
-                            MaterialTheme.colorScheme.surfaceVariant,
-                        )
-                    )
-                )
-                .padding(20.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .background(
+                        brush =
+                            Brush.linearGradient(
+                                colors =
+                                    listOf(
+                                        MaterialTheme.colorScheme.primaryContainer,
+                                        MaterialTheme.colorScheme.surfaceVariant,
+                                    ),
+                            ),
+                    ).padding(20.dp),
         ) {
             Column {
                 Row(
@@ -317,19 +320,33 @@ private fun MetodePembayaranSection(data: LaporanPenjualanUi) {
                     LinearProgressIndicator(
                         progress = { (p.persentase / 100.0).toFloat().coerceIn(0f, 1f) },
                         modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-                        color = if (p.metode == MetodePembayaran.CASH) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+                        color =
+                            if (p.metode ==
+                                MetodePembayaran.CASH
+                            ) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.secondary
+                            },
                     )
                 }
             }
             if (data.pembayaran.isEmpty()) {
-                Text("Belum ada transaksi di rentang ini", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    "Belum ada transaksi di rentang ini",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }
 }
 
 @Composable
-private fun AuditVolumeCard(selesai: Int, voidCount: Int) {
+private fun AuditVolumeCard(
+    selesai: Int,
+    voidCount: Int,
+) {
     Surface(
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surfaceVariant,
@@ -343,13 +360,23 @@ private fun AuditVolumeCard(selesai: Int, voidCount: Int) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("Transaksi Selesai", style = MaterialTheme.typography.labelMedium)
                 Spacer(Modifier.height(2.dp))
-                Text("$selesai", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
+                Text(
+                    "$selesai",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Black,
+                    color = MaterialTheme.colorScheme.primary,
+                )
             }
             Box(Modifier.width(1.dp).height(32.dp).background(MaterialTheme.colorScheme.outlineVariant))
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("Dibatalkan (Void)", style = MaterialTheme.typography.labelMedium)
                 Spacer(Modifier.height(2.dp))
-                Text("$voidCount", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.error)
+                Text(
+                    "$voidCount",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Black,
+                    color = MaterialTheme.colorScheme.error,
+                )
             }
         }
     }
@@ -365,14 +392,23 @@ private fun TopProdukSection(data: LaporanPenjualanUi) {
     ) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.Star, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(20.dp))
+                Icon(
+                    Icons.Filled.Star,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier.size(20.dp),
+                )
                 Spacer(Modifier.width(8.dp))
                 Text("5 Produk Terlaris", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             }
             Spacer(Modifier.height(10.dp))
 
             if (data.topProduk.isEmpty()) {
-                Text("Belum ada data produk terjual", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    "Belum ada data produk terjual",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             } else {
                 data.topProduk.forEachIndexed { index, p ->
                     Row(
@@ -383,7 +419,14 @@ private fun TopProdukSection(data: LaporanPenjualanUi) {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                             Surface(
                                 shape = CircleShape,
-                                color = if (index == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                                color =
+                                    if (index ==
+                                        0
+                                    ) {
+                                        MaterialTheme.colorScheme.primaryContainer
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceVariant
+                                    },
                                 modifier = Modifier.size(26.dp),
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
@@ -393,13 +436,20 @@ private fun TopProdukSection(data: LaporanPenjualanUi) {
                             Spacer(Modifier.width(10.dp))
                             Column {
                                 Text(p.nama, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                                Text("${formatQuantity(p.jumlahTerjualScaled)} unit", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(
+                                    "${formatQuantity(p.jumlahTerjualScaled)} unit",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
                         }
                         Text(formatRupiah(p.totalNominal), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                     }
                     if (index < data.topProduk.lastIndex) {
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 2.dp))
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                            modifier = Modifier.padding(vertical = 2.dp),
+                        )
                     }
                 }
             }

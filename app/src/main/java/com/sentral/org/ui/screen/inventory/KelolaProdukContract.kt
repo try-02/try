@@ -3,14 +3,18 @@ package com.sentral.org.ui.screen.inventory
 import androidx.compose.runtime.Immutable
 import com.sentral.org.data.model.JenisPergerakanPersediaan
 
-enum class StatusStokFilter(val label: String) {
+enum class StatusStokFilter(
+    val label: String,
+) {
     SEMUA("Semua"),
     MENIPIS("Menipis (≤ 5)"),
     HABIS("Habis (0)"),
     NONAKTIF("Non-Aktif"),
 }
 
-enum class UrutanProduk(val label: String) {
+enum class UrutanProduk(
+    val label: String,
+) {
     NAMA_AZ("Nama (A-Z)"),
     NAMA_ZA("Nama (Z-A)"),
     STOK_TERENDAH("Stok Terendah"),
@@ -58,6 +62,12 @@ data class KelolaProdukUiState(
 )
 
 sealed interface KelolaProdukEvent {
-    data class Pesan(val teks: String, val isError: Boolean = false) : KelolaProdukEvent
-    data class NavigasiKeForm(val produkId: Long? = null) : KelolaProdukEvent
+    data class Pesan(
+        val teks: String,
+        val isError: Boolean = false,
+    ) : KelolaProdukEvent
+
+    data class NavigasiKeForm(
+        val produkId: Long? = null,
+    ) : KelolaProdukEvent
 }

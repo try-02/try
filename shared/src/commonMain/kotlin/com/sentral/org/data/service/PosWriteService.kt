@@ -13,12 +13,10 @@ class RoomTransactionRunner(
     private val database: PosDatabase,
     private val lock: PosExecutionLock = PosExecutionLockImpl(),
 ) : PosWriteService {
-
-    override suspend fun <T> run(block: suspend () -> T): T {
-        return lock.withMutationLock {
+    override suspend fun <T> run(block: suspend () -> T): T =
+        lock.withMutationLock {
             database.withWriteTransaction {
                 block()
             }
         }
-    }
 }

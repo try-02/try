@@ -14,24 +14,24 @@ import androidx.room3.PrimaryKey
             entity = KeranjangEntity::class,
             parentColumns = ["id"],
             childColumns = ["keranjang_id"],
-            onDelete = ForeignKey.CASCADE
+            onDelete = ForeignKey.CASCADE,
         ),
         ForeignKey(
             entity = ProdukEntity::class,
             parentColumns = ["id"],
             childColumns = ["produk_id"],
-            onDelete = ForeignKey.RESTRICT
-        )
+            onDelete = ForeignKey.RESTRICT,
+        ),
     ],
     indices = [
-        Index("keranjang_id"), 
+        Index("keranjang_id"),
         Index("produk_id"),
         Index(
             value = ["keranjang_id", "produk_id"],
             unique = true,
-            name = "unik_item_keranjang_produk"
-        )
-    ]
+            name = "unik_item_keranjang_produk",
+        ),
+    ],
 )
 data class ItemKeranjangEntity(
     @PrimaryKey(autoGenerate = true)

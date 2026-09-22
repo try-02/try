@@ -2,6 +2,7 @@ package com.sentral.org.ui.screen.shift
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.sqlite.SQLiteException
 import com.sentral.org.data.model.PrintResult
 import com.sentral.org.data.repository.ProfilTokoRepository
 import com.sentral.org.data.service.PrinterService
@@ -16,7 +17,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import androidx.sqlite.SQLiteException
 
 class TutupShiftViewModel(
     private val shiftService: ShiftService,
@@ -24,7 +24,6 @@ class TutupShiftViewModel(
     private val printerService: PrinterService,
     private val profilRepo: ProfilTokoRepository,
 ) : ViewModel() {
-
     private val _uiState = MutableStateFlow(TutupShiftUiState())
     val uiState: StateFlow<TutupShiftUiState> = _uiState.asStateFlow()
 
@@ -89,14 +88,15 @@ class TutupShiftViewModel(
             _uiState.update { it.copy(sedangMemproses = true) }
             try {
                 val summary = shiftService.getShiftSummary(shiftId, isZReport = true, actualCash = kasAktual)
-                val summaryUi = ShiftSummaryUi(
-                    kasAwal = summary.kasAwal,
-                    totalPenjualanTunai = summary.totalPenjualanTunai,
-                    totalReturTunai = summary.totalReturTunai,
-                    kasDiharapkan = summary.kasDiharapkan,
-                    kasAktual = summary.kasAktual,
-                    selisihKas = summary.selisihKas,
-                )
+                val summaryUi =
+                    ShiftSummaryUi(
+                        kasAwal = summary.kasAwal,
+                        totalPenjualanTunai = summary.totalPenjualanTunai,
+                        totalReturTunai = summary.totalReturTunai,
+                        kasDiharapkan = summary.kasDiharapkan,
+                        kasAktual = summary.kasAktual,
+                        selisihKas = summary.selisihKas,
+                    )
                 _uiState.update {
                     it.copy(
                         summary = summaryUi,
@@ -164,7 +164,8 @@ class TutupShiftViewModel(
                         val toko = profilRepo.get()
                         val receiptData = ReceiptFormatter.formatShiftReport(toko, summaryFinal)
                         printerService.enqueue(receiptData)
-                    } catch (_: Exception) {}
+                    } catch (_: Exception) {
+                    }
 
                     // 2. Bersihkan pointer sesi kasir
                     sessionProvider.logout()

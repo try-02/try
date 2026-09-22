@@ -5,7 +5,6 @@ import com.sentral.org.data.dao.SalesAggregateRaw
 import com.sentral.org.data.dao.TopProductRaw
 
 object LaporanCalculator {
-
     fun calculate(
         sales: SalesAggregateRaw,
         hppPenjualan: Long,
@@ -20,40 +19,45 @@ object LaporanCalculator {
         val hppBersih = (hppPenjualan - hppRetur).coerceAtLeast(0L)
         val labaKotor = omzetBersih - hppBersih
 
-        val marginPersen = if (omzetBersih > 0L) {
-            (labaKotor.toDouble() / omzetBersih.toDouble()) * 100.0
-        } else {
-            0.0
-        }
-
-        val rataRataTransaksi = if (sales.jumlahSelesai > 0) {
-            omzetPenjualan / sales.jumlahSelesai
-        } else {
-            0L
-        }
-
-        val totalNominalBayar = payments.sumOf { it.totalNominal }
-        val laporanBayar = payments.map { p ->
-            val pct = if (totalNominalBayar > 0L) {
-                (p.totalNominal.toDouble() / totalNominalBayar.toDouble()) * 100.0
+        val marginPersen =
+            if (omzetBersih > 0L) {
+                (labaKotor.toDouble() / omzetBersih.toDouble()) * 100.0
             } else {
                 0.0
             }
-            LaporanPembayaran(
-                metode = p.metode,
-                nominal = p.totalNominal,
-                persentase = pct,
-            )
-        }
 
-        val mappedTopProduk = topProducts.map {
-            TopProdukLaporan(
-                produkId = it.produkId,
-                nama = it.namaProduk,
-                jumlahTerjualScaled = it.totalJumlahScaled,
-                totalNominal = it.totalNominal,
-            )
-        }
+        val rataRataTransaksi =
+            if (sales.jumlahSelesai > 0) {
+                omzetPenjualan / sales.jumlahSelesai
+            } else {
+                0L
+            }
+
+        val totalNominalBayar = payments.sumOf { it.totalNominal }
+        val laporanBayar =
+            payments.map { p ->
+                val pct =
+                    if (totalNominalBayar > 0L) {
+                        (p.totalNominal.toDouble() / totalNominalBayar.toDouble()) * 100.0
+                    } else {
+                        0.0
+                    }
+                LaporanPembayaran(
+                    metode = p.metode,
+                    nominal = p.totalNominal,
+                    persentase = pct,
+                )
+            }
+
+        val mappedTopProduk =
+            topProducts.map {
+                TopProdukLaporan(
+                    produkId = it.produkId,
+                    nama = it.namaProduk,
+                    jumlahTerjualScaled = it.totalJumlahScaled,
+                    totalNominal = it.totalNominal,
+                )
+            }
 
         return LaporanPenjualan(
             omzetPenjualan = omzetPenjualan,

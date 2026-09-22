@@ -7,9 +7,13 @@ import androidx.room3.Index
 import androidx.room3.PrimaryKey
 import com.sentral.org.data.model.StatusShift
 
-@Entity(tableName = "shift", foreignKeys = [
-    ForeignKey(entity = KasirEntity::class, parentColumns = ["id"], childColumns = ["kasir_id"], onDelete = ForeignKey.RESTRICT),
-], indices = [Index("kasir_id"), Index("status"), Index("dimulai_pada"), Index("ditutup_pada")])
+@Entity(
+    tableName = "shift",
+    foreignKeys = [
+        ForeignKey(entity = KasirEntity::class, parentColumns = ["id"], childColumns = ["kasir_id"], onDelete = ForeignKey.RESTRICT),
+    ],
+    indices = [Index("kasir_id"), Index("status"), Index("dimulai_pada"), Index("ditutup_pada")],
+)
 data class ShiftEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     @ColumnInfo(name = "kasir_id") val kasirId: Long,

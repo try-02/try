@@ -57,12 +57,12 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
-import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -86,13 +86,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import kotlinx.coroutines.launch
-import org.koin.androidx.compose.koinViewModel
 import com.sentral.org.data.entity.PrinterEntity
 import com.sentral.org.ui.navigation.PosRoute
 import com.sentral.org.ui.viewmodel.AddPrinterViewModel
 import com.sentral.org.ui.viewmodel.BluetoothDeviceUi
 import com.sentral.org.ui.viewmodel.PrinterTestResult
+import kotlinx.coroutines.launch
+import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -117,63 +117,66 @@ fun AddPrinterScreen(
     val scanProgress by viewModel.scanProgress.collectAsState()
     val isBluetoothEnabled by viewModel.isBluetoothEnabled.collectAsState()
 
-    val requiredPermissions = remember {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            arrayOf(
-                Manifest.permission.BLUETOOTH_SCAN,
-                Manifest.permission.BLUETOOTH_CONNECT,
-            )
-        } else {
-            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
+    val requiredPermissions =
+        remember {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                arrayOf(
+                    Manifest.permission.BLUETOOTH_SCAN,
+                    Manifest.permission.BLUETOOTH_CONNECT,
+                )
+            } else {
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
+            }
         }
-    }
 
-    fun hasPermissions(): Boolean {
-        return requiredPermissions.all {
+    fun hasPermissions(): Boolean =
+        requiredPermissions.all {
             ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
         }
-    }
 
     // Launcher untuk meminta pengaktifan Bluetooth sistem
-    val enableBluetoothLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            viewModel.setBluetoothEnabled(true)
-            viewModel.startBluetoothScan()
-        } else {
-            viewModel.setBluetoothEnabled(false)
-            scope.launch {
-                snackbarHostState.showSnackbar("Bluetooth harus aktif untuk memindai printer.")
-            }
-        }
-    }
-
-    // Launcher untuk izin runtime Bluetooth / Lokasi
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        val allGranted = permissions.all { it.value }
-        if (allGranted) {
-            if (viewModel.checkBluetoothEnabled()) {
+    val enableBluetoothLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.StartActivityForResult(),
+        ) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                viewModel.setBluetoothEnabled(true)
                 viewModel.startBluetoothScan()
             } else {
-                enableBluetoothLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
-            }
-        } else {
-            val activity = context as? Activity
-            val anyPermanentlyDenied = permissions.keys.any { perm ->
-                activity != null && !ActivityCompat.shouldShowRequestPermissionRationale(activity, perm)
-            }
-            if (anyPermanentlyDenied) {
-                showPermissionDeniedDialog = true
-            } else {
+                viewModel.setBluetoothEnabled(false)
                 scope.launch {
-                    snackbarHostState.showSnackbar("Izin perangkat di sekitar dibutuhkan untuk mendeteksi printer.")
+                    snackbarHostState.showSnackbar("Bluetooth harus aktif untuk memindai printer.")
                 }
             }
         }
-    }
+
+    // Launcher untuk izin runtime Bluetooth / Lokasi
+    val permissionLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions(),
+        ) { permissions ->
+            val allGranted = permissions.all { it.value }
+            if (allGranted) {
+                if (viewModel.checkBluetoothEnabled()) {
+                    viewModel.startBluetoothScan()
+                } else {
+                    enableBluetoothLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
+                }
+            } else {
+                val activity = context as? Activity
+                val anyPermanentlyDenied =
+                    permissions.keys.any { perm ->
+                        activity != null && !ActivityCompat.shouldShowRequestPermissionRationale(activity, perm)
+                    }
+                if (anyPermanentlyDenied) {
+                    showPermissionDeniedDialog = true
+                } else {
+                    scope.launch {
+                        snackbarHostState.showSnackbar("Izin perangkat di sekitar dibutuhkan untuk mendeteksi printer.")
+                    }
+                }
+            }
+        }
 
     val requestScanOrPrerequisites = {
         if (!hasPermissions()) {
@@ -187,30 +190,36 @@ fun AddPrinterScreen(
 
     // Dengarkan perubahan status adapter Bluetooth hardware di runtime
     DisposableEffect(context) {
-        val receiver = object : BroadcastReceiver() {
-            override fun onReceive(c: Context?, intent: Intent?) {
-                if (intent?.action == BluetoothAdapter.ACTION_STATE_CHANGED) {
-                    val state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR)
-                    when (state) {
-                        BluetoothAdapter.STATE_ON -> {
-                            viewModel.setBluetoothEnabled(true)
-                            if (hasPermissions() && selectedTab == 0) {
-                                viewModel.startBluetoothScan()
+        val receiver =
+            object : BroadcastReceiver() {
+                override fun onReceive(
+                    c: Context?,
+                    intent: Intent?,
+                ) {
+                    if (intent?.action == BluetoothAdapter.ACTION_STATE_CHANGED) {
+                        val state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR)
+                        when (state) {
+                            BluetoothAdapter.STATE_ON -> {
+                                viewModel.setBluetoothEnabled(true)
+                                if (hasPermissions() && selectedTab == 0) {
+                                    viewModel.startBluetoothScan()
+                                }
                             }
-                        }
-                        BluetoothAdapter.STATE_OFF, BluetoothAdapter.STATE_TURNING_OFF -> {
-                            viewModel.setBluetoothEnabled(false)
+
+                            BluetoothAdapter.STATE_OFF, BluetoothAdapter.STATE_TURNING_OFF -> {
+                                viewModel.setBluetoothEnabled(false)
+                            }
                         }
                     }
                 }
             }
-        }
         val filter = IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED)
         context.registerReceiver(receiver, filter)
         onDispose {
             try {
                 context.unregisterReceiver(receiver)
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
         }
     }
 
@@ -250,16 +259,18 @@ fun AddPrinterScreen(
                     }
                 },
                 windowInsets = WindowInsets.statusBars,
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                ),
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                    ),
             )
         },
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding),
         ) {
             // Tab row
             PrimaryTabRow(
@@ -295,28 +306,33 @@ fun AddPrinterScreen(
 
             // Content
             when (selectedTab) {
-                0 -> BluetoothTab(
-                    devices = bluetoothDevices,
-                    isScanning = isScanning,
-                    scanProgress = scanProgress,
-                    isBluetoothEnabled = isBluetoothEnabled,
-                    onEnableBluetooth = {
-                        enableBluetoothLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
-                    },
-                    onRescan = requestScanOrPrerequisites,
-                    onSelectDevice = { device ->
-                        testResult = null
-                        showTestDialog = true
-                        viewModel.testBluetoothConnection(device)
-                    },
-                )
-                1 -> WifiTab(
-                    onTestConnection = { name, ip, port ->
-                        testResult = null
-                        showTestDialog = true
-                        viewModel.testWifiConnection(name, ip, port)
-                    },
-                )
+                0 -> {
+                    BluetoothTab(
+                        devices = bluetoothDevices,
+                        isScanning = isScanning,
+                        scanProgress = scanProgress,
+                        isBluetoothEnabled = isBluetoothEnabled,
+                        onEnableBluetooth = {
+                            enableBluetoothLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
+                        },
+                        onRescan = requestScanOrPrerequisites,
+                        onSelectDevice = { device ->
+                            testResult = null
+                            showTestDialog = true
+                            viewModel.testBluetoothConnection(device)
+                        },
+                    )
+                }
+
+                1 -> {
+                    WifiTab(
+                        onTestConnection = { name, ip, port ->
+                            testResult = null
+                            showTestDialog = true
+                            viewModel.testWifiConnection(name, ip, port)
+                        },
+                    )
+                }
             }
         }
 
@@ -346,15 +362,18 @@ fun AddPrinterScreen(
             onDismissRequest = { showPermissionDeniedDialog = false },
             title = { Text("Izin Bluetooth Diperlukan", fontWeight = FontWeight.Bold) },
             text = {
-                Text("Aplikasi membutuhkan izin 'Perangkat di sekitar' untuk mendeteksi printer kasir. Silakan aktifkan izin di Pengaturan Aplikasi.")
+                Text(
+                    "Aplikasi membutuhkan izin 'Perangkat di sekitar' untuk mendeteksi printer kasir. Silakan aktifkan izin di Pengaturan Aplikasi.",
+                )
             },
             confirmButton = {
                 Button(
                     onClick = {
                         showPermissionDeniedDialog = false
-                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                            data = Uri.fromParts("package", context.packageName, null)
-                        }
+                        val intent =
+                            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = Uri.fromParts("package", context.packageName, null)
+                            }
                         context.startActivity(intent)
                     },
                 ) {
@@ -389,18 +408,20 @@ private fun BluetoothTab(
     onSelectDevice: (BluetoothDeviceUi) -> Unit,
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(20.dp),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(20.dp),
     ) {
         // Banner peringatan bila Bluetooth dimatikan
         AnimatedVisibility(visible = !isBluetoothEnabled) {
             Surface(
                 shape = MaterialTheme.shapes.medium,
                 color = MaterialTheme.colorScheme.errorContainer,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -430,10 +451,11 @@ private fun BluetoothTab(
                     Button(
                         onClick = onEnableBluetooth,
                         shape = MaterialTheme.shapes.small,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.onError,
-                        ),
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error,
+                                contentColor = MaterialTheme.colorScheme.onError,
+                            ),
                     ) {
                         Text("Nyalakan", style = MaterialTheme.typography.labelMedium)
                     }
@@ -455,9 +477,13 @@ private fun BluetoothTab(
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    if (!isBluetoothEnabled) "Bluetooth mati"
-                    else if (isScanning) "Memindai perangkat..."
-                    else "${devices.size} perangkat ditemukan",
+                    if (!isBluetoothEnabled) {
+                        "Bluetooth mati"
+                    } else if (isScanning) {
+                        "Memindai perangkat..."
+                    } else {
+                        "${devices.size} perangkat ditemukan"
+                    },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -501,9 +527,10 @@ private fun BluetoothTab(
         // Device list
         if (devices.isEmpty() && !isScanning) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .weight(1f),
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .weight(1f),
                 contentAlignment = Alignment.Center,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -562,13 +589,15 @@ private fun BluetoothDeviceCard(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-        ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 2.dp,
-            pressedElevation = 4.dp,
-        ),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+            ),
+        elevation =
+            CardDefaults.cardElevation(
+                defaultElevation = 2.dp,
+                pressedElevation = 4.dp,
+            ),
     ) {
         Row(
             modifier = Modifier.padding(20.dp),
@@ -576,16 +605,24 @@ private fun BluetoothDeviceCard(
         ) {
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = if (device.isPaired) MaterialTheme.colorScheme.primaryContainer
-                else MaterialTheme.colorScheme.surfaceVariant,
+                color =
+                    if (device.isPaired) {
+                        MaterialTheme.colorScheme.primaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant
+                    },
                 modifier = Modifier.size(56.dp),
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         Icons.Filled.Bluetooth,
                         contentDescription = null,
-                        tint = if (device.isPaired) MaterialTheme.colorScheme.onPrimaryContainer
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint =
+                            if (device.isPaired) {
+                                MaterialTheme.colorScheme.onPrimaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
                         modifier = Modifier.size(28.dp),
                     )
                 }
@@ -633,22 +670,22 @@ private fun BluetoothDeviceCard(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun WifiTab(
-    onTestConnection: (name: String, ip: String, port: Int) -> Unit,
-) {
+private fun WifiTab(onTestConnection: (name: String, ip: String, port: Int) -> Unit) {
     var printerName by rememberSaveable { mutableStateOf("") }
     var ipAddress by rememberSaveable { mutableStateOf("") }
     var portText by rememberSaveable { mutableStateOf("9100") }
 
-    val isValid = printerName.isNotBlank() && 
-                  ipAddress.isNotBlank() && 
-                  isValidIpAddress(ipAddress) &&
-                  portText.toIntOrNull() in 1..65535
+    val isValid =
+        printerName.isNotBlank() &&
+            ipAddress.isNotBlank() &&
+            isValidIpAddress(ipAddress) &&
+            portText.toIntOrNull() in 1..65535
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(20.dp),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(20.dp),
     ) {
         Text(
             "Konfigurasi Printer WiFi",
@@ -719,13 +756,15 @@ private fun WifiTab(
                 onTestConnection(printerName, ipAddress, port)
             },
             enabled = isValid,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
             shape = MaterialTheme.shapes.large,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-            ),
+            colors =
+                ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                ),
         ) {
             Icon(Icons.Filled.Wifi, contentDescription = null, modifier = Modifier.size(24.dp))
             Spacer(Modifier.width(12.dp))
@@ -751,35 +790,45 @@ private fun TestConnectionDialog(
         icon = {
             Surface(
                 shape = RoundedCornerShape(16.dp),
-                color = when (result) {
-                    is PrinterTestResult.Success -> MaterialTheme.colorScheme.primaryContainer
-                    is PrinterTestResult.Failed -> MaterialTheme.colorScheme.errorContainer
-                    else -> MaterialTheme.colorScheme.surfaceVariant
-                },
+                color =
+                    when (result) {
+                        is PrinterTestResult.Success -> MaterialTheme.colorScheme.primaryContainer
+                        is PrinterTestResult.Failed -> MaterialTheme.colorScheme.errorContainer
+                        else -> MaterialTheme.colorScheme.surfaceVariant
+                    },
                 modifier = Modifier.size(64.dp),
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     when (result) {
-                        is PrinterTestResult.Testing -> CircularProgressIndicator(
-                            modifier = Modifier.size(32.dp),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        is PrinterTestResult.Success -> Icon(
-                            Icons.Filled.CheckCircle,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.size(32.dp),
-                        )
-                        is PrinterTestResult.Failed -> Icon(
-                            Icons.Filled.Error,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.size(32.dp),
-                        )
-                        null -> CircularProgressIndicator(
-                            modifier = Modifier.size(32.dp),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        is PrinterTestResult.Testing -> {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(32.dp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+
+                        is PrinterTestResult.Success -> {
+                            Icon(
+                                Icons.Filled.CheckCircle,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(32.dp),
+                            )
+                        }
+
+                        is PrinterTestResult.Failed ->
+                            Icon(
+                                Icons.Filled.Error,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.size(32.dp),
+                            )
+
+                        null ->
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(32.dp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                     }
                 }
             }
@@ -798,40 +847,49 @@ private fun TestConnectionDialog(
         },
         text = {
             when (result) {
-                is PrinterTestResult.Testing -> Text(
-                    "Sedang mencoba terhubung ke printer. Harap tunggu...",
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-                is PrinterTestResult.Success -> Column {
+                is PrinterTestResult.Testing -> {
                     Text(
-                        "Printer siap digunakan!",
+                        "Sedang mencoba terhubung ke printer. Harap tunggu...",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "Tap 'Simpan' untuk menambahkan printer ke daftar.",
-                        style = MaterialTheme.typography.bodyMedium,
                     )
                 }
-                is PrinterTestResult.Failed -> Column {
-                    Text(
-                        result.message,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.error,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "Pastikan printer menyala dan terhubung ke jaringan yang sama.",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
+
+                is PrinterTestResult.Success -> {
+                    Column {
+                        Text(
+                            "Printer siap digunakan!",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Tap 'Simpan' untuk menambahkan printer ke daftar.",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
                 }
-                null -> Text(
-                    "Mempersiapkan...",
-                    style = MaterialTheme.typography.bodyLarge,
-                )
+
+                is PrinterTestResult.Failed ->
+                    Column {
+                        Text(
+                            result.message,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.error,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Pastikan printer menyala dan terhubung ke jaringan yang sama.",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+
+                null ->
+                    Text(
+                        "Mempersiapkan...",
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
             }
         },
         confirmButton = {
@@ -844,6 +902,7 @@ private fun TestConnectionDialog(
                         Text("Simpan", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                     }
                 }
+
                 is PrinterTestResult.Failed -> {
                     Button(
                         onClick = onDismiss,
@@ -852,6 +911,7 @@ private fun TestConnectionDialog(
                         Text("Coba Lagi", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                     }
                 }
+
                 else -> {}
             }
         },

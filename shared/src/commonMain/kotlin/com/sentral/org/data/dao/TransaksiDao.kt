@@ -34,7 +34,6 @@ data class TopProductRaw(
 @Dao
 @DaoReturnTypeConverters(PagingSourceDaoReturnTypeConverter::class)
 interface TransaksiDao {
-
     @Insert
     suspend fun insert(entity: TransaksiEntity): Long
 
@@ -54,28 +53,32 @@ interface TransaksiDao {
     @Query("SELECT * FROM transaksi ORDER BY dibuat_pada DESC, id DESC")
     fun observeAllPaged(): PagingSource<Int, TransaksiEntity>
 
-    @Query("""
+    @Query(
+        """
         UPDATE transaksi
         SET status = 'VOID',
             dibatalkan_pada = :now,
             alasan_pembatalan = :reason
         WHERE id = :id
           AND status = 'SELESAI'
-    """)
+    """,
+    )
     suspend fun markVoid(
         id: Long,
         now: Long,
-        reason: String
+        reason: String,
     ): Int
 
-    @Query("""
+    @Query(
+        """
         SELECT * FROM transaksi
         WHERE (:query = '' OR nomor_transaksi LIKE :query || '%')
           AND (:status IS NULL OR status = :status)
           AND (:startDate IS NULL OR dibuat_pada >= :startDate)
           AND (:endDate IS NULL OR dibuat_pada <= :endDate)
         ORDER BY dibuat_pada DESC, id DESC
-    """)
+    """,
+    )
     fun observeFilteredPaged(
         query: String,
         status: StatusTransaksi?,
@@ -84,7 +87,8 @@ interface TransaksiDao {
     ): PagingSource<Int, TransaksiEntity>
 
     @Transaction
-    @Query("""
+    @Query(
+        """
         SELECT * FROM transaksi
         WHERE (:query = '' OR nomor_transaksi LIKE :query || '%')
           AND (:status IS NULL OR status = :status)
@@ -92,7 +96,8 @@ interface TransaksiDao {
           AND (:endDate IS NULL OR dibuat_pada <= :endDate)
         ORDER BY dibuat_pada DESC, id DESC
         LIMIT :limit OFFSET :offset
-    """)
+    """,
+    )
     suspend fun getFilteredForExportPaged(
         query: String,
         status: StatusTransaksi?,
@@ -102,34 +107,47 @@ interface TransaksiDao {
         offset: Int,
     ): List<TransaksiDenganDetail>
 
-    @Query("""
+    @Query(
+        """
         SELECT * FROM transaksi
         WHERE shift_id = :shiftId
         ORDER BY dibuat_pada ASC
-    """)
+    """,
+    )
     suspend fun getByShift(shiftId: Long): List<TransaksiEntity>
 
     // ===== QUERY ANALITIK REAKTIF TAHAP 7 =====
 
-    @Query("""
+    @Query(
+        """
         SELECT 
             COALESCE(SUM(CASE WHEN status = 'SELESAI' THEN total ELSE 0 END), 0) AS omzetPenjualan,
             COALESCE(SUM(CASE WHEN status = 'SELESAI' THEN 1 ELSE 0 END), 0) AS jumlahSelesai,
             COALESCE(SUM(CASE WHEN status = 'VOID' THEN 1 ELSE 0 END), 0) AS jumlahVoid
         FROM transaksi
         WHERE dibuat_pada >= :start AND dibuat_pada < :end
-    """)
-    fun observeSalesAggregate(start: Long, end: Long): Flow<SalesAggregateRaw>
+    """,
+    )
+    fun observeSalesAggregate(
+        start: Long,
+        end: Long,
+    ): Flow<SalesAggregateRaw>
 
-    @Query("""
+    @Query(
+        """
         SELECT COALESCE(SUM((it.harga_modal * it.jumlah + 500) / 1000), 0)
         FROM item_transaksi it
         JOIN transaksi t ON it.transaksi_id = t.id
         WHERE t.status = 'SELESAI' AND t.dibuat_pada >= :start AND t.dibuat_pada < :end
-    """)
-    fun observeHppPenjualan(start: Long, end: Long): Flow<Long>
+    """,
+    )
+    fun observeHppPenjualan(
+        start: Long,
+        end: Long,
+    ): Flow<Long>
 
-    @Query("""
+    @Query(
+        """
         SELECT 
             p.metode AS metode,
             COALESCE(SUM(p.jumlah), 0) AS totalNominal
@@ -137,10 +155,15 @@ interface TransaksiDao {
         JOIN transaksi t ON p.transaksi_id = t.id
         WHERE t.status = 'SELESAI' AND t.dibuat_pada >= :start AND t.dibuat_pada < :end
         GROUP BY p.metode
-    """)
-    fun observePaymentAggregate(start: Long, end: Long): Flow<List<PaymentAggregateRaw>>
+    """,
+    )
+    fun observePaymentAggregate(
+        start: Long,
+        end: Long,
+    ): Flow<List<PaymentAggregateRaw>>
 
-    @Query("""
+    @Query(
+        """
         SELECT 
             COALESCE(it.produk_id, 0) AS produkId,
             it.nama_produk AS namaProduk,
@@ -152,6 +175,10 @@ interface TransaksiDao {
         GROUP BY it.nama_produk
         ORDER BY totalJumlahScaled DESC
         LIMIT 5
-    """)
-    fun observeTopProducts(start: Long, end: Long): Flow<List<TopProductRaw>>
+    """,
+    )
+    fun observeTopProducts(
+        start: Long,
+        end: Long,
+    ): Flow<List<TopProductRaw>>
 }

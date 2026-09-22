@@ -10,25 +10,31 @@ interface PergerakanPersediaanDao {
     @Insert
     suspend fun insert(entity: PergerakanPersediaanEntity): Long
 
-    @Query("""
+    @Query(
+        """
         SELECT * FROM pergerakan_persediaan
         WHERE produk_id = :produkId
         ORDER BY dibuat_pada DESC, id DESC
-    """)
+    """,
+    )
     suspend fun getByProduk(produkId: Long): List<PergerakanPersediaanEntity>
 
-    @Query("""
+    @Query(
+        """
         SELECT * FROM pergerakan_persediaan
         WHERE transaksi_id = :transaksiId
         ORDER BY id
-    """)
+    """,
+    )
     suspend fun getByTransaksi(transaksiId: Long): List<PergerakanPersediaanEntity>
 
-    @Query("""
+    @Query(
+        """
         SELECT * FROM pergerakan_persediaan
         WHERE pengembalian_id = :returId
         ORDER BY id
-    """)
+    """,
+    )
     suspend fun getByRetur(returId: Long): List<PergerakanPersediaanEntity>
 
     @Insert
@@ -36,14 +42,16 @@ interface PergerakanPersediaanDao {
 
     // ===== QUERY KARTU STOK AUDIT TRAIL =====
 
-    @Query("""
+    @Query(
+        """
         SELECT * FROM pergerakan_persediaan
         WHERE produk_id = :produkId
           AND (:startDate IS NULL OR dibuat_pada >= :startDate)
           AND (:endDate IS NULL OR dibuat_pada <= :endDate)
           AND (:jenis IS NULL OR jenis = :jenis)
         ORDER BY dibuat_pada DESC, id DESC
-    """)
+    """,
+    )
     fun observeKartuStok(
         produkId: Long,
         startDate: Long? = null,

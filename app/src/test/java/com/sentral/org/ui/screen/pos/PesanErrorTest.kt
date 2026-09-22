@@ -6,7 +6,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Test
 
 class PesanErrorTest {
-
     @Test
     fun `ProductInactive menyebut nama produk dan arahan tindakan`() {
         val pesan = PosDataException.ProductInactive(7L, "Kopi Susu").pesanPengguna()

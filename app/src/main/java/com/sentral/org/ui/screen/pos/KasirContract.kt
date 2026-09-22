@@ -26,7 +26,10 @@ data class KasirUiState(
 
 /** Kejadian sekali-tampil (snackbar/dialog). Bukan bagian dari state. */
 sealed interface KasirEvent {
-    data class Pesan(val teks: String, val jenis: Jenis) : KasirEvent {
+    data class Pesan(
+        val teks: String,
+        val jenis: Jenis,
+    ) : KasirEvent {
         enum class Jenis { INFO, SUKSES, GALAT }
     }
 
@@ -40,5 +43,8 @@ sealed interface KasirEvent {
         val jumlahScaled: Long,
     ) : KasirEvent
 
-    data class CheckoutBerhasil(val nomorTransaksi: String, val kembalian: Long) : KasirEvent
+    data class CheckoutBerhasil(
+        val nomorTransaksi: String,
+        val kembalian: Long,
+    ) : KasirEvent
 }

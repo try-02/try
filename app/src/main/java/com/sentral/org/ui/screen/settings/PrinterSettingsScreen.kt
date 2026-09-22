@@ -34,8 +34,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -62,34 +62,35 @@ fun PrinterSettingsScreen(
         topBar = {
             TopAppBar(
                 windowInsets = WindowInsets.statusBars,
-                title = { 
+                title = {
                     Text(
                         "Pengaturan Printer",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
-                    ) 
+                    )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                ),
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    ),
             )
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = onAddPrinter,
                 icon = { Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(24.dp)) },
-                text = { 
+                text = {
                     Text(
                         "Tambah Printer",
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
-                    ) 
+                    )
                 },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -97,17 +98,19 @@ fun PrinterSettingsScreen(
         },
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding),
         ) {
             // Kartu Setelan Auto-Print
             Surface(
                 shape = MaterialTheme.shapes.large,
                 color = MaterialTheme.colorScheme.surfaceVariant,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -142,9 +145,10 @@ fun PrinterSettingsScreen(
             // Konten: Kosong atau Daftar Printer
             if (uiState.printers.isEmpty()) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
                     contentAlignment = Alignment.Center,
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -179,9 +183,10 @@ fun PrinterSettingsScreen(
                 }
             } else {
                 LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
                     contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
@@ -208,9 +213,10 @@ private fun PrinterCard(
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = if (printer.isDefault) 3.dp else 1.dp,
         shadowElevation = if (printer.isDefault) 6.dp else 2.dp,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -219,27 +225,30 @@ private fun PrinterCard(
             // Icon container dengan warna ekspresif
             Surface(
                 shape = RoundedCornerShape(16.dp),
-                color = when {
-                    printer.dinonaktifkanOtomatis -> MaterialTheme.colorScheme.errorContainer
-                    printer.isDefault -> MaterialTheme.colorScheme.primaryContainer
-                    else -> MaterialTheme.colorScheme.surfaceVariant
-                },
+                color =
+                    when {
+                        printer.dinonaktifkanOtomatis -> MaterialTheme.colorScheme.errorContainer
+                        printer.isDefault -> MaterialTheme.colorScheme.primaryContainer
+                        else -> MaterialTheme.colorScheme.surfaceVariant
+                    },
                 modifier = Modifier.size(64.dp),
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
-                        imageVector = when {
-                            printer.dinonaktifkanOtomatis -> Icons.Filled.Error
-                            printer.tipeKoneksi == "BLUETOOTH" -> Icons.Filled.Bluetooth
-                            printer.tipeKoneksi == "WIFI" -> Icons.Filled.Wifi
-                            else -> Icons.Filled.Print
-                        },
+                        imageVector =
+                            when {
+                                printer.dinonaktifkanOtomatis -> Icons.Filled.Error
+                                printer.tipeKoneksi == "BLUETOOTH" -> Icons.Filled.Bluetooth
+                                printer.tipeKoneksi == "WIFI" -> Icons.Filled.Wifi
+                                else -> Icons.Filled.Print
+                            },
                         contentDescription = null,
-                        tint = when {
-                            printer.dinonaktifkanOtomatis -> MaterialTheme.colorScheme.onErrorContainer
-                            printer.isDefault -> MaterialTheme.colorScheme.onPrimaryContainer
-                            else -> MaterialTheme.colorScheme.onSurfaceVariant
-                        },
+                        tint =
+                            when {
+                                printer.dinonaktifkanOtomatis -> MaterialTheme.colorScheme.onErrorContainer
+                                printer.isDefault -> MaterialTheme.colorScheme.onPrimaryContainer
+                                else -> MaterialTheme.colorScheme.onSurfaceVariant
+                            },
                         modifier = Modifier.size(32.dp),
                     )
                 }

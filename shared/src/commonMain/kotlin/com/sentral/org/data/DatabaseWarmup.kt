@@ -11,7 +11,7 @@ class DatabaseWarmup(
     private val seeder: ProductSeeder,
 ) {
     suspend fun warm() {
-        database.profilTokoDao().get()   // buka koneksi
-        seeder.seedIfEmpty()             // atomik: produk + stok + ledger dalam 1 transaksi
+        database.profilTokoDao().get() // buka koneksi
+        seeder.seedIfEmpty() // atomik: produk + stok + ledger dalam 1 transaksi
     }
 }

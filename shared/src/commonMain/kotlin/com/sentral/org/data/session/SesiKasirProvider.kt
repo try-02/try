@@ -20,6 +20,5 @@ class DevSesiKasirProvider(
     private val kasirs: KasirDao,
     private val shifts: ShiftDao,
 ) : SesiKasirProvider {
-    override suspend fun sesiAktif(): SesiKasir? =
-        shifts.getLatestOpen()?.let { SesiKasir(it.kasirId, it.namaKasir, it.id) }
+    override suspend fun sesiAktif(): SesiKasir? = shifts.getLatestOpen()?.let { SesiKasir(it.kasirId, it.namaKasir, it.id) }
 }

@@ -13,30 +13,37 @@ class ShiftService(
     private val transactions: TransaksiDao,
     private val payments: PembayaranDao,
 ) {
-    suspend fun open(cashierId: Long, openingCash: Long, now: Long, note: String = ""): Result<Long> =
+    suspend fun open(
+        cashierId: Long,
+        openingCash: Long,
+        now: Long,
+        note: String = "",
+    ): Result<Long> =
         suspendRunCatching {
             require(openingCash >= 0)
             write.run {
-                val cashier = cashiers.getById(cashierId)
-                    ?: throw PosDataException.NotFound("Kasir tidak ditemukan")
+                val cashier =
+                    cashiers.getById(cashierId)
+                        ?: throw PosDataException.NotFound("Kasir tidak ditemukan")
                 if (!cashier.aktif) throw PosDataException.Validation("Kasir tidak aktif")
                 if (shifts.hasOpenForKasir(cashierId)) {
                     throw PosDataException.Duplicate("Kasir sudah memiliki shift terbuka")
                 }
-                val id = shifts.insert(
-                    ShiftEntity(
-                        kasirId = cashier.id,
-                        namaKasir = cashier.nama,
-                        status = StatusShift.TERBUKA,
-                        kasAwal = openingCash,
-                        dimulaiPada = now,
-                        kasDiharapkan = null,
-                        kasAktual = null,
-                        selisihKas = null,
-                        ditutupPada = null,
-                        catatan = note,
+                val id =
+                    shifts.insert(
+                        ShiftEntity(
+                            kasirId = cashier.id,
+                            namaKasir = cashier.nama,
+                            status = StatusShift.TERBUKA,
+                            kasAwal = openingCash,
+                            dimulaiPada = now,
+                            kasDiharapkan = null,
+                            kasAktual = null,
+                            selisihKas = null,
+                            ditutupPada = null,
+                            catatan = note,
+                        ),
                     )
-                )
                 cashLedger.insert(
                     PergerakanKasEntity(
                         shiftId = id,
@@ -46,7 +53,7 @@ class ShiftService(
                         pengembalianId = null,
                         keterangan = "Kas awal",
                         dibuatPada = now,
-                    )
+                    ),
                 )
                 id
             }
@@ -60,8 +67,9 @@ class ShiftService(
         isZReport: Boolean,
         actualCash: Long? = null,
     ): ShiftSummary {
-        val shift = shifts.getById(shiftId)
-            ?: throw PosDataException.NotFound("Shift tidak ditemukan")
+        val shift =
+            shifts.getById(shiftId)
+                ?: throw PosDataException.NotFound("Shift tidak ditemukan")
 
         val expectedCash = cashLedger.getExpectedCash(shiftId)
         val difference = actualCash?.let { it - expectedCash }
@@ -86,9 +94,10 @@ class ShiftService(
 
         // Ambil mutasi retur tunai dari buku kas shift ini
         val kasMovements = cashLedger.getByShift(shiftId)
-        val returTunai = kasMovements
-            .filter { it.jenis == JenisPergerakanKas.RETUR }
-            .sumOf { -it.jumlahDelta } // dikonversi ke positif untuk ringkasan
+        val returTunai =
+            kasMovements
+                .filter { it.jenis == JenisPergerakanKas.RETUR }
+                .sumOf { -it.jumlahDelta } // dikonversi ke positif untuk ringkasan
 
         return ShiftSummary(
             shiftId = shift.id,
@@ -117,21 +126,23 @@ class ShiftService(
         actualCash: Long,
         now: Long,
         note: String = "",
-    ): Result<ShiftSummary> = suspendRunCatching {
-        require(actualCash >= 0)
-        write.run {
-            val shift = shifts.getById(shiftId)
-                ?: throw PosDataException.NotFound("Shift tidak ditemukan")
-            if (shift.status != StatusShift.TERBUKA) {
-                throw PosDataException.InvalidState("Shift sudah ditutup sebelumnya")
+    ): Result<ShiftSummary> =
+        suspendRunCatching {
+            require(actualCash >= 0)
+            write.run {
+                val shift =
+                    shifts.getById(shiftId)
+                        ?: throw PosDataException.NotFound("Shift tidak ditemukan")
+                if (shift.status != StatusShift.TERBUKA) {
+                    throw PosDataException.InvalidState("Shift sudah ditutup sebelumnya")
+                }
+                val expected = cashLedger.getExpectedCash(shiftId)
+                val difference = actualCash - expected
+                check(shifts.close(shiftId, expected, actualCash, difference, now, note) == 1) {
+                    "Gagal memperbarui status shift"
+                }
             }
-            val expected = cashLedger.getExpectedCash(shiftId)
-            val difference = actualCash - expected
-            check(shifts.close(shiftId, expected, actualCash, difference, now, note) == 1) {
-                "Gagal memperbarui status shift"
-            }
+            // Ambil summary final Z Report
+            getShiftSummary(shiftId = shiftId, isZReport = true, actualCash = actualCash)
         }
-        // Ambil summary final Z Report
-        getShiftSummary(shiftId = shiftId, isZReport = true, actualCash = actualCash)
-    }
 }

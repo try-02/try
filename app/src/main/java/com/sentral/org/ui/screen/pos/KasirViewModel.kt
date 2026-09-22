@@ -2,24 +2,26 @@ package com.sentral.org.ui.screen.pos
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.sqlite.SQLiteException
 import co.touchlab.kermit.Logger
+import com.sentral.org.data.dao.PersediaanDao
+import com.sentral.org.data.entity.ProfilTokoEntity
 import com.sentral.org.data.model.CheckoutRequest
 import com.sentral.org.data.model.MetodePembayaran
 import com.sentral.org.data.model.MoneyMath
 import com.sentral.org.data.model.PaymentRequest
+import com.sentral.org.data.model.PrinterStatus
+import com.sentral.org.data.model.PrinterStatus.SIAP
 import com.sentral.org.data.model.QUANTITY_SCALE
 import com.sentral.org.data.model.quantityOf
 import com.sentral.org.data.repository.CartRepository
 import com.sentral.org.data.repository.ProdukRepository
 import com.sentral.org.data.repository.ProfilTokoRepository
-import com.sentral.org.data.dao.PersediaanDao
-import com.sentral.org.data.entity.ProfilTokoEntity
+import com.sentral.org.data.repository.TransaksiRepository
 import com.sentral.org.data.service.CartService
 import com.sentral.org.data.service.CheckoutService
+import com.sentral.org.data.service.PrinterService
 import com.sentral.org.data.session.SesiKasirProvider
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,15 +34,12 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-
-import com.sentral.org.data.service.PrinterService
-import com.sentral.org.data.model.PrinterStatus
-import com.sentral.org.data.model.PrinterStatus.SIAP
-import com.sentral.org.data.repository.TransaksiRepository
-import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import androidx.sqlite.SQLiteException
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.concurrent.atomic.AtomicInteger
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class KasirViewModel(
@@ -54,7 +53,6 @@ class KasirViewModel(
     private val printerService: PrinterService,
     private val transaksiRepo: TransaksiRepository,
 ) : ViewModel() {
-
     private companion object {
         private val log = Logger.withTag("KasirVM")
     }
@@ -66,16 +64,20 @@ class KasirViewModel(
     val event = _event.receiveAsFlow()
 
     /** Profil toko utk header (nama toko). Tidak ikut combine utama agar hemat rekomposisi. */
-    val profilToko: StateFlow<ProfilTokoEntity?> = profilRepo.observe()
-        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    val profilToko: StateFlow<ProfilTokoEntity?> =
+        profilRepo
+            .observe()
+            .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     /** Stok live per produk (scaled -> unit) utk indikator stok rendah di kartu. */
-    val stokPerProduk: StateFlow<Map<Long, Long>> = persediaanDao.observeAll()
-        .map { daftar -> daftar.associate { it.produkId to it.jumlah / QUANTITY_SCALE } }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+    val stokPerProduk: StateFlow<Map<Long, Long>> =
+        persediaanDao
+            .observeAll()
+            .map { daftar -> daftar.associate { it.produkId to it.jumlah / QUANTITY_SCALE } }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     /** Status printer untuk ditampilkan di TopAppBar. */
-    val printerStatus: StateFlow<PrinterStatus> = 
+    val printerStatus: StateFlow<PrinterStatus> =
         printerService.status
             .stateIn(viewModelScope, SharingStarted.Eagerly, SIAP)
 
@@ -85,57 +87,66 @@ class KasirViewModel(
         val manual: Long?,
     )
 
-    private val dataKeranjangFlow = combine(
-        produkRepo.observeAktif(),
-        cartRepo.observeOpen(),
-        pilihanManual,
-    ) { produk, carts, manual -> DetilKeranjang(produk, carts, manual) }
-        .flatMapLatest { d ->
-            val efektif = d.manual?.takeIf { id -> d.carts.any { it.id == id } }
-                ?: d.carts.firstOrNull()?.id
-            val itemsFlow = if (efektif == null) {
-                flowOf(emptyList())
-            } else {
-                cartRepo.observeItemsLive(efektif)
-            }
-            itemsFlow.map { rows ->
-                val baris = rows.map {
-                    BarisKeranjangUi(
-                        itemId = it.item.id,
-                        produkId = it.item.produkId,
-                        nama = it.namaMaster,
-                        hargaSatuan = it.hargaMaster,
-                        jumlahScaled = it.item.jumlah,
-                        totalBaris = MoneyMath.lineTotal(it.hargaMaster, it.item.jumlah),
-                    )
+    private val dataKeranjangFlow =
+        combine(
+            produkRepo.observeAktif(),
+            cartRepo.observeOpen(),
+            pilihanManual,
+        ) { produk, carts, manual -> DetilKeranjang(produk, carts, manual) }
+            .flatMapLatest { d ->
+                val efektif =
+                    d.manual?.takeIf { id -> d.carts.any { it.id == id } }
+                        ?: d.carts.firstOrNull()?.id
+                val itemsFlow =
+                    if (efektif == null) {
+                        flowOf(emptyList())
+                    } else {
+                        cartRepo.observeItemsLive(efektif)
+                    }
+                itemsFlow.map { rows ->
+                    val baris =
+                        rows.map {
+                            BarisKeranjangUi(
+                                itemId = it.item.id,
+                                produkId = it.item.produkId,
+                                nama = it.namaMaster,
+                                hargaSatuan = it.hargaMaster,
+                                jumlahScaled = it.item.jumlah,
+                                totalBaris = MoneyMath.lineTotal(it.hargaMaster, it.item.jumlah),
+                            )
+                        }
+                    Triple(d, efektif, baris)
                 }
-                Triple(d, efektif, baris)
             }
-        }
 
-    val uiState: StateFlow<KasirUiState> = combine(
-        dataKeranjangFlow,
-        sedangProses,
-    ) { (d, efektif, baris), proses ->
-        KasirUiState(
-            produk = d.produk,
-            keranjangTerbuka = d.carts,
-            keranjangAktifId = efektif,
-            baris = baris,
-            subtotal = MoneyMath.sumExact(baris.map { it.totalBaris }),
-            sedangProses = proses,
-        )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), KasirUiState())
+    val uiState: StateFlow<KasirUiState> =
+        combine(
+            dataKeranjangFlow,
+            sedangProses,
+        ) { (d, efektif, baris), proses ->
+            KasirUiState(
+                produk = d.produk,
+                keranjangTerbuka = d.carts,
+                keranjangAktifId = efektif,
+                baris = baris,
+                subtotal = MoneyMath.sumExact(baris.map { it.totalBaris }),
+                sedangProses = proses,
+            )
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), KasirUiState())
 
     // ---------- Intent: keranjang ----------
 
-    fun pilihKeranjang(id: Long) { pilihanManual.value = id }
+    fun pilihKeranjang(id: Long) {
+        pilihanManual.value = id
+    }
 
     fun keranjangBaru() {
         viewModelScope.launch {
-            val s = sesi.sesiAktif() ?: run {
-                kirim("Buka shift kasir terlebih dahulu", KasirEvent.Pesan.Jenis.GALAT); return@launch
-            }
+            val s =
+                sesi.sesiAktif() ?: run {
+                    kirim("Buka shift kasir terlebih dahulu", KasirEvent.Pesan.Jenis.GALAT)
+                    return@launch
+                }
             cartService.buatKeranjang(s.kasirId, System.currentTimeMillis()).fold(
                 onSuccess = { id ->
                     pilihanManual.value = id
@@ -150,7 +161,10 @@ class KasirViewModel(
         viewModelScope.launch {
             val cartId = uiState.value.keranjangAktifId ?: return@launch
             cartService.hold(cartId, System.currentTimeMillis()).fold(
-                onSuccess = { pilihanManual.value = null; kirim("Keranjang ditahan", KasirEvent.Pesan.Jenis.INFO) },
+                onSuccess = {
+                    pilihanManual.value = null
+                    kirim("Keranjang ditahan", KasirEvent.Pesan.Jenis.INFO)
+                },
                 onFailure = { kirim(it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT) },
             )
         }
@@ -160,7 +174,10 @@ class KasirViewModel(
         viewModelScope.launch {
             val cartId = uiState.value.keranjangAktifId ?: return@launch
             cartService.cancel(cartId, System.currentTimeMillis()).fold(
-                onSuccess = { pilihanManual.value = null; kirim("Keranjang dibatalkan", KasirEvent.Pesan.Jenis.INFO) },
+                onSuccess = {
+                    pilihanManual.value = null
+                    kirim("Keranjang dibatalkan", KasirEvent.Pesan.Jenis.INFO)
+                },
                 onFailure = { kirim(it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT) },
             )
         }
@@ -180,7 +197,8 @@ class KasirViewModel(
     fun tambahProduk(produkId: Long) {
         viewModelScope.launch {
             val cartId = pastikanKeranjangAktif() ?: return@launch
-            cartService.addProduct(cartId, produkId, quantityOf(1), System.currentTimeMillis())
+            cartService
+                .addProduct(cartId, produkId, quantityOf(1), System.currentTimeMillis())
                 .onFailure { kirim(it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT) }
         }
     }
@@ -191,9 +209,10 @@ class KasirViewModel(
      */
     suspend fun scanBarcodeTambahProduk(code: String): String? {
         val cleanCode = code.trim()
-        val produk = produkRepo.getByBarcode(cleanCode)
-            ?: produkRepo.getBySku(cleanCode)
-            ?: return null
+        val produk =
+            produkRepo.getByBarcode(cleanCode)
+                ?: produkRepo.getBySku(cleanCode)
+                ?: return null
 
         if (!produk.aktif) {
             kirim("Produk '${produk.nama}' sedang tidak aktif", KasirEvent.Pesan.Jenis.GALAT)
@@ -205,13 +224,18 @@ class KasirViewModel(
     }
 
     fun tambahSatuan(produkId: Long) = ubah(produkId, quantityOf(1))
+
     fun kurangiSatuan(produkId: Long) = ubah(produkId, -quantityOf(1))
 
     /** Menyetel kuantitas mutlak (menerima kuantitas desimal ter-skala) */
-    fun aturJumlah(produkId: Long, kuantitasScaled: Long) {
+    fun aturJumlah(
+        produkId: Long,
+        kuantitasScaled: Long,
+    ) {
         viewModelScope.launch {
             val cartId = pastikanKeranjangAktif() ?: return@launch
-            cartService.setJumlah(cartId, produkId, kuantitasScaled, System.currentTimeMillis())
+            cartService
+                .setJumlah(cartId, produkId, kuantitasScaled, System.currentTimeMillis())
                 .onFailure { kirim(it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT) }
         }
     }
@@ -219,7 +243,8 @@ class KasirViewModel(
     fun hapusBaris(produkId: Long) {
         viewModelScope.launch {
             val cartId = uiState.value.keranjangAktifId ?: return@launch
-            cartService.hapusBaris(cartId, produkId, System.currentTimeMillis())
+            cartService
+                .hapusBaris(cartId, produkId, System.currentTimeMillis())
                 .onFailure { kirim(it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT) }
         }
     }
@@ -240,7 +265,7 @@ class KasirViewModel(
                             nama = baris.nama,
                             produkId = produkId,
                             jumlahScaled = baris.jumlahScaled,
-                        )
+                        ),
                     )
                 },
                 onFailure = { kirim(it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT) },
@@ -252,21 +277,26 @@ class KasirViewModel(
      * Dipanggil saat user tap UNDO di snackbar hapus baris.
      * Menambahkan ulang produk dengan jumlah asli (scaled) ke keranjang aktif.
      */
-    fun restoreBaris(produkId: Long, jumlahScaled: Long) {
+    fun restoreBaris(
+        produkId: Long,
+        jumlahScaled: Long,
+    ) {
         viewModelScope.launch {
-            val cartId = uiState.value.keranjangAktifId ?: run {
-                kirim("Keranjang aktif sudah hilang, undo tidak bisa dilakukan", KasirEvent.Pesan.Jenis.GALAT)
-                return@launch
-            }
+            val cartId =
+                uiState.value.keranjangAktifId ?: run {
+                    kirim("Keranjang aktif sudah hilang, undo tidak bisa dilakukan", KasirEvent.Pesan.Jenis.GALAT)
+                    return@launch
+                }
             if (jumlahScaled <= 0) return@launch
-            cartService.addProduct(cartId, produkId, jumlahScaled, System.currentTimeMillis())
+            cartService
+                .addProduct(cartId, produkId, jumlahScaled, System.currentTimeMillis())
                 .onFailure { kirim(it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT) }
         }
     }
 
     /**
      * Trigger cetak struk otomatis setelah checkout sukses.
-     * 
+     *
      * DESAIN:
      * - Load data transaksi + items + payments + profil toko
      * - Format menjadi ReceiptData
@@ -276,7 +306,7 @@ class KasirViewModel(
      */
     private fun triggerAutoPrint(transactionId: Long) {
         log.i { "🖨️ Auto-print triggered for transaction $transactionId" }
-        
+
         viewModelScope.launch {
             try {
                 // Load profil toko terlebih dahulu untuk memeriksa konfigurasi
@@ -292,19 +322,20 @@ class KasirViewModel(
                     log.w { "❌ Transaksi tidak ditemukan: $transactionId" }
                     return@launch
                 }
-                
+
                 val items = transaksiRepo.getItems(transactionId)
                 val payments = transaksiRepo.getPayments(transactionId)
 
                 log.d { "📋 Loaded: ${items.size} items, ${payments.size} payments" }
 
                 // Format menjadi ReceiptData
-                val receiptData = com.sentral.org.data.service.ReceiptFormatter.format(
-                    toko = profilToko,
-                    transaksi = transaksi,
-                    items = items,
-                    payments = payments,
-                )
+                val receiptData =
+                    com.sentral.org.data.service.ReceiptFormatter.format(
+                        toko = profilToko,
+                        transaksi = transaksi,
+                        items = items,
+                        payments = payments,
+                    )
 
                 log.d { "📝 Receipt formatted, enqueueing to printer" }
 
@@ -314,6 +345,7 @@ class KasirViewModel(
                         is com.sentral.org.data.model.PrintResult.Success -> {
                             log.i { "✅ Print success for transaction $transactionId" }
                         }
+
                         is com.sentral.org.data.model.PrintResult.Failure -> {
                             log.w { "❌ Print failed for transaction $transactionId: ${result.message}" }
                             kirim("Struk gagal dicetak: ${result.message}", KasirEvent.Pesan.Jenis.GALAT)
@@ -331,7 +363,8 @@ class KasirViewModel(
     fun bayarCash(uangDiterima: Long) {
         val total = uiState.value.subtotal
         if (uangDiterima < total) {
-            kirim("Uang diterima kurang dari total", KasirEvent.Pesan.Jenis.GALAT); return
+            kirim("Uang diterima kurang dari total", KasirEvent.Pesan.Jenis.GALAT)
+            return
         }
         eksekusiBayar(listOf(PaymentRequest(MetodePembayaran.CASH, total, received = uangDiterima)))
     }
@@ -342,125 +375,141 @@ class KasirViewModel(
 
     // ---------- Internals ----------
 
-    private fun ubah(produkId: Long, delta: Long) {
+    private fun ubah(
+        produkId: Long,
+        delta: Long,
+    ) {
         viewModelScope.launch {
             val cartId = uiState.value.keranjangAktifId ?: return@launch
-            cartService.ubahJumlah(cartId, produkId, delta, System.currentTimeMillis())
+            cartService
+                .ubahJumlah(cartId, produkId, delta, System.currentTimeMillis())
                 .onFailure { kirim(it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT) }
         }
     }
 
     private fun eksekusiBayar(payments: List<PaymentRequest>) {
         val state = uiState.value
-        val cartId = state.keranjangAktifId ?: run {
-            kirim("Tidak ada keranjang aktif", KasirEvent.Pesan.Jenis.GALAT); return
-        }
+        val cartId =
+            state.keranjangAktifId ?: run {
+                kirim("Tidak ada keranjang aktif", KasirEvent.Pesan.Jenis.GALAT)
+                return
+            }
         if (state.baris.isEmpty()) {
-            kirim("Keranjang kosong", KasirEvent.Pesan.Jenis.GALAT); return
+            kirim("Keranjang kosong", KasirEvent.Pesan.Jenis.GALAT)
+            return
         }
-        
+
         log.d { "🛒 eksekusiBayar() called with ${payments.size} payments" }
-        
+
         viewModelScope.launch {
             sedangProses.value = true
             try {
-                val s = sesi.sesiAktif() ?: run {
-                    kirim("Buka shift kasir terlebih dahulu", KasirEvent.Pesan.Jenis.GALAT); return@launch
-                }
+                val s =
+                    sesi.sesiAktif() ?: run {
+                        kirim("Buka shift kasir terlebih dahulu", KasirEvent.Pesan.Jenis.GALAT)
+                        return@launch
+                    }
                 val now = System.currentTimeMillis()
-                
+
                 log.d { "⏳ Calling checkoutService.checkout()" }
-                
-                checkoutService.checkout(
-                    CheckoutRequest(
-                        cartId = cartId,
-                        cashierId = s.kasirId,
-                        shiftId = s.shiftId,
-                        payments = payments,
-                        transactionNumber = NomorTransaksiGenerator.buat(now),
-                        now = now,
+
+                checkoutService
+                    .checkout(
+                        CheckoutRequest(
+                            cartId = cartId,
+                            cashierId = s.kasirId,
+                            shiftId = s.shiftId,
+                            payments = payments,
+                            transactionNumber = NomorTransaksiGenerator.buat(now),
+                            now = now,
+                        ),
+                    ).fold(
+                        onSuccess = { r ->
+                            log.i { "✅ Checkout success: txId=${r.transactionId}, number=${r.transactionNumber}" }
+                            // Reset pointer manual agar keranjang berikutnya membuat instans aktif baru
+                            pilihanManual.value = null
+
+                            // ===== AUTO-PRINT: Trigger cetak struk =====
+                            triggerAutoPrint(r.transactionId)
+
+                            _event.send(KasirEvent.CheckoutBerhasil(r.transactionNumber, r.change))
+                        },
+                        onFailure = { error ->
+                            log.e(error) { "❌ Checkout failed: ${error.message}" }
+                            kirim(error.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT)
+                        },
                     )
-                ).fold(
-                    onSuccess = { r ->
-                        log.i { "✅ Checkout success: txId=${r.transactionId}, number=${r.transactionNumber}" }
-                        // Reset pointer manual agar keranjang berikutnya membuat instans aktif baru
-                        pilihanManual.value = null
-                        
-                        // ===== AUTO-PRINT: Trigger cetak struk =====
-                        triggerAutoPrint(r.transactionId)
-                        
-                        _event.send(KasirEvent.CheckoutBerhasil(r.transactionNumber, r.change))
-                    },
-                    onFailure = { error ->
-                        log.e(error) { "❌ Checkout failed: ${error.message}" }
-                        kirim(error.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT)
-                    },
-                )
             } finally {
                 sedangProses.value = false
             }
         }
     }
 
-    private suspend fun pastikanKeranjangAktif(): Long? = keranjangMutex.withLock {
-        // Validasi keaktifan ID yang sedang dipegang pilihanManual
-        val manualId = pilihanManual.value
-        if (manualId != null) {
-            val cart = cartRepo.getById(manualId)
-            if (cart != null && cart.status == com.sentral.org.data.model.StatusKeranjang.AKTIF) {
-                return manualId
-            } else {
-                pilihanManual.value = null
+    private suspend fun pastikanKeranjangAktif(): Long? =
+        keranjangMutex.withLock {
+            // Validasi keaktifan ID yang sedang dipegang pilihanManual
+            val manualId = pilihanManual.value
+            if (manualId != null) {
+                val cart = cartRepo.getById(manualId)
+                if (cart != null && cart.status == com.sentral.org.data.model.StatusKeranjang.AKTIF) {
+                    return manualId
+                } else {
+                    pilihanManual.value = null
+                }
             }
-        }
 
-        // Validasi keaktifan ID yang sedang aktif di UI State
-        val stateCartId = uiState.value.keranjangAktifId
-        if (stateCartId != null) {
-            val cart = cartRepo.getById(stateCartId)
-            if (cart != null && cart.status == com.sentral.org.data.model.StatusKeranjang.AKTIF) {
-                return stateCartId
+            // Validasi keaktifan ID yang sedang aktif di UI State
+            val stateCartId = uiState.value.keranjangAktifId
+            if (stateCartId != null) {
+                val cart = cartRepo.getById(stateCartId)
+                if (cart != null && cart.status == com.sentral.org.data.model.StatusKeranjang.AKTIF) {
+                    return stateCartId
+                }
             }
+
+            val s =
+                sesi.sesiAktif() ?: run {
+                    kirim("Buka shift kasir terlebih dahulu", KasirEvent.Pesan.Jenis.GALAT)
+                    return null
+                }
+            return cartService.buatKeranjang(s.kasirId, System.currentTimeMillis()).fold(
+                onSuccess = { id ->
+                    pilihanManual.value = id
+                    id
+                },
+                onFailure = { e ->
+                    kirim(e.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT)
+                    null
+                },
+            )
         }
 
-        val s = sesi.sesiAktif() ?: run {
-            kirim("Buka shift kasir terlebih dahulu", KasirEvent.Pesan.Jenis.GALAT)
-            return null
-        }
-        return cartService.buatKeranjang(s.kasirId, System.currentTimeMillis()).fold(
-            onSuccess = { id ->
-                pilihanManual.value = id
-                id
-            },
-            onFailure = { e ->
-                kirim(e.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT)
-                null
-            },
-        )
-    }
-
-    private fun kirim(teks: String, jenis: KasirEvent.Pesan.Jenis) {
+    private fun kirim(
+        teks: String,
+        jenis: KasirEvent.Pesan.Jenis,
+    ) {
         viewModelScope.launch { _event.send(KasirEvent.Pesan(teks, jenis)) }
     }
 /**
-    suspend fun scanBarcodeTambahProduk(barcode: String): String? {
-        val produk = produkRepo.getByBarcode(barcode.trim()) ?: return null
-        if (!produk.aktif) {
-            kirim("Produk '${produk.nama}' sedang tidak aktif", KasirEvent.Pesan.Jenis.GALAT)
-            return null
-        }
-        val cartId = pastikanKeranjangAktif() ?: return null
-        val result = cartService.addProduct(cartId, produk.id, quantityOf(1), System.currentTimeMillis())
-        return if (result.isSuccess) produk.nama else null
-    }
+     suspend fun scanBarcodeTambahProduk(barcode: String): String? {
+     val produk = produkRepo.getByBarcode(barcode.trim()) ?: return null
+     if (!produk.aktif) {
+     kirim("Produk '${produk.nama}' sedang tidak aktif", KasirEvent.Pesan.Jenis.GALAT)
+     return null
+     }
+     val cartId = pastikanKeranjangAktif() ?: return null
+     val result = cartService.addProduct(cartId, produk.id, quantityOf(1), System.currentTimeMillis())
+     return if (result.isSuccess) produk.nama else null
+     }
 
-    private data class Detil(
-        val produk: List<com.sentral.org.data.entity.ProdukEntity>,
-        val carts: List<com.sentral.org.data.entity.KeranjangEntity>,
-        val manual: Long?,
-        val proses: Boolean,
-    ) */
+     private data class Detil(
+     val produk: List<com.sentral.org.data.entity.ProdukEntity>,
+     val carts: List<com.sentral.org.data.entity.KeranjangEntity>,
+     val manual: Long?,
+     val proses: Boolean,
+     ) */
 }
+
 /** Nomor transaksi unik-praktis; unique index DB adalah pengaman pamungkas. */
 object NomorTransaksiGenerator {
     private val counter = AtomicInteger(0)

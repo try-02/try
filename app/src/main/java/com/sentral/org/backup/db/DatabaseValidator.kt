@@ -7,7 +7,6 @@ import com.sentral.org.backup.model.PosBackupException
 import java.io.File
 
 class DatabaseValidator {
-
     private inline fun <T> SQLiteConnection.query(
         sql: String,
         block: (SQLiteStatement) -> T,
@@ -24,9 +23,10 @@ class DatabaseValidator {
         val driver = BundledSQLiteDriver()
         val connection = driver.open(sqliteFile.absolutePath)
         try {
-            val result = connection.query("PRAGMA integrity_check;") { stmt ->
-                if (stmt.step()) stmt.getText(0) else "error"
-            }
+            val result =
+                connection.query("PRAGMA integrity_check;") { stmt ->
+                    if (stmt.step()) stmt.getText(0) else "error"
+                }
             if (result.lowercase() != "ok") {
                 throw PosBackupException.SQLiteIntegrityFailed(result)
             }
@@ -39,11 +39,20 @@ class DatabaseValidator {
         val driver = BundledSQLiteDriver()
         val connection = driver.open(sqliteFile.absolutePath)
         try {
-            val requiredTables = listOf(
-                "transaksi", "item_transaksi", "produk", "kasir",
-                "shift", "pergerakan_kas", "keranjang", "item_keranjang",
-                "printer", "profil_toko", "room_master_table",
-            )
+            val requiredTables =
+                listOf(
+                    "transaksi",
+                    "item_transaksi",
+                    "produk",
+                    "kasir",
+                    "shift",
+                    "pergerakan_kas",
+                    "keranjang",
+                    "item_keranjang",
+                    "printer",
+                    "profil_toko",
+                    "room_master_table",
+                )
             val existingTables = mutableSetOf<String>()
             connection.query("SELECT name FROM sqlite_master WHERE type='table';") { stmt ->
                 while (stmt.step()) {

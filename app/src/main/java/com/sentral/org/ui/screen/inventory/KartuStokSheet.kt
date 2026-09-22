@@ -42,10 +42,11 @@ fun KartuStokSheet(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val sheetState = rememberBottomSheetState(
-        initialValue = SheetValue.Hidden,
-        enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
-    )
+    val sheetState =
+        rememberBottomSheetState(
+            initialValue = SheetValue.Hidden,
+            enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
+        )
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -55,10 +56,11 @@ fun KartuStokSheet(
         containerColor = MaterialTheme.colorScheme.surface,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.85f)
-                .padding(horizontal = 20.dp, vertical = 12.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.85f)
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
         ) {
             Text("Kartu Stok & Jejak Audit", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Text(produk.nama, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -76,7 +78,12 @@ fun KartuStokSheet(
             if (ledgerList.isEmpty()) {
                 Box(Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Filled.History, contentDescription = null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(
+                            Icons.Filled.History,
+                            contentDescription = null,
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                         Spacer(Modifier.height(8.dp))
                         Text("Belum ada riwayat mutasi persediaan", style = MaterialTheme.typography.bodyMedium)
                     }
@@ -114,17 +121,18 @@ private fun BarisKartuStok(
             ) {
                 Surface(
                     shape = RoundedCornerShape(6.dp),
-                    color = when (row.jenis) {
-                        JenisPergerakanPersediaan.STOK_AWAL -> MaterialTheme.colorScheme.primaryContainer
-                        JenisPergerakanPersediaan.STOK_MASUK -> MaterialTheme.colorScheme.secondaryContainer
-                        JenisPergerakanPersediaan.PENJUALAN -> MaterialTheme.colorScheme.surface
-                        JenisPergerakanPersediaan.PEMBATALAN_PENJUALAN -> MaterialTheme.colorScheme.tertiaryContainer
-                        JenisPergerakanPersediaan.PENGEMBALIAN_NORMAL, JenisPergerakanPersediaan.PENGEMBALIAN_RUSAK -> MaterialTheme.colorScheme.secondaryContainer
-                        JenisPergerakanPersediaan.PENYESUAIAN -> MaterialTheme.colorScheme.primaryContainer
-                        JenisPergerakanPersediaan.KERUSAKAN -> MaterialTheme.colorScheme.errorContainer
-                        JenisPergerakanPersediaan.PEMULIHAN_KERUSAKAN -> MaterialTheme.colorScheme.secondaryContainer
-                        JenisPergerakanPersediaan.PEMUSNAHAN -> MaterialTheme.colorScheme.errorContainer
-                    },
+                    color =
+                        when (row.jenis) {
+                            JenisPergerakanPersediaan.STOK_AWAL -> MaterialTheme.colorScheme.primaryContainer
+                            JenisPergerakanPersediaan.STOK_MASUK -> MaterialTheme.colorScheme.secondaryContainer
+                            JenisPergerakanPersediaan.PENJUALAN -> MaterialTheme.colorScheme.surface
+                            JenisPergerakanPersediaan.PEMBATALAN_PENJUALAN -> MaterialTheme.colorScheme.tertiaryContainer
+                            JenisPergerakanPersediaan.PENGEMBALIAN_NORMAL, JenisPergerakanPersediaan.PENGEMBALIAN_RUSAK -> MaterialTheme.colorScheme.secondaryContainer
+                            JenisPergerakanPersediaan.PENYESUAIAN -> MaterialTheme.colorScheme.primaryContainer
+                            JenisPergerakanPersediaan.KERUSAKAN -> MaterialTheme.colorScheme.errorContainer
+                            JenisPergerakanPersediaan.PEMULIHAN_KERUSAKAN -> MaterialTheme.colorScheme.secondaryContainer
+                            JenisPergerakanPersediaan.PEMUSNAHAN -> MaterialTheme.colorScheme.errorContainer
+                        },
                 ) {
                     Text(
                         row.jenis.name.replace('_', ' '),
@@ -144,14 +152,26 @@ private fun BarisKartuStok(
             ) {
                 Column {
                     Text(
-                        "Mutasi: ${if (row.perubahanJumlah >= 0) "+${formatQuantity(row.perubahanJumlah)}" else formatQuantity(row.perubahanJumlah)} unit",
+                        "Mutasi: ${if (row.perubahanJumlah >= 0) {
+                            "+${formatQuantity(row.perubahanJumlah)}"
+                        } else {
+                            formatQuantity(
+                                row.perubahanJumlah,
+                            )
+                        }} unit",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
                         color = if (row.perubahanJumlah >= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                     )
                     if (row.perubahanJumlahRusak != 0L) {
                         Text(
-                            "Mutasi Rusak: ${if (row.perubahanJumlahRusak > 0) "+${formatQuantity(row.perubahanJumlahRusak)}" else formatQuantity(row.perubahanJumlahRusak)}",
+                            "Mutasi Rusak: ${if (row.perubahanJumlahRusak > 0) {
+                                "+${formatQuantity(row.perubahanJumlahRusak)}"
+                            } else {
+                                formatQuantity(
+                                    row.perubahanJumlahRusak,
+                                )
+                            }}",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.tertiary,
                         )

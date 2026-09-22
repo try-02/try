@@ -19,16 +19,16 @@ class OfflineTransaksiRepository(
     private val items: ItemTransaksiDao,
     private val payments: PembayaranDao,
 ) : TransaksiRepository {
-
     override fun observeAll(): Flow<List<TransaksiEntity>> = transactions.observeAll()
 
-    override fun getRiwayatPaged(filter: TransaksiFilter): Flow<PagingData<TransaksiEntity>> {
-        return Pager(
-            config = PagingConfig(
-                pageSize = 20,
-                prefetchDistance = 5,
-                enablePlaceholders = false,
-            ),
+    override fun getRiwayatPaged(filter: TransaksiFilter): Flow<PagingData<TransaksiEntity>> =
+        Pager(
+            config =
+                PagingConfig(
+                    pageSize = 20,
+                    prefetchDistance = 5,
+                    enablePlaceholders = false,
+                ),
             pagingSourceFactory = {
                 transactions.observeFilteredPaged(
                     query = filter.query.trim(),
@@ -38,7 +38,6 @@ class OfflineTransaksiRepository(
                 )
             },
         ).flow
-    }
 
     override suspend fun getById(id: Long): TransaksiEntity? = transactions.getById(id)
 
@@ -52,8 +51,8 @@ class OfflineTransaksiRepository(
         filter: TransaksiFilter,
         limit: Int,
         offset: Int,
-    ): List<TransaksiDenganDetail> {
-        return transactions.getFilteredForExportPaged(
+    ): List<TransaksiDenganDetail> =
+        transactions.getFilteredForExportPaged(
             query = filter.query.trim(),
             status = filter.status,
             startDate = filter.startDate,
@@ -61,5 +60,4 @@ class OfflineTransaksiRepository(
             limit = limit,
             offset = offset,
         )
-    }
 }

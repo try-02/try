@@ -19,8 +19,14 @@ data class BackupRestoreUiState(
 )
 
 sealed interface BackupRestoreEvent {
-    data class Pesan(val teks: String, val isError: Boolean = false) : BackupRestoreEvent
+    data class Pesan(
+        val teks: String,
+        val isError: Boolean = false,
+    ) : BackupRestoreEvent
+
     data object MintaPilihLokasiExport : BackupRestoreEvent
+
     data object MintaPilihFileImport : BackupRestoreEvent
+
     data object RestartAplikasi : BackupRestoreEvent
 }

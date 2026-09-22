@@ -2,6 +2,7 @@ package com.sentral.org.ui.screen.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.sqlite.SQLiteException
 import com.sentral.org.data.dao.KasirDao
 import com.sentral.org.data.entity.KasirEntity
 import com.sentral.org.data.service.AuthResult
@@ -16,28 +17,27 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import androidx.sqlite.SQLiteException
 import java.security.GeneralSecurityException
 
 class LoginKasirViewModel(
     private val kasirDao: KasirDao,
     private val authService: AuthService,
 ) : ViewModel() {
-
     private val _stateInternal = MutableStateFlow(LoginKasirUiState())
     private val _event = Channel<LoginKasirEvent>(Channel.BUFFERED)
     val event = _event.receiveAsFlow()
 
-    val uiState: StateFlow<LoginKasirUiState> = combine(
-        kasirDao.observeAktif(),
-        _stateInternal,
-    ) { kasirs, internal ->
-        val mappedKasir = kasirs.map { KasirItemUi(id = it.id, nama = it.nama) }
-        internal.copy(
-            daftarKasir = mappedKasir,
-            kasirTerpilih = internal.kasirTerpilih ?: mappedKasir.firstOrNull(),
-        )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LoginKasirUiState())
+    val uiState: StateFlow<LoginKasirUiState> =
+        combine(
+            kasirDao.observeAktif(),
+            _stateInternal,
+        ) { kasirs, internal ->
+            val mappedKasir = kasirs.map { KasirItemUi(id = it.id, nama = it.nama) }
+            internal.copy(
+                daftarKasir = mappedKasir,
+                kasirTerpilih = internal.kasirTerpilih ?: mappedKasir.firstOrNull(),
+            )
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LoginKasirUiState())
 
     fun pilihKasir(kasir: KasirItemUi) {
         _stateInternal.update {
@@ -81,7 +81,10 @@ class LoginKasirViewModel(
         _stateInternal.update { it.copy(dialogTambahKasirTerbuka = false) }
     }
 
-    fun tambahKasirBaru(nama: String, pin: String) {
+    fun tambahKasirBaru(
+        nama: String,
+        pin: String,
+    ) {
         val namaClean = nama.trim()
         if (namaClean.isBlank()) {
             viewModelScope.launch { _event.send(LoginKasirEvent.Pesan("Nama kasir tidak boleh kosong")) }
@@ -96,14 +99,15 @@ class LoginKasirViewModel(
             try {
                 val now = System.currentTimeMillis()
                 val pinHash = authService.buatHashPin(pin)
-                val id = kasirDao.insert(
-                    KasirEntity(
-                        nama = namaClean,
-                        pinHash = pinHash,
-                        aktif = true,
-                        dibuatPada = now,
+                val id =
+                    kasirDao.insert(
+                        KasirEntity(
+                            nama = namaClean,
+                            pinHash = pinHash,
+                            aktif = true,
+                            dibuatPada = now,
+                        ),
                     )
-                )
                 val kasirBaru = kasirDao.getById(id)?.let { KasirItemUi(id = it.id, nama = it.nama) }
                 _stateInternal.update {
                     it.copy(
@@ -119,8 +123,8 @@ class LoginKasirViewModel(
             } catch (e: androidx.sqlite.SQLiteException) {
                 _event.send(
                     LoginKasirEvent.Pesan(
-                        e.message ?: "Gagal menyimpan kasir"
-                    )
+                        e.message ?: "Gagal menyimpan kasir",
+                    ),
                 )
             }
         }
@@ -145,6 +149,7 @@ class LoginKasirViewModel(
                         _event.send(LoginKasirEvent.NavigasiKeBukaShift(result.kasirId, result.namaKasir))
                     }
                 }
+
                 is AuthResult.Failed -> {
                     _stateInternal.update {
                         it.copy(
@@ -154,6 +159,7 @@ class LoginKasirViewModel(
                         )
                     }
                 }
+
                 is AuthResult.Locked -> {
                     _stateInternal.update {
                         it.copy(
@@ -165,6 +171,7 @@ class LoginKasirViewModel(
                     }
                     mulaiHitungMundurLockout(result.sisaDetik)
                 }
+
                 is AuthResult.KasirTidakAktif -> {
                     _stateInternal.update {
                         it.copy(sedangMemproses = false, pinInput = "", pesanError = "Kasir tidak aktif")
@@ -178,25 +185,26 @@ class LoginKasirViewModel(
 
     private fun mulaiHitungMundurLockout(durasiDetik: Long) {
         lockoutJob?.cancel()
-        lockoutJob = viewModelScope.launch {
-            var detikTersisa = durasiDetik
-            while (detikTersisa > 0) {
-                kotlinx.coroutines.delay(1000L)
-                detikTersisa--
-                _stateInternal.update {
-                    if (detikTersisa > 0) {
-                        it.copy(
-                            sisaDetikTerkunci = detikTersisa,
-                            pesanError = "Terlalu banyak percobaan. Terkunci $detikTersisa detik",
-                        )
-                    } else {
-                        it.copy(
-                            sisaDetikTerkunci = null,
-                            pesanError = null,
-                        )
+        lockoutJob =
+            viewModelScope.launch {
+                var detikTersisa = durasiDetik
+                while (detikTersisa > 0) {
+                    kotlinx.coroutines.delay(1000L)
+                    detikTersisa--
+                    _stateInternal.update {
+                        if (detikTersisa > 0) {
+                            it.copy(
+                                sisaDetikTerkunci = detikTersisa,
+                                pesanError = "Terlalu banyak percobaan. Terkunci $detikTersisa detik",
+                            )
+                        } else {
+                            it.copy(
+                                sisaDetikTerkunci = null,
+                                pesanError = null,
+                            )
+                        }
                     }
                 }
             }
-        }
     }
 }

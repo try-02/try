@@ -23,25 +23,30 @@ class DevSessionBootstrap(
     }
 
     private suspend fun pastikanKasir(): Long =
-        cashiers.observeAktif().first().firstOrNull()?.id
+        cashiers
+            .observeAktif()
+            .first()
+            .firstOrNull()
+            ?.id
             ?: cashiers.insert(
                 KasirEntity(
                     id = 0,
                     nama = "Kasir Dev",
-                    pinHash = null,   // belum dipakai; diisi saat fitur login PIN ada
+                    pinHash = null, // belum dipakai; diisi saat fitur login PIN ada
                     aktif = true,
                     dibuatPada = currentTimeMillis(),
-                )
+                ),
             )
 
     private suspend fun pastikanShiftTerbuka(kasirId: Long) {
-        if (shifts.getOpenForKasir(kasirId) != null) return   // restart dgn shift terbuka -> aman
-        shiftService.open(
-            cashierId = kasirId,
-            openingCash = KAS_AWAL_DEV,
-            now = currentTimeMillis(),
-            note = "Auto-open (dev bootstrap)",
-        ).getOrThrow()
+        if (shifts.getOpenForKasir(kasirId) != null) return // restart dgn shift terbuka -> aman
+        shiftService
+            .open(
+                cashierId = kasirId,
+                openingCash = KAS_AWAL_DEV,
+                now = currentTimeMillis(),
+                note = "Auto-open (dev bootstrap)",
+            ).getOrThrow()
     }
 
     private companion object {

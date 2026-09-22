@@ -10,7 +10,6 @@ actual fun createPinHasher(): PinHasher = AndroidPinHasher()
 
 @OptIn(ExperimentalEncodingApi::class)
 internal class AndroidPinHasher : PinHasher {
-
     companion object {
         private const val ALGORITHM = "PBKDF2WithHmacSHA256"
         private const val ITERATIONS = 12_000
@@ -32,7 +31,10 @@ internal class AndroidPinHasher : PinHasher {
         return "$PREFIX\$i=$ITERATIONS\$$saltBase64\$$hashBase64"
     }
 
-    override fun verifyPin(rawPin: String, storedHash: String): Boolean {
+    override fun verifyPin(
+        rawPin: String,
+        storedHash: String,
+    ): Boolean {
         return try {
             val parts = storedHash.split("$")
             // Format: ["", "pbkdf2-sha256", "v=1", "i=12000", "saltBase64", "hashBase64"]
@@ -51,7 +53,12 @@ internal class AndroidPinHasher : PinHasher {
         }
     }
 
-    private fun pbkdf2(password: CharArray, salt: ByteArray, iterations: Int, keyLengthBits: Int): ByteArray {
+    private fun pbkdf2(
+        password: CharArray,
+        salt: ByteArray,
+        iterations: Int,
+        keyLengthBits: Int,
+    ): ByteArray {
         val spec = PBEKeySpec(password, salt, iterations, keyLengthBits)
         val skf = SecretKeyFactory.getInstance(ALGORITHM)
         return skf.generateSecret(spec).encoded

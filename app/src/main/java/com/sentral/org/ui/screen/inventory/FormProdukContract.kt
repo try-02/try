@@ -17,6 +17,10 @@ data class FormProdukUiState(
 )
 
 sealed interface FormProdukEvent {
-    data class Pesan(val teks: String, val isError: Boolean = false) : FormProdukEvent
+    data class Pesan(
+        val teks: String,
+        val isError: Boolean = false,
+    ) : FormProdukEvent
+
     data object SimpanSukses : FormProdukEvent
 }

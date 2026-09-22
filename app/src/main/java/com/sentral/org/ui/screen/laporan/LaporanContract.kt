@@ -5,7 +5,9 @@ import com.sentral.org.data.model.LaporanPembayaran
 import com.sentral.org.data.model.LaporanPenjualan
 import com.sentral.org.data.model.TopProdukLaporan
 
-enum class LaporanRange(val label: String) {
+enum class LaporanRange(
+    val label: String,
+) {
     HARI_INI("Hari Ini"),
     TUJUH_HARI("7 Hari"),
     TIGA_PULUH_HARI("30 Hari"),
@@ -28,21 +30,22 @@ data class LaporanPenjualanUi(
     val topProduk: List<TopProdukLaporan>,
 )
 
-fun LaporanPenjualan.toUi() = LaporanPenjualanUi(
-    omzetPenjualan = omzetPenjualan,
-    totalRetur = totalRetur,
-    omzetBersih = omzetBersih,
-    hppHistoris = hppHistoris,
-    hppRetur = hppRetur,
-    hppBersih = hppBersih,
-    labaKotor = labaKotor,
-    marginPersen = marginPersen,
-    jumlahTransaksiSelesai = jumlahTransaksiSelesai,
-    jumlahTransaksiVoid = jumlahTransaksiVoid,
-    rataRataTransaksi = rataRataTransaksi,
-    pembayaran = pembayaran,
-    topProduk = topProduk,
-)
+fun LaporanPenjualan.toUi() =
+    LaporanPenjualanUi(
+        omzetPenjualan = omzetPenjualan,
+        totalRetur = totalRetur,
+        omzetBersih = omzetBersih,
+        hppHistoris = hppHistoris,
+        hppRetur = hppRetur,
+        hppBersih = hppBersih,
+        labaKotor = labaKotor,
+        marginPersen = marginPersen,
+        jumlahTransaksiSelesai = jumlahTransaksiSelesai,
+        jumlahTransaksiVoid = jumlahTransaksiVoid,
+        rataRataTransaksi = rataRataTransaksi,
+        pembayaran = pembayaran,
+        topProduk = topProduk,
+    )
 
 data class LaporanUiState(
     val range: LaporanRange = LaporanRange.HARI_INI,

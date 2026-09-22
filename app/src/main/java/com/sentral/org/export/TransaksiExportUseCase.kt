@@ -8,9 +8,10 @@ class TransaksiExportUseCase(
     private val transaksiRepo: TransaksiRepository,
     private val excelExporter: ExcelReportExporter,
 ) {
-    suspend fun exportToExcel(filter: TransaksiFilter): Result<Uri> = runCatching {
-        excelExporter.exportTransaksiStreaming { limit, offset ->
-            transaksiRepo.getTransaksiForExportPaged(filter, limit, offset)
+    suspend fun exportToExcel(filter: TransaksiFilter): Result<Uri> =
+        runCatching {
+            excelExporter.exportTransaksiStreaming { limit, offset ->
+                transaksiRepo.getTransaksiForExportPaged(filter, limit, offset)
+            }
         }
-    }
 }

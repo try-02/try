@@ -9,7 +9,6 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class MigrationTest {
-
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
 
     @Test

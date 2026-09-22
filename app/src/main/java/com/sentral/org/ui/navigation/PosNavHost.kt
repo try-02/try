@@ -6,12 +6,11 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.sentral.org.ui.screen.pos.PosUtamaScreen
-import com.sentral.org.ui.theme.PosTheme
-
-import com.sentral.org.ui.screen.settings.PrinterSettingsScreen
-import com.sentral.org.ui.screen.settings.AddPrinterScreen
 import com.sentral.org.data.service.PrinterService
+import com.sentral.org.ui.screen.pos.PosUtamaScreen
+import com.sentral.org.ui.screen.settings.AddPrinterScreen
+import com.sentral.org.ui.screen.settings.PrinterSettingsScreen
+import com.sentral.org.ui.theme.PosTheme
 // import androidx.compose.runtime.rememberCoroutineScope
 // import kotlinx.coroutines.launch
 // import org.koin.compose.koinInject // Koin untuk Compose Multiplatform
@@ -20,17 +19,16 @@ import com.sentral.org.data.service.PrinterService
 fun PosNavHost(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
-    // Rute awal kini langsung menuju POS Utama, karena Splash Screen 
+    // Rute awal kini langsung menuju POS Utama, karena Splash Screen
     // sudah ditangani sepenuhnya oleh level Activity
-    startDestination: PosRoute = PosRoute.PosUtama
+    startDestination: PosRoute = PosRoute.PosUtama,
 ) {
     PosTheme {
         NavHost(
             navController = navController,
             startDestination = startDestination,
-            modifier = modifier
+            modifier = modifier,
         ) {
-
             composable<PosRoute.LoginKasir> {
                 com.sentral.org.ui.screen.auth.LoginKasirScreen(
                     onLoginSuksesKePos = {
@@ -63,8 +61,8 @@ fun PosNavHost(
 
             composable<PosRoute.PosUtama> {
                 PosUtamaScreen(
-                    onNavigateToRiwayat = { 
-                        navController.navigate(PosRoute.RiwayatTransaksi()) 
+                    onNavigateToRiwayat = {
+                        navController.navigate(PosRoute.RiwayatTransaksi())
                     },
                     onNavigateToTutupShift = {
                         navController.navigate(PosRoute.TutupShift)
@@ -95,7 +93,7 @@ fun PosNavHost(
             composable<PosRoute.PrinterSettings> {
                 PrinterSettingsScreen(
                     onBack = { navController.popBackStack() },
-                    onAddPrinter = { 
+                    onAddPrinter = {
                         navController.navigate(PosRoute.AddPrinter) // <-- Hubungkan ke route AddPrinter
                     },
                 )
@@ -104,7 +102,7 @@ fun PosNavHost(
             composable<PosRoute.AddPrinter> {
                 AddPrinterScreen(
                     onBack = { navController.popBackStack() },
-                    onSave = { 
+                    onSave = {
                         navController.popBackStack()
                     },
                 )

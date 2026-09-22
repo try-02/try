@@ -14,15 +14,15 @@ import com.sentral.org.data.model.StatusKeranjang
             entity = KasirEntity::class,
             parentColumns = ["id"],
             childColumns = ["kasir_id"],
-            onDelete = ForeignKey.RESTRICT
-        )
+            onDelete = ForeignKey.RESTRICT,
+        ),
     ],
     indices = [
         Index("kasir_id"),
         Index(
-            value = ["status", "diperbarui_pada"]
-        )
-    ]
+            value = ["status", "diperbarui_pada"],
+        ),
+    ],
 )
 data class KeranjangEntity(
     @PrimaryKey(autoGenerate = true)

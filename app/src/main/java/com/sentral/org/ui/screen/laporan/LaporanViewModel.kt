@@ -18,33 +18,35 @@ import kotlinx.coroutines.flow.stateIn
 class LaporanViewModel(
     private val laporanRepo: LaporanRepository,
 ) : ViewModel() {
-
     private val _range = MutableStateFlow(LaporanRange.HARI_INI)
     val range: StateFlow<LaporanRange> = _range.asStateFlow()
 
-    val uiState: StateFlow<LaporanUiState> = _range
-        .flatMapLatest { selectedRange ->
-            val now = currentTimeMillis()
-            val (start, end) = hitungRentangWaktu(selectedRange, now)
-            laporanRepo.observeLaporan(start, end).map { data ->
-                LaporanUiState(
-                    range = selectedRange,
-                    data = data.toUi(),
-                    sedangMemuat = false,
-                )
-            }
-        }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = LaporanUiState(),
-        )
+    val uiState: StateFlow<LaporanUiState> =
+        _range
+            .flatMapLatest { selectedRange ->
+                val now = currentTimeMillis()
+                val (start, end) = hitungRentangWaktu(selectedRange, now)
+                laporanRepo.observeLaporan(start, end).map { data ->
+                    LaporanUiState(
+                        range = selectedRange,
+                        data = data.toUi(),
+                        sedangMemuat = false,
+                    )
+                }
+            }.stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = LaporanUiState(),
+            )
 
     fun pilihRange(range: LaporanRange) {
         _range.value = range
     }
 
-    private fun hitungRentangWaktu(range: LaporanRange, now: Long): Pair<Long, Long> {
+    private fun hitungRentangWaktu(
+        range: LaporanRange,
+        now: Long,
+    ): Pair<Long, Long> {
         val startOfToday = getStartOfDayMillis(now)
         val startOfTomorrow = startOfToday + 86_400_000L
 

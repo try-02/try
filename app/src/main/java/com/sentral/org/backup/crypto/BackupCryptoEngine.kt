@@ -1,32 +1,32 @@
 package com.sentral.org.backup.crypto
 
 import com.sentral.org.backup.model.BackupMetadata
-import com.sentral.org.backup.model.PosBakHeader
 import com.sentral.org.backup.model.PosBackupException
+import com.sentral.org.backup.model.PosBakHeader
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
+import java.security.GeneralSecurityException
 import java.security.SecureRandom
 import javax.crypto.Cipher
 import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.PBEKeySpec
 import javax.crypto.spec.SecretKeySpec
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
-import java.io.IOException
-import java.security.GeneralSecurityException
-import kotlinx.serialization.SerializationException
 
 class BackupCryptoEngine {
-
     companion object {
-        val MAGIC_BYTES = byteArrayOf('P'.code.toByte(), 'O'.code.toByte(), 'S'.code.toByte(), 'B'.code.toByte(), 'A'.code.toByte(), 'K'.code.toByte())
+        val MAGIC_BYTES =
+            byteArrayOf('P'.code.toByte(), 'O'.code.toByte(), 'S'.code.toByte(), 'B'.code.toByte(), 'A'.code.toByte(), 'K'.code.toByte())
         const val CURRENT_FORMAT_VERSION = 1
         const val KDF_ITERATIONS = 100_000
         const val SALT_LENGTH_BYTES = 16
@@ -48,15 +48,16 @@ class BackupCryptoEngine {
         val iv = ByteArray(GCM_IV_LENGTH_BYTES).also { random.nextBytes(it) }
         val metadataJson = json.encodeToString(metadata)
 
-        val header = PosBakHeader(
-            formatVersion = CURRENT_FORMAT_VERSION,
-            schemaVersion = metadata.schemaVersion,
-            createdAt = metadata.createdAt,
-            kdfIterations = KDF_ITERATIONS,
-            salt = salt,
-            iv = iv,
-            metadataJson = metadataJson,
-        )
+        val header =
+            PosBakHeader(
+                formatVersion = CURRENT_FORMAT_VERSION,
+                schemaVersion = metadata.schemaVersion,
+                createdAt = metadata.createdAt,
+                kdfIterations = KDF_ITERATIONS,
+                salt = salt,
+                iv = iv,
+                metadataJson = metadataJson,
+            )
 
         val headerBytes = serializeHeader(header)
         val secretKey = deriveKey(password, salt, KDF_ITERATIONS)
@@ -87,93 +88,95 @@ class BackupCryptoEngine {
         }
     }
 
-private fun decryptPayload(
-    fileIn: FileInputStream,
-    destinationDbFile: File,
-    cipher: Cipher,
-) {
-    try {
-        FileOutputStream(destinationDbFile).use { fileOut ->
-            decryptChunks(
+    private fun decryptPayload(
+        fileIn: FileInputStream,
+        destinationDbFile: File,
+        cipher: Cipher,
+    ) {
+        try {
+            FileOutputStream(destinationDbFile).use { fileOut ->
+                decryptChunks(
+                    fileIn = fileIn,
+                    fileOut = fileOut,
+                    cipher = cipher,
+                )
+                fileOut.flush()
+            }
+        } catch (e: IOException) {
+            destinationDbFile.delete()
+            throw PosBackupException.WrongPasswordOrCorrupted(e)
+        } catch (e: GeneralSecurityException) {
+            destinationDbFile.delete()
+            throw PosBackupException.WrongPasswordOrCorrupted(e)
+        }
+    }
+
+    private fun decryptChunks(
+        fileIn: FileInputStream,
+        fileOut: FileOutputStream,
+        cipher: Cipher,
+    ) {
+        val buffer = ByteArray(BUFFER_SIZE)
+
+        while (true) {
+            val bytesRead = fileIn.read(buffer)
+            if (bytesRead == -1) break
+
+            cipher
+                .update(buffer, 0, bytesRead)
+                ?.let(fileOut::write)
+        }
+
+        fileOut.write(cipher.doFinal())
+    }
+
+    fun decrypt(
+        sourceEncryptedFile: File,
+        destinationDbFile: File,
+        password: CharArray,
+    ): BackupMetadata {
+        if (destinationDbFile.exists()) {
+            destinationDbFile.delete()
+        }
+
+        FileInputStream(sourceEncryptedFile).use { fileIn ->
+            val header = parseHeader(fileIn)
+
+            if (header.formatVersion > CURRENT_FORMAT_VERSION) {
+                throw PosBackupException.UnsupportedVersion(header.formatVersion)
+            }
+
+            val headerBytes = serializeHeader(header)
+            val secretKey =
+                deriveKey(
+                    password,
+                    header.salt,
+                    header.kdfIterations,
+                )
+
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+            cipher.init(
+                Cipher.DECRYPT_MODE,
+                secretKey,
+                GCMParameterSpec(GCM_TAG_LENGTH_BITS, header.iv),
+            )
+            cipher.updateAAD(headerBytes)
+
+            decryptPayload(
                 fileIn = fileIn,
-                fileOut = fileOut,
+                destinationDbFile = destinationDbFile,
                 cipher = cipher,
             )
-            fileOut.flush()
-        }
-    } catch (e: IOException) {
-        destinationDbFile.delete()
-        throw PosBackupException.WrongPasswordOrCorrupted(e)
-    } catch (e: GeneralSecurityException) {
-        destinationDbFile.delete()
-        throw PosBackupException.WrongPasswordOrCorrupted(e)
-    }
-}
 
-private fun decryptChunks(
-    fileIn: FileInputStream,
-    fileOut: FileOutputStream,
-    cipher: Cipher,
-) {
-    val buffer = ByteArray(BUFFER_SIZE)
-
-    while (true) {
-        val bytesRead = fileIn.read(buffer)
-        if (bytesRead == -1) break
-
-        cipher.update(buffer, 0, bytesRead)
-            ?.let(fileOut::write)
-    }
-
-    fileOut.write(cipher.doFinal())
-}
-
-fun decrypt(
-    sourceEncryptedFile: File,
-    destinationDbFile: File,
-    password: CharArray,
-): BackupMetadata {
-    if (destinationDbFile.exists()) {
-        destinationDbFile.delete()
-    }
-
-    FileInputStream(sourceEncryptedFile).use { fileIn ->
-        val header = parseHeader(fileIn)
-
-        if (header.formatVersion > CURRENT_FORMAT_VERSION) {
-            throw PosBackupException.UnsupportedVersion(header.formatVersion)
-        }
-
-        val headerBytes = serializeHeader(header)
-        val secretKey = deriveKey(
-            password,
-            header.salt,
-            header.kdfIterations,
-        )
-
-        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-        cipher.init(
-            Cipher.DECRYPT_MODE,
-            secretKey,
-            GCMParameterSpec(GCM_TAG_LENGTH_BITS, header.iv),
-        )
-        cipher.updateAAD(headerBytes)
-
-        decryptPayload(
-            fileIn = fileIn,
-            destinationDbFile = destinationDbFile,
-            cipher = cipher,
-        )
-
-        return try {
-            json.decodeFromString<BackupMetadata>(header.metadataJson)
-        } catch (_: SerializationException) {
-            throw PosBackupException.InvalidFormat(
-                "Metadata file backup tidak terbaca",
-            )
+            return try {
+                json.decodeFromString<BackupMetadata>(header.metadataJson)
+            } catch (_: SerializationException) {
+                throw PosBackupException.InvalidFormat(
+                    "Metadata file backup tidak terbaca",
+                )
+            }
         }
     }
-}
 
     private fun serializeHeader(header: PosBakHeader): ByteArray {
         val byteStream = ByteArrayOutputStream()
@@ -237,7 +240,11 @@ fun decrypt(
         )
     }
 
-    private fun deriveKey(password: CharArray, salt: ByteArray, iterations: Int): SecretKeySpec {
+    private fun deriveKey(
+        password: CharArray,
+        salt: ByteArray,
+        iterations: Int,
+    ): SecretKeySpec {
         val spec = PBEKeySpec(password, salt, iterations, 256)
         val factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
         val keyBytes = factory.generateSecret(spec).encoded

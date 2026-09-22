@@ -8,7 +8,6 @@ class ProductSeeder(
     private val db: PosDatabase,
     private val write: PosWriteService,
 ) {
-
     suspend fun seedIfEmpty() {
         if (db.produkDao().count() > 0) return
 

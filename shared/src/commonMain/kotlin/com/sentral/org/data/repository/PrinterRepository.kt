@@ -5,6 +5,8 @@ import kotlinx.coroutines.flow.Flow
 
 interface PrinterRepository {
     fun observeAll(): Flow<List<PrinterEntity>>
+
     suspend fun getDefault(): PrinterEntity?
-    suspend fun insert(entity: PrinterEntity): Long  // ← BARU
+
+    suspend fun insert(entity: PrinterEntity): Long // ← BARU
 }
