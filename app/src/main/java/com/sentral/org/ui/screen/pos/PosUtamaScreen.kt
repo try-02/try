@@ -179,7 +179,9 @@ fun PosUtamaScreen(
                         }
                 }
 
-                is KasirEvent.CheckoutBerhasil -> hasilCheckout = event
+                is KasirEvent.CheckoutBerhasil -> {
+                    hasilCheckout = event
+                }
             }
         }
     }
@@ -413,9 +415,13 @@ fun PosUtamaScreen(
                                     }
                                 }
 
-                                TabBawah.LAPORAN -> Icon(Icons.Filled.Insights, contentDescription = null)
+                                TabBawah.LAPORAN -> {
+                                    Icon(Icons.Filled.Insights, contentDescription = null)
+                                }
 
-                                TabBawah.PENGATURAN -> Icon(Icons.Filled.Settings, contentDescription = null)
+                                TabBawah.PENGATURAN -> {
+                                    Icon(Icons.Filled.Settings, contentDescription = null)
+                                }
                             }
                         },
                         label = { Text(t.label, style = MaterialTheme.typography.labelMedium) },

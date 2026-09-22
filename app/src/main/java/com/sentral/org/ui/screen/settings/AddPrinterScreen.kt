@@ -816,19 +816,21 @@ private fun TestConnectionDialog(
                             )
                         }
 
-                        is PrinterTestResult.Failed ->
+                        is PrinterTestResult.Failed -> {
                             Icon(
                                 Icons.Filled.Error,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onErrorContainer,
                                 modifier = Modifier.size(32.dp),
                             )
+                        }
 
-                        null ->
+                        null -> {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(32.dp),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
+                        }
                     }
                 }
             }
@@ -870,7 +872,7 @@ private fun TestConnectionDialog(
                     }
                 }
 
-                is PrinterTestResult.Failed ->
+                is PrinterTestResult.Failed -> {
                     Column {
                         Text(
                             result.message,
@@ -884,12 +886,14 @@ private fun TestConnectionDialog(
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
+                }
 
-                null ->
+                null -> {
                     Text(
                         "Mempersiapkan...",
                         style = MaterialTheme.typography.bodyLarge,
                     )
+                }
             }
         },
         confirmButton = {

@@ -90,13 +90,14 @@ class ReturService(
                                     budget // Retur tuntas: ambil sisa budget penuh agar tidak ada selisih sen
                                 }
 
-                                else ->
+                                else -> {
                                     MoneyMath
                                         .proportional(
                                             part = line.quantity,
                                             total = item.jumlah,
                                             amount = netLine,
                                         ).coerceAtMost(budget)
+                                }
                             }
 
                         PreparedLine(item, line, refund)

@@ -144,12 +144,13 @@ fun DialogPenyesuaianStok(
                                 )
                             }
 
-                            else ->
+                            else -> {
                                 Triple(
                                     MaterialTheme.colorScheme.primaryContainer,
                                     MaterialTheme.colorScheme.onPrimaryContainer,
                                     "Cocok (Fisik Pas)",
                                 )
+                            }
                         }
 
                     val tanda =

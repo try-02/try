@@ -112,9 +112,10 @@ fun RiwayatTransaksiScreen(
                     snackbarHostState.showSnackbar("Transaksi ${event.nomorTransaksi} berhasil dibatalkan (VOID)")
                 }
 
-                is RiwayatEvent.ReturSukses ->
+                is RiwayatEvent.ReturSukses -> {
                     snackbarHostState
                         .showSnackbar("Retur ${event.nomorTransaksi} berhasil (Refund ${formatRupiah(event.totalRefund)})")
+                }
 
                 is RiwayatEvent.FileSiapDibagikan -> {
                     val sendIntent =

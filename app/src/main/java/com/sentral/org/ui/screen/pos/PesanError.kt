@@ -22,11 +22,17 @@ fun Throwable.pesanPengguna(): String =
             message ?: "Keadaan sudah berubah, muat ulang layar"
         }
 
-        is PosDataException.Validation -> message ?: "Masukan tidak valid"
+        is PosDataException.Validation -> {
+            message ?: "Masukan tidak valid"
+        }
 
-        is PosDataException.InsufficientStock -> message ?: "Stok tidak mencukupi"
+        is PosDataException.InsufficientStock -> {
+            message ?: "Stok tidak mencukupi"
+        }
 
-        is PosDataException.InsufficientDamagedStock -> message ?: "Stok rusak tidak mencukupi"
+        is PosDataException.InsufficientDamagedStock -> {
+            message ?: "Stok rusak tidak mencukupi"
+        }
 
         is PosDataException.Duplicate -> message ?: "Data sudah terdaftar"
 
