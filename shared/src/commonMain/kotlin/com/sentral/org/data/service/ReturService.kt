@@ -173,7 +173,7 @@ class ReturService(
                         }
 
                         TujuanStokPengembalian.TIDAK_DIKEMBALIKAN -> {
-                            Unit
+                            // Tidak ada mutasi stok.
                         }
                     }
                 }

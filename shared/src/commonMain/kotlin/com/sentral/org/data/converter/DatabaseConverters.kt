@@ -8,8 +8,7 @@ import com.sentral.org.data.model.*
  * kembalikan null (bukan crash). Penting untuk ketahanan aplikasi saat DB
  * corrupt atau ada data usang dari migrasi manual.
  */
-private inline fun <reified T : Enum<T>> safeEnumValueOf(name: String?): T? =
-    name?.let { target -> enumValues<T>().firstOrNull { it.name == target } }
+private inline fun <reified T : Enum<T>> safeEnumValueOf(name: String?): T? = name?.let { target -> enumValues<T>().firstOrNull { it.name == target } }
 
 class DatabaseConverters {
     @ColumnTypeConverter fun statusKeranjangToString(v: StatusKeranjang?): String? = v?.name
