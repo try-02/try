@@ -1,7 +1,14 @@
 package com.sentral.org.data.converter
 
 import androidx.room3.ColumnTypeConverter
-import com.sentral.org.data.model.Enums
+import com.sentral.org.data.model.StatusKeranjang
+import com.sentral.org.data.model.StatusTransaksi
+import com.sentral.org.data.model.StatusShift
+import com.sentral.org.data.model.MetodePembayaran
+import com.sentral.org.data.model.JenisDiskon
+import com.sentral.org.data.model.TujuanStokPengembalian
+import com.sentral.org.data.model.JenisPergerakanPersediaan
+import com.sentral.org.data.model.JenisPergerakanKas
 
 /**
  * Helper parsing enum yang aman: kalau string tidak cocok dengan enum value,
