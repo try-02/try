@@ -1,0 +1,33 @@
+name: Format Kotlin
+
+on:
+  workflow_dispatch:
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Download ktlint
+        run: |
+          curl -L -O https://github.com/ktlint/ktlint/releases/download/2.0.0-ALPHA-4/ktlint
+          chmod +x ktlint
+
+      - name: Format Kotlin
+        run: |
+          ./ktlint --format "**/*.kt" "**/*.kts"
+
+      - name: Upload Hasil Format ke Artifak
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kode-kotlin-terformat
+          # Mengunggah seluruh isi proyek, namun mengecualikan folder .git dan file biner ktlint
+          path: |
+            ./
+            !./.git/**
+            !./ktlint
+          retention-days: 7 # File ZIP akan otomatis dihapus GitHub setelah 7 hari
