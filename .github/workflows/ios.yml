@@ -7,10 +7,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-defaults:
-  run:
-    working-directory: ./coba9
-
 jobs:
   # ============================================================
   # JOB 1: Android & JVM Test (Dijalankan di Linux Ubuntu)
