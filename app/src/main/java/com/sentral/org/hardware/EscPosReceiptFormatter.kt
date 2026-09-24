@@ -182,38 +182,39 @@ object EscPosReceiptFormatter {
         }
         return sb.toString()
     }
-
-    /**
-     * Meng-escape karakter khusus yang memiliki makna dalam markup DantSu.
-     */
-    private fun escapeDantSuText(text: String): String =
-        text
-            .replace("[", "&#91;")
-            .replace("]", "&#93;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-
-    /**
-     * Memotong teks jika melebihi lebar maksimum, menambahkan ".." di akhir.
-     */
-    private fun truncate(
-        text: String,
-        maxWidth: Int,
-    ): String = if (text.length > maxWidth) text.take(maxWidth - 2) + ".." else text
-
-    /**
-     * Membentuk baris dengan label di kiri dan value di kanan.
-     */
-    private fun alignedLine(
-        label: String,
-        value: String,
-    ): String = "[L]$label[R]$value\n"
-
-    /**
-     * Membentuk baris bold dengan label di kiri dan value di kanan.
-     */
-    private fun alignedLineBold(
-        label: String,
-        value: String,
-    ): String = "[L]<b>$label</b>[R]<b>$value</b>\n"
 }
+
+/**
+ * Meng-escape karakter khusus yang memiliki makna dalam markup DantSu.
+ * Dipindahkan ke top-level function untuk mengurangi jumlah fungsi di dalam object.
+ */
+private fun escapeDantSuText(text: String): String =
+    text
+        .replace("[", "&#91;")
+        .replace("]", "&#93;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+
+/**
+ * Memotong teks jika melebihi lebar maksimum, menambahkan ".." di akhir.
+ */
+private fun truncate(
+    text: String,
+    maxWidth: Int,
+): String = if (text.length > maxWidth) text.take(maxWidth - 2) + ".." else text
+
+/**
+ * Membentuk baris dengan label di kiri dan value di kanan.
+ */
+private fun alignedLine(
+    label: String,
+    value: String,
+): String = "[L]$label[R]$value\n"
+
+/**
+ * Membentuk baris bold dengan label di kiri dan value di kanan.
+ */
+private fun alignedLineBold(
+    label: String,
+    value: String,
+): String = "[L]<b>$label</b>[R]<b>$value</b>\n"

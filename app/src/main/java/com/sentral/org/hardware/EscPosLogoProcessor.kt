@@ -63,8 +63,14 @@ object EscPosLogoProcessor {
                 val uri = uriString.toUri()
                 if (!isLogoSafeToDecode(context, uri)) return@withContext null
                 processBitmapToEscPosBytes(context, uri)
-            } catch (e: Exception) {
-                logException(e)
+            } catch (e: SecurityException) {
+                log.e(e) { "No permission to read logo: ${e.message}" }
+                null
+            } catch (e: IOException) {
+                log.e(e) { "Failed to load logo: ${e.message}" }
+                null
+            } catch (e: IllegalArgumentException) {
+                log.e(e) { "Invalid logo data: ${e.message}" }
                 null
             } catch (e: OutOfMemoryError) {
                 log.e(e) { "OOM loading logo: ${e.message}" }
@@ -150,18 +156,6 @@ object EscPosLogoProcessor {
         resized.recycle()
 
         return bytes
-    }
-
-    /**
-     * Sentralisasi logging exception untuk mengurangi kompleksitas siklomatik pada blok catch.
-     */
-    private fun logException(e: Exception) {
-        when (e) {
-            is SecurityException -> log.e(e) { "No permission to read logo: ${e.message}" }
-            is IOException -> log.e(e) { "Failed to load logo: ${e.message}" }
-            is IllegalArgumentException -> log.e(e) { "Invalid logo data: ${e.message}" }
-            else -> log.e(e) { "Unexpected error loading logo: ${e.message}" }
-        }
     }
 
     /**

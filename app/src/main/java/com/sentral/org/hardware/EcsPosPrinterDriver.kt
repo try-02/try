@@ -179,7 +179,10 @@ class EscPosPrinterDriver(
                 message = "Gagal render QR/barcode: ${e.message}",
                 isRetryable = false,
             )
-        } catch (e: Exception) {
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+            // Intentional fallback: Tangkap semua exception yang tidak terduga
+            // untuk memastikan proses print tidak crash dan tetap return PrintResult.
+            // Ini penting untuk graceful degradation di production environment.
             return PrintResult.Failure(
                 message = e.message ?: "Error cetak tidak diketahui",
                 isRetryable = isRetryableError(e),
