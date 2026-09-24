@@ -1,7 +1,9 @@
 package com.sentral.org.hardware
 
 import com.sentral.org.data.model.MetodePembayaran
+import com.sentral.org.data.model.PaymentInfo
 import com.sentral.org.data.model.ReceiptData
+import com.sentral.org.data.model.ReceiptItem
 import com.sentral.org.data.model.formatQuantity
 import com.sentral.org.data.service.ReceiptFormatter
 import java.text.SimpleDateFormat
@@ -86,7 +88,7 @@ object EscPosReceiptFormatter {
     }
 
     private fun buildItemsSection(
-        items: List<com.sentral.org.data.entity.ItemTransaksiEntity>,
+        items: List<ReceiptItem>,
         charsPerLine: Int,
     ): String {
         val sb = StringBuilder()
@@ -136,7 +138,7 @@ object EscPosReceiptFormatter {
         return sb.toString()
     }
 
-    private fun buildPaymentsSection(payments: List<com.sentral.org.data.entity.PembayaranEntity>): String {
+    private fun buildPaymentsSection(payments: List<PaymentInfo>): String {
         val sb = StringBuilder()
         payments.forEach { payment ->
             val metode =
