@@ -42,6 +42,7 @@ import java.util.Locale
 import java.util.concurrent.atomic.AtomicInteger
 
 @OptIn(ExperimentalCoroutinesApi::class)
+@Suppress("TooManyFunctions") // ViewModel mengekspos 15 intent ke UI (keranjang, item, pembayaran), ini adalah pola MVVM standar untuk POS screen yang kompleks.
 class KasirViewModel(
     private val cartService: CartService,
     private val checkoutService: CheckoutService,
