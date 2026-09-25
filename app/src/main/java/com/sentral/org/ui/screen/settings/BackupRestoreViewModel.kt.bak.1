@@ -22,7 +22,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
 
-@Suppress("TooManyFunctions") // ViewModel mengekspos 12 intent ke UI (dialogs, backup/restore flow), ini adalah pola MVVM standar.
 class BackupRestoreViewModel(
     private val backupService: BackupService,
     private val restoreService: RestoreService,

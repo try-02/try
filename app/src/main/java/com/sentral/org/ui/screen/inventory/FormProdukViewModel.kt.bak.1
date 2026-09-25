@@ -23,7 +23,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-@Suppress("TooManyFunctions") // ViewModel mengekspos 12 intent ke UI (setters, scanner, generate SKU, simpan), ini adalah pola MVVM standar.
 class FormProdukViewModel(
     savedStateHandle: SavedStateHandle,
     private val productService: ProductManagementService,

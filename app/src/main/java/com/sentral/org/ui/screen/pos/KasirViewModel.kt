@@ -144,15 +144,15 @@ class KasirViewModel(
         viewModelScope.launch {
             val s =
                 sesi.sesiAktif() ?: run {
-                    kirim("Buka shift kasir terlebih dahulu", KasirEvent.Pesan.Jenis.GALAT)
+                    kirimEvent(_event, "Buka shift kasir terlebih dahulu", KasirEvent.Pesan.Jenis.GALAT, viewModelScope)
                     return@launch
                 }
             cartService.buatKeranjang(s.kasirId, System.currentTimeMillis()).fold(
                 onSuccess = { id ->
                     pilihanManual.value = id
-                    kirim("Keranjang baru dibuat", KasirEvent.Pesan.Jenis.INFO)
+                    kirimEvent(_event, "Keranjang baru dibuat", KasirEvent.Pesan.Jenis.INFO, viewModelScope)
                 },
-                onFailure = { kirim(it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT) },
+                onFailure = { kirimEvent(_event, it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT, viewModelScope) },
             )
         }
     }
@@ -163,9 +163,9 @@ class KasirViewModel(
             cartService.hold(cartId, System.currentTimeMillis()).fold(
                 onSuccess = {
                     pilihanManual.value = null
-                    kirim("Keranjang ditahan", KasirEvent.Pesan.Jenis.INFO)
+                    kirimEvent(_event, "Keranjang ditahan", KasirEvent.Pesan.Jenis.INFO, viewModelScope)
                 },
-                onFailure = { kirim(it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT) },
+                onFailure = { kirimEvent(_event, it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT, viewModelScope) },
             )
         }
     }
@@ -176,9 +176,9 @@ class KasirViewModel(
             cartService.cancel(cartId, System.currentTimeMillis()).fold(
                 onSuccess = {
                     pilihanManual.value = null
-                    kirim("Keranjang dibatalkan", KasirEvent.Pesan.Jenis.INFO)
+                    kirimEvent(_event, "Keranjang dibatalkan", KasirEvent.Pesan.Jenis.INFO, viewModelScope)
                 },
-                onFailure = { kirim(it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT) },
+                onFailure = { kirimEvent(_event, it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT, viewModelScope) },
             )
         }
     }
@@ -187,7 +187,7 @@ class KasirViewModel(
         viewModelScope.launch {
             cartService.resume(id, System.currentTimeMillis()).fold(
                 onSuccess = { pilihanManual.value = id },
-                onFailure = { kirim(it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT) },
+                onFailure = { kirimEvent(_event, it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT, viewModelScope) },
             )
         }
     }
@@ -196,10 +196,10 @@ class KasirViewModel(
 
     fun tambahProduk(produkId: Long) {
         viewModelScope.launch {
-            val cartId = pastikanKeranjangAktif() ?: return@launch
+            val cartId = pastikanKeranjangAktifInternal(keranjangMutex, pilihanManual, uiState, cartRepo, cartService, sesi, _event) ?: return@launch
             cartService
                 .addProduct(cartId, produkId, quantityOf(1), System.currentTimeMillis())
-                .onFailure { kirim(it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT) }
+                .onFailure { kirimEvent(_event, it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT, viewModelScope) }
         }
     }
 
@@ -215,17 +215,31 @@ class KasirViewModel(
                 ?: return null
 
         if (!produk.aktif) {
-            kirim("Produk '${produk.nama}' sedang tidak aktif", KasirEvent.Pesan.Jenis.GALAT)
+            kirimEvent(_event, "Produk '${produk.nama}' sedang tidak aktif", KasirEvent.Pesan.Jenis.GALAT, viewModelScope)
             return null
         }
-        val cartId = pastikanKeranjangAktif() ?: return null
+        val cartId = pastikanKeranjangAktifInternal(keranjangMutex, pilihanManual, uiState, cartRepo, cartService, sesi, _event) ?: return null
         val result = cartService.addProduct(cartId, produk.id, quantityOf(1), System.currentTimeMillis())
         return if (result.isSuccess) produk.nama else null
     }
 
-    fun tambahSatuan(produkId: Long) = ubah(produkId, quantityOf(1))
+    fun tambahSatuan(produkId: Long) {
+        viewModelScope.launch {
+            val cartId = uiState.value.keranjangAktifId ?: return@launch
+            cartService
+                .ubahJumlah(cartId, produkId, quantityOf(1), System.currentTimeMillis())
+                .onFailure { kirimEvent(_event, it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT, viewModelScope) }
+        }
+    }
 
-    fun kurangiSatuan(produkId: Long) = ubah(produkId, -quantityOf(1))
+    fun kurangiSatuan(produkId: Long) {
+        viewModelScope.launch {
+            val cartId = uiState.value.keranjangAktifId ?: return@launch
+            cartService
+                .ubahJumlah(cartId, produkId, -quantityOf(1), System.currentTimeMillis())
+                .onFailure { kirimEvent(_event, it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT, viewModelScope) }
+        }
+    }
 
     /** Menyetel kuantitas mutlak (menerima kuantitas desimal ter-skala) */
     fun aturJumlah(
@@ -233,10 +247,10 @@ class KasirViewModel(
         kuantitasScaled: Long,
     ) {
         viewModelScope.launch {
-            val cartId = pastikanKeranjangAktif() ?: return@launch
+            val cartId = pastikanKeranjangAktifInternal(keranjangMutex, pilihanManual, uiState, cartRepo, cartService, sesi, _event) ?: return@launch
             cartService
                 .setJumlah(cartId, produkId, kuantitasScaled, System.currentTimeMillis())
-                .onFailure { kirim(it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT) }
+                .onFailure { kirimEvent(_event, it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT, viewModelScope) }
         }
     }
 
@@ -245,7 +259,7 @@ class KasirViewModel(
             val cartId = uiState.value.keranjangAktifId ?: return@launch
             cartService
                 .hapusBaris(cartId, produkId, System.currentTimeMillis())
-                .onFailure { kirim(it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT) }
+                .onFailure { kirimEvent(_event, it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT, viewModelScope) }
         }
     }
 
@@ -268,7 +282,7 @@ class KasirViewModel(
                         ),
                     )
                 },
-                onFailure = { kirim(it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT) },
+                onFailure = { kirimEvent(_event, it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT, viewModelScope) },
             )
         }
     }
@@ -284,77 +298,13 @@ class KasirViewModel(
         viewModelScope.launch {
             val cartId =
                 uiState.value.keranjangAktifId ?: run {
-                    kirim("Keranjang aktif sudah hilang, undo tidak bisa dilakukan", KasirEvent.Pesan.Jenis.GALAT)
+                    kirimEvent(_event, "Keranjang aktif sudah hilang, undo tidak bisa dilakukan", KasirEvent.Pesan.Jenis.GALAT, viewModelScope)
                     return@launch
                 }
             if (jumlahScaled <= 0) return@launch
             cartService
                 .addProduct(cartId, produkId, jumlahScaled, System.currentTimeMillis())
-                .onFailure { kirim(it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT) }
-        }
-    }
-
-    /**
-     * Trigger cetak struk otomatis setelah checkout sukses.
-     *
-     * DESAIN:
-     * - Load data transaksi + items + payments + profil toko
-     * - Format menjadi ReceiptData
-     * - Enqueue ke PrinterService (non-blocking)
-     * - Jika gagal load data, log error tapi jangan gagalkan checkout
-     * - Cetak dilakukan async di background, tidak memblokir UI
-     */
-    private fun triggerAutoPrint(transactionId: Long) {
-        log.i { "🖨️ Auto-print triggered for transaction $transactionId" }
-
-        viewModelScope.launch {
-            try {
-                // Load profil toko terlebih dahulu untuk memeriksa konfigurasi
-                val profilToko = profilRepo.get()
-                if (profilToko?.cetakOtomatis == false) {
-                    log.i { "ℹ️ Auto-print dilewati karena fitur cetak otomatis dinonaktifkan" }
-                    return@launch
-                }
-
-                // Load semua data yang dibutuhkan untuk cetak struk
-                val transaksi = transaksiRepo.getById(transactionId)
-                if (transaksi == null) {
-                    log.w { "❌ Transaksi tidak ditemukan: $transactionId" }
-                    return@launch
-                }
-
-                val items = transaksiRepo.getItems(transactionId)
-                val payments = transaksiRepo.getPayments(transactionId)
-
-                log.d { "📋 Loaded: ${items.size} items, ${payments.size} payments" }
-
-                // Format menjadi ReceiptData
-                val receiptData =
-                    com.sentral.org.data.service.ReceiptFormatter.format(
-                        toko = profilToko,
-                        transaksi = transaksi,
-                        items = items,
-                        payments = payments,
-                    )
-
-                log.d { "📝 Receipt formatted, enqueueing to printer" }
-
-                // Enqueue ke printer service (non-blocking)
-                printerService.enqueue(receiptData) { result ->
-                    when (result) {
-                        is com.sentral.org.data.model.PrintResult.Success -> {
-                            log.i { "✅ Print success for transaction $transactionId" }
-                        }
-
-                        is com.sentral.org.data.model.PrintResult.Failure -> {
-                            log.w { "❌ Print failed for transaction $transactionId: ${result.message}" }
-                            kirim("Struk gagal dicetak: ${result.message}", KasirEvent.Pesan.Jenis.GALAT)
-                        }
-                    }
-                }
-            } catch (e: androidx.sqlite.SQLiteException) {
-                log.e(e) { "❌ Auto-print exception: ${e.message}" }
-            }
+                .onFailure { kirimEvent(_event, it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT, viewModelScope) }
         }
     }
 
@@ -363,151 +313,241 @@ class KasirViewModel(
     fun bayarCash(uangDiterima: Long) {
         val total = uiState.value.subtotal
         if (uangDiterima < total) {
-            kirim("Uang diterima kurang dari total", KasirEvent.Pesan.Jenis.GALAT)
+            kirimEvent(_event, "Uang diterima kurang dari total", KasirEvent.Pesan.Jenis.GALAT, viewModelScope)
             return
         }
-        eksekusiBayar(listOf(PaymentRequest(MetodePembayaran.CASH, total, received = uangDiterima)))
+        eksekusiBayarInternal(
+            payments = listOf(PaymentRequest(MetodePembayaran.CASH, total, received = uangDiterima)),
+            uiState = uiState,
+            sedangProses = sedangProses,
+            sesi = sesi,
+            checkoutService = checkoutService,
+            pilihanManual = pilihanManual,
+            printerService = printerService,
+            profilRepo = profilRepo,
+            transaksiRepo = transaksiRepo,
+            _event = _event,
+            viewModelScope = viewModelScope,
+        )
     }
 
     fun bayarQris(referensi: String? = null) {
-        eksekusiBayar(listOf(PaymentRequest(MetodePembayaran.QRIS, uiState.value.subtotal, reference = referensi)))
+        eksekusiBayarInternal(
+            payments = listOf(PaymentRequest(MetodePembayaran.QRIS, uiState.value.subtotal, reference = referensi)),
+            uiState = uiState,
+            sedangProses = sedangProses,
+            sesi = sesi,
+            checkoutService = checkoutService,
+            pilihanManual = pilihanManual,
+            printerService = printerService,
+            profilRepo = profilRepo,
+            transaksiRepo = transaksiRepo,
+            _event = _event,
+            viewModelScope = viewModelScope,
+        )
     }
+}
 
-    // ---------- Internals ----------
+// ========== Top-level helper functions (extracted to reduce function count in class) ==========
 
-    private fun ubah(
-        produkId: Long,
-        delta: Long,
-    ) {
-        viewModelScope.launch {
-            val cartId = uiState.value.keranjangAktifId ?: return@launch
-            cartService
-                .ubahJumlah(cartId, produkId, delta, System.currentTimeMillis())
-                .onFailure { kirim(it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT) }
+/**
+ * Trigger cetak struk otomatis setelah checkout sukses.
+ */
+private fun triggerAutoPrintInternal(
+    transactionId: Long,
+    profilRepo: ProfilTokoRepository,
+    transaksiRepo: TransaksiRepository,
+    printerService: PrinterService,
+    _event: Channel<KasirEvent>,
+    viewModelScope: kotlinx.coroutines.CoroutineScope,
+) {
+    val log = Logger.withTag("KasirVM")
+    log.i { "🖨️ Auto-print triggered for transaction $transactionId" }
+
+    viewModelScope.launch {
+        try {
+            val profilToko = profilRepo.get()
+            if (profilToko?.cetakOtomatis == false) {
+                log.i { "ℹ️ Auto-print dilewati karena fitur cetak otomatis dinonaktifkan" }
+                return@launch
+            }
+
+            val transaksi = transaksiRepo.getById(transactionId)
+            if (transaksi == null) {
+                log.w { "❌ Transaksi tidak ditemukan: $transactionId" }
+                return@launch
+            }
+
+            val items = transaksiRepo.getItems(transactionId)
+            val payments = transaksiRepo.getPayments(transactionId)
+
+            log.d { "📋 Loaded: ${items.size} items, ${payments.size} payments" }
+
+            val receiptData =
+                com.sentral.org.data.service.ReceiptFormatter.format(
+                    toko = profilToko,
+                    transaksi = transaksi,
+                    items = items,
+                    payments = payments,
+                )
+
+            log.d { "📝 Receipt formatted, enqueueing to printer" }
+
+            printerService.enqueue(receiptData) { result ->
+                when (result) {
+                    is com.sentral.org.data.model.PrintResult.Success -> {
+                        log.i { "✅ Print success for transaction $transactionId" }
+                    }
+
+                    is com.sentral.org.data.model.PrintResult.Failure -> {
+                        log.w { "❌ Print failed for transaction $transactionId: ${result.message}" }
+                        kirimEvent(_event, "Struk gagal dicetak: ${result.message}", KasirEvent.Pesan.Jenis.GALAT, viewModelScope)
+                    }
+                }
+            }
+        } catch (e: androidx.sqlite.SQLiteException) {
+            log.e(e) { "❌ Auto-print exception: ${e.message}" }
         }
     }
+}
 
-    private fun eksekusiBayar(payments: List<PaymentRequest>) {
-        val state = uiState.value
-        val cartId =
-            state.keranjangAktifId ?: run {
-                kirim("Tidak ada keranjang aktif", KasirEvent.Pesan.Jenis.GALAT)
-                return
-            }
-        if (state.baris.isEmpty()) {
-            kirim("Keranjang kosong", KasirEvent.Pesan.Jenis.GALAT)
+/**
+ * Eksekusi pembayaran dan checkout.
+ */
+private fun eksekusiBayarInternal(
+    payments: List<PaymentRequest>,
+    uiState: StateFlow<KasirUiState>,
+    sedangProses: MutableStateFlow<Boolean>,
+    sesi: SesiKasirProvider,
+    checkoutService: CheckoutService,
+    pilihanManual: MutableStateFlow<Long?>,
+    printerService: PrinterService,
+    profilRepo: ProfilTokoRepository,
+    transaksiRepo: TransaksiRepository,
+    _event: Channel<KasirEvent>,
+    viewModelScope: kotlinx.coroutines.CoroutineScope,
+) {
+    val log = Logger.withTag("KasirVM")
+    val state = uiState.value
+    val cartId =
+        state.keranjangAktifId ?: run {
+            kirimEvent(_event, "Tidak ada keranjang aktif", KasirEvent.Pesan.Jenis.GALAT, viewModelScope)
             return
         }
-
-        log.d { "🛒 eksekusiBayar() called with ${payments.size} payments" }
-
-        viewModelScope.launch {
-            sedangProses.value = true
-            try {
-                val s =
-                    sesi.sesiAktif() ?: run {
-                        kirim("Buka shift kasir terlebih dahulu", KasirEvent.Pesan.Jenis.GALAT)
-                        return@launch
-                    }
-                val now = System.currentTimeMillis()
-
-                log.d { "⏳ Calling checkoutService.checkout()" }
-
-                checkoutService
-                    .checkout(
-                        CheckoutRequest(
-                            cartId = cartId,
-                            cashierId = s.kasirId,
-                            shiftId = s.shiftId,
-                            payments = payments,
-                            transactionNumber = NomorTransaksiGenerator.buat(now),
-                            now = now,
-                        ),
-                    ).fold(
-                        onSuccess = { r ->
-                            log.i { "✅ Checkout success: txId=${r.transactionId}, number=${r.transactionNumber}" }
-                            // Reset pointer manual agar keranjang berikutnya membuat instans aktif baru
-                            pilihanManual.value = null
-
-                            // ===== AUTO-PRINT: Trigger cetak struk =====
-                            triggerAutoPrint(r.transactionId)
-
-                            _event.send(KasirEvent.CheckoutBerhasil(r.transactionNumber, r.change))
-                        },
-                        onFailure = { error ->
-                            log.e(error) { "❌ Checkout failed: ${error.message}" }
-                            kirim(error.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT)
-                        },
-                    )
-            } finally {
-                sedangProses.value = false
-            }
-        }
+    if (state.baris.isEmpty()) {
+        kirimEvent(_event, "Keranjang kosong", KasirEvent.Pesan.Jenis.GALAT, viewModelScope)
+        return
     }
 
-    private suspend fun pastikanKeranjangAktif(): Long? =
-        keranjangMutex.withLock {
-            // Validasi keaktifan ID yang sedang dipegang pilihanManual
-            val manualId = pilihanManual.value
-            if (manualId != null) {
-                val cart = cartRepo.getById(manualId)
-                if (cart != null && cart.status == com.sentral.org.data.model.StatusKeranjang.AKTIF) {
-                    return manualId
-                } else {
-                    pilihanManual.value = null
-                }
-            }
+    log.d { "🛒 eksekusiBayar() called with ${payments.size} payments" }
 
-            // Validasi keaktifan ID yang sedang aktif di UI State
-            val stateCartId = uiState.value.keranjangAktifId
-            if (stateCartId != null) {
-                val cart = cartRepo.getById(stateCartId)
-                if (cart != null && cart.status == com.sentral.org.data.model.StatusKeranjang.AKTIF) {
-                    return stateCartId
-                }
-            }
-
+    viewModelScope.launch {
+        sedangProses.value = true
+        try {
             val s =
                 sesi.sesiAktif() ?: run {
-                    kirim("Buka shift kasir terlebih dahulu", KasirEvent.Pesan.Jenis.GALAT)
-                    return null
+                    kirimEvent(_event, "Buka shift kasir terlebih dahulu", KasirEvent.Pesan.Jenis.GALAT, viewModelScope)
+                    return@launch
                 }
-            return cartService.buatKeranjang(s.kasirId, System.currentTimeMillis()).fold(
-                onSuccess = { id ->
-                    pilihanManual.value = id
-                    id
-                },
-                onFailure = { e ->
-                    kirim(e.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT)
-                    null
-                },
-            )
+            val now = System.currentTimeMillis()
+
+            log.d { "⏳ Calling checkoutService.checkout()" }
+
+            checkoutService
+                .checkout(
+                    CheckoutRequest(
+                        cartId = cartId,
+                        cashierId = s.kasirId,
+                        shiftId = s.shiftId,
+                        payments = payments,
+                        transactionNumber = NomorTransaksiGenerator.buat(now),
+                        now = now,
+                    ),
+                ).fold(
+                    onSuccess = { r ->
+                        log.i { "✅ Checkout success: txId=${r.transactionId}, number=${r.transactionNumber}" }
+                        pilihanManual.value = null
+
+                        triggerAutoPrintInternal(
+                            transactionId = r.transactionId,
+                            profilRepo = profilRepo,
+                            transaksiRepo = transaksiRepo,
+                            printerService = printerService,
+                            _event = _event,
+                            viewModelScope = viewModelScope,
+                        )
+
+                        _event.send(KasirEvent.CheckoutBerhasil(r.transactionNumber, r.change))
+                    },
+                    onFailure = { error ->
+                        log.e(error) { "❌ Checkout failed: ${error.message}" }
+                        kirimEvent(_event, error.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT, viewModelScope)
+                    },
+                )
+        } finally {
+            sedangProses.value = false
+        }
+    }
+}
+
+/**
+ * Pastikan ada keranjang aktif, buat baru jika perlu.
+ */
+private suspend fun pastikanKeranjangAktifInternal(
+    keranjangMutex: Mutex,
+    pilihanManual: MutableStateFlow<Long?>,
+    uiState: StateFlow<KasirUiState>,
+    cartRepo: CartRepository,
+    cartService: CartService,
+    sesi: SesiKasirProvider,
+    _event: Channel<KasirEvent>,
+): Long? =
+    keranjangMutex.withLock {
+        val manualId = pilihanManual.value
+        if (manualId != null) {
+            val cart = cartRepo.getById(manualId)
+            if (cart != null && cart.status == com.sentral.org.data.model.StatusKeranjang.AKTIF) {
+                return manualId
+            } else {
+                pilihanManual.value = null
+            }
         }
 
-    private fun kirim(
-        teks: String,
-        jenis: KasirEvent.Pesan.Jenis,
-    ) {
-        viewModelScope.launch { _event.send(KasirEvent.Pesan(teks, jenis)) }
-    }
-/**
-     suspend fun scanBarcodeTambahProduk(barcode: String): String? {
-     val produk = produkRepo.getByBarcode(barcode.trim()) ?: return null
-     if (!produk.aktif) {
-     kirim("Produk '${produk.nama}' sedang tidak aktif", KasirEvent.Pesan.Jenis.GALAT)
-     return null
-     }
-     val cartId = pastikanKeranjangAktif() ?: return null
-     val result = cartService.addProduct(cartId, produk.id, quantityOf(1), System.currentTimeMillis())
-     return if (result.isSuccess) produk.nama else null
-     }
+        val stateCartId = uiState.value.keranjangAktifId
+        if (stateCartId != null) {
+            val cart = cartRepo.getById(stateCartId)
+            if (cart != null && cart.status == com.sentral.org.data.model.StatusKeranjang.AKTIF) {
+                return stateCartId
+            }
+        }
 
-     private data class Detil(
-     val produk: List<com.sentral.org.data.entity.ProdukEntity>,
-     val carts: List<com.sentral.org.data.entity.KeranjangEntity>,
-     val manual: Long?,
-     val proses: Boolean,
-     ) */
+        val s =
+            sesi.sesiAktif() ?: run {
+                kirimEvent(_event, "Buka shift kasir terlebih dahulu", KasirEvent.Pesan.Jenis.GALAT, viewModelScope)
+                return null
+            }
+        return cartService.buatKeranjang(s.kasirId, System.currentTimeMillis()).fold(
+            onSuccess = { id ->
+                pilihanManual.value = id
+                id
+            },
+            onFailure = { e ->
+                kirimEvent(_event, e.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT, viewModelScope)
+                null
+            },
+        )
+    }
+
+/**
+ * Helper untuk mengirim event ke channel.
+ */
+private fun kirimEvent(
+    _event: Channel<KasirEvent>,
+    teks: String,
+    jenis: KasirEvent.Pesan.Jenis,
+    viewModelScope: kotlinx.coroutines.CoroutineScope,
+) {
+    viewModelScope.launch { _event.send(KasirEvent.Pesan(teks, jenis)) }
 }
 
 /** Nomor transaksi unik-praktis; unique index DB adalah pengaman pamungkas. */

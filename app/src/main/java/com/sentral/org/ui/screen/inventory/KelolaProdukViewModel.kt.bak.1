@@ -45,7 +45,6 @@ private data class DialogState(
 )
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
-@Suppress("TooManyFunctions") // ViewModel mengekspos 13 intent ke UI (setters, dialogs, mutations), ini adalah pola MVVM standar.
 class KelolaProdukViewModel(
     private val productService: ProductManagementService,
     private val sessionProvider: ActiveSesiKasirProvider,
