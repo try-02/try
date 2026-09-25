@@ -196,7 +196,7 @@ class KasirViewModel(
 
     fun tambahProduk(produkId: Long) {
         viewModelScope.launch {
-            val cartId = pastikanKeranjangAktifInternal(keranjangMutex, pilihanManual, uiState, cartRepo, cartService, sesi, _event) ?: return@launch
+            val cartId = pastikanKeranjangAktifInternal(keranjangMutex, pilihanManual, uiState, cartRepo, cartService, sesi, _event, viewModelScope) ?: return@launch
             cartService
                 .addProduct(cartId, produkId, quantityOf(1), System.currentTimeMillis())
                 .onFailure { kirimEvent(_event, it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT, viewModelScope) }
@@ -218,7 +218,7 @@ class KasirViewModel(
             kirimEvent(_event, "Produk '${produk.nama}' sedang tidak aktif", KasirEvent.Pesan.Jenis.GALAT, viewModelScope)
             return null
         }
-        val cartId = pastikanKeranjangAktifInternal(keranjangMutex, pilihanManual, uiState, cartRepo, cartService, sesi, _event) ?: return null
+        val cartId = pastikanKeranjangAktifInternal(keranjangMutex, pilihanManual, uiState, cartRepo, cartService, sesi, _event, viewModelScope) ?: return null
         val result = cartService.addProduct(cartId, produk.id, quantityOf(1), System.currentTimeMillis())
         return if (result.isSuccess) produk.nama else null
     }
@@ -247,7 +247,7 @@ class KasirViewModel(
         kuantitasScaled: Long,
     ) {
         viewModelScope.launch {
-            val cartId = pastikanKeranjangAktifInternal(keranjangMutex, pilihanManual, uiState, cartRepo, cartService, sesi, _event) ?: return@launch
+            val cartId = pastikanKeranjangAktifInternal(keranjangMutex, pilihanManual, uiState, cartRepo, cartService, sesi, _event, viewModelScope) ?: return@launch
             cartService
                 .setJumlah(cartId, produkId, kuantitasScaled, System.currentTimeMillis())
                 .onFailure { kirimEvent(_event, it.pesanPengguna(), KasirEvent.Pesan.Jenis.GALAT, viewModelScope) }
@@ -501,6 +501,7 @@ private suspend fun pastikanKeranjangAktifInternal(
     cartService: CartService,
     sesi: SesiKasirProvider,
     _event: Channel<KasirEvent>,
+    viewModelScope: kotlinx.coroutines.CoroutineScope,
 ): Long? =
     keranjangMutex.withLock {
         val manualId = pilihanManual.value
