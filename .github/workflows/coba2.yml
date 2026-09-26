@@ -54,6 +54,19 @@ jobs:
           keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
           keyPassword: ${{ secrets.KEY_PASSWORD }}
 
+      - name: Sanitize Compose Compiler Report filenames
+        shell: bash
+        run: |
+          for dir in app/build/compose_compiler shared/build/compose_compiler; do
+            if [ -d "$dir" ]; then
+              find "$dir" -depth -type f -name '*:*' -print0 |
+              while IFS= read -r -d '' file; do
+                new_file="${file//:/_}"
+                mv "$file" "$new_file"
+              done
+            fi
+          done
+
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:

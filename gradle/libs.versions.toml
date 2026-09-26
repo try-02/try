@@ -73,6 +73,7 @@ androidx-compose-material-icon-ext = { group = "androidx.compose.material", name
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 androidx-paging-runtime = { group = "androidx.paging", name = "paging-runtime", version.ref = "paging" }
 androidx-paging-compose = { group = "androidx.paging", name = "paging-compose", version.ref = "paging" }
+compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "composemulti" }
 
 # Database (Room 3.0.1 + Bundled SQLite)
 room3-runtime = { group = "androidx.room3", name = "room3-runtime", version.ref = "room3" }
