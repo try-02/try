@@ -5,7 +5,6 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.stability.analyzer)
     alias(libs.plugins.composeDoctor)
-    alias(libs.plugins.compose.compiler)
 }
 
 // Konfigurasi Room Auto-Migration Schema sudah dipindah ke :shared module
