@@ -78,11 +78,6 @@ tasks.matching { it.name.startsWith("lint") || it.name.contains("Lint") }.config
     dependsOn(tasks.matching { it.name.startsWith("ksp") })
 }
 
-composeCompiler {
-    reportsDestination = layout.buildDirectory.dir("compose_compiler")
-    metricsDestination = layout.buildDirectory.dir("compose_compiler")
-}
-
 // Room KSP harus dijalankan per target source set
 dependencies {
 //    add("kspCommonMainMetadata", libs.room3.compiler)
