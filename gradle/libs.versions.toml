@@ -6,6 +6,7 @@ ksp = "2.3.11"
 kotlinxSerialization = "1.11.0"
 kotlinMultiplatform = "2.4.20"   # sama dgn kotlin; untuk plugin kmp
 akml = "9.4.1"
+composemulti = "1.13.0-alpha01"
 
 # Database & Async
 room3 = "3.0.3"
@@ -130,5 +131,5 @@ stability-analyzer = { id = "com.github.skydoves.compose.stability.analyzer", ve
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlinMultiplatform" }
 android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "akml" }
 composeDoctor = { id = "dev.composedoctor", version.ref = "composeDoctor" }
-jetbrains-compose = { id = "org.jetbrains.compose", version.ref = "1.13.0-alpha01" }
+jetbrains-compose = { id = "org.jetbrains.compose", version.ref = "composemulti" }
 
