@@ -23,10 +23,7 @@ import com.sentral.org.data.service.CheckoutService
 import com.sentral.org.data.service.PrinterService
 import com.sentral.org.data.session.SesiKasirProvider
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.ImmutableMap
-import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -75,12 +72,18 @@ class KasirViewModel(
             .observe()
             .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    /** Stok live per produk (scaled -> unit) utk indikator stok rendah di kartu. */
-    val stokPerProduk: StateFlow<ImmutableMap<Long, Long>> =
+    /**
+     * Stok live per produk (scaled -> unit) utk indikator stok rendah di kartu.
+     *
+     * Sengaja `Map` biasa, bukan `ImmutableMap`: nilai ini hanya dipakai di dalam blok
+     * `remember` untuk menyusun `ProdukPanelUi`, tidak pernah jadi parameter composable.
+     * ImmutableMap di sini cuma menambah satu alokasi per emisi DB tanpa manfaat.
+     */
+    val stokPerProduk: StateFlow<Map<Long, Long>> =
         persediaanDao
             .observeAll()
-            .map { daftar -> daftar.associate { it.produkId to it.jumlah / QUANTITY_SCALE }.toImmutableMap() }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentMapOf())
+            .map { daftar -> daftar.associate { it.produkId to it.jumlah / QUANTITY_SCALE } }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     /** Status printer untuk ditampilkan di TopAppBar. */
     val printerStatus: StateFlow<PrinterStatus> =

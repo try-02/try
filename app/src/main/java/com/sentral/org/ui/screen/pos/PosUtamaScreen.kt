@@ -107,7 +107,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sentral.org.data.entity.KeranjangEntity
-import com.sentral.org.data.entity.ProdukEntity
 import com.sentral.org.data.model.PrinterStatus.DINONAKTIFKAN
 import com.sentral.org.data.model.PrinterStatus.ERROR
 import com.sentral.org.data.model.PrinterStatus.SIAP
@@ -116,7 +115,6 @@ import com.sentral.org.data.model.QUANTITY_SCALE
 import com.sentral.org.data.model.StatusKeranjang
 import com.sentral.org.ui.screen.pos.scanner.BarcodeScannerOverlay
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.toImmutableList
 import org.koin.androidx.compose.koinViewModel
 
@@ -199,19 +197,29 @@ fun PosUtamaScreen(
                 .toImmutableList()
         }
     val produkTersaring =
-        remember(state.produk, kataKunci.value, kategoriTerpilih.value) {
-            state.produk.filter { p ->
-                (
-                    kategoriTerpilih.value == null ||
-                        p.kategori.equals(kategoriTerpilih.value, ignoreCase = true)
-                ) &&
+        remember(state.produk, stokPerProduk, kataKunci.value, kategoriTerpilih.value) {
+            state.produk
+                .filter { p ->
                     (
-                        kataKunci.value.isBlank() ||
-                            p.nama.contains(kataKunci.value, ignoreCase = true) ||
-                            p.sku.contains(kataKunci.value, ignoreCase = true) ||
-                            p.barcode?.contains(kataKunci.value, ignoreCase = true) == true
+                        kategoriTerpilih.value == null ||
+                            p.kategori.equals(kategoriTerpilih.value, ignoreCase = true)
+                    ) &&
+                        (
+                            kataKunci.value.isBlank() ||
+                                p.nama.contains(kataKunci.value, ignoreCase = true) ||
+                                p.sku.contains(kataKunci.value, ignoreCase = true) ||
+                                p.barcode?.contains(kataKunci.value, ignoreCase = true) == true
+                        )
+                }.map { p ->
+                    // Stok di-join di sini, bukan diteruskan sebagai Map terpisah ke PanelProduk.
+                    ProdukPanelUi(
+                        id = p.id,
+                        nama = p.nama,
+                        harga = p.harga,
+                        kategori = p.kategori,
+                        stok = stokPerProduk[p.id],
                     )
-            }.toImmutableList()
+                }.toImmutableList()
         }
 
     val adaKeranjang = state.baris.isNotEmpty()
@@ -440,7 +448,6 @@ fun PosUtamaScreen(
                     PanelProduk(
                         produk = produkTersaring,
                         semuaKategori = semuaKategori,
-                        stokPerProduk = stokPerProduk,
                         kataKunci = kataKunci.value,
                         onUbahKataKunci = { kataKunci.value = it },
                         kategoriTerpilih = kategoriTerpilih.value,
@@ -934,9 +941,8 @@ private fun PlaceholderTab(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PanelProduk(
-    produk: ImmutableList<ProdukEntity>,
+    produk: ImmutableList<ProdukPanelUi>,
     semuaKategori: ImmutableList<String>,
-    stokPerProduk: ImmutableMap<Long, Long>,
     kataKunci: String,
     onUbahKataKunci: (String) -> Unit,
     kategoriTerpilih: String?,
@@ -1027,7 +1033,7 @@ private fun PanelProduk(
                     KartuProdukSpotify(
                         nama = p.nama,
                         harga = p.harga,
-                        stok = stokPerProduk[p.id],
+                        stok = p.stok,
                         kategori = p.kategori,
                         onTap = { onProdukDipilih(p.id) },
                     )

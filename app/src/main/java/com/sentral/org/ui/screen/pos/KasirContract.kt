@@ -1,5 +1,6 @@
 package com.sentral.org.ui.screen.pos
 
+import androidx.compose.runtime.Immutable
 import com.sentral.org.data.entity.KeranjangEntity
 import com.sentral.org.data.entity.ProdukEntity
 import kotlinx.collections.immutable.ImmutableList
@@ -13,6 +14,22 @@ data class BarisKeranjangUi(
     val hargaSatuan: Long,
     val jumlahScaled: Long,
     val totalBaris: Long,
+)
+
+/**
+ * Satu baris produk utk panel katalog POS, lengkap dgn stok yg sudah di-join.
+ *
+ * Stok sengaja ikut di sini (bukan `Map<Long, Long>` terpisah) supaya item komposisi cuma
+ * menerima `Long?` — map inventaris penuh tidak pernah masuk ke composable, sehingga
+ * perubahan stok satu produk tidak memaksa seluruh list dievaluasi ulang.
+ */
+@Immutable
+data class ProdukPanelUi(
+    val id: Long,
+    val nama: String,
+    val harga: Long,
+    val kategori: String,
+    val stok: Long?,
 )
 
 data class KasirUiState(
