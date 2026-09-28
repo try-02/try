@@ -2,8 +2,6 @@ package com.sentral.org.ui.screen.inventory
 
 import androidx.compose.runtime.Immutable
 import com.sentral.org.data.model.JenisPergerakanPersediaan
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
 
 enum class StatusStokFilter(
     val label: String,
@@ -60,7 +58,7 @@ data class KelolaProdukUiState(
     val sedangMemuat: Boolean = true,
     val dialogPenyesuaianTarget: ProdukItemAdminUi? = null,
     val kartuStokTarget: ProdukItemAdminUi? = null,
-    val kartuStokList: ImmutableList<KartuStokItemUi> = persistentListOf(),
+    val kartuStokList: List<KartuStokItemUi> = emptyList(),
 )
 
 sealed interface KelolaProdukEvent {

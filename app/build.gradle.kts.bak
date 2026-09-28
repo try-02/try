@@ -134,9 +134,6 @@ dependencies {
     implementation(libs.room3.paging)
     implementation(libs.sqlite.bundled)
 
-    // Stabilitas parameter Compose: ImmutableList / ImmutableMap
-    implementation(libs.kotlinx.collections.immutable)
-
     // 1. AndroidX Core & Lifecycle
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

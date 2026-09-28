@@ -22,11 +22,6 @@ import com.sentral.org.data.service.CartService
 import com.sentral.org.data.service.CheckoutService
 import com.sentral.org.data.service.PrinterService
 import com.sentral.org.data.session.SesiKasirProvider
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.ImmutableMap
-import kotlinx.collections.immutable.persistentMapOf
-import kotlinx.collections.immutable.toImmutableList
-import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -76,11 +71,11 @@ class KasirViewModel(
             .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     /** Stok live per produk (scaled -> unit) utk indikator stok rendah di kartu. */
-    val stokPerProduk: StateFlow<ImmutableMap<Long, Long>> =
+    val stokPerProduk: StateFlow<Map<Long, Long>> =
         persediaanDao
             .observeAll()
-            .map { daftar -> daftar.associate { it.produkId to it.jumlah / QUANTITY_SCALE }.toImmutableMap() }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentMapOf())
+            .map { daftar -> daftar.associate { it.produkId to it.jumlah / QUANTITY_SCALE } }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     /** Status printer untuk ditampilkan di TopAppBar. */
     val printerStatus: StateFlow<PrinterStatus> =
@@ -89,7 +84,7 @@ class KasirViewModel(
 
     private data class DetilKeranjang(
         val produk: List<com.sentral.org.data.entity.ProdukEntity>,
-        val carts: ImmutableList<com.sentral.org.data.entity.KeranjangEntity>,
+        val carts: List<com.sentral.org.data.entity.KeranjangEntity>,
         val manual: Long?,
     )
 
@@ -98,7 +93,7 @@ class KasirViewModel(
             produkRepo.observeAktif(),
             cartRepo.observeOpen(),
             pilihanManual,
-        ) { produk, carts, manual -> DetilKeranjang(produk, carts.toImmutableList(), manual) }
+        ) { produk, carts, manual -> DetilKeranjang(produk, carts, manual) }
             .flatMapLatest { d ->
                 val efektif =
                     d.manual?.takeIf { id -> d.carts.any { it.id == id } }

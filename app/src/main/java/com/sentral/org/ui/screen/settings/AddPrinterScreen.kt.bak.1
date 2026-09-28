@@ -91,7 +91,6 @@ import com.sentral.org.ui.navigation.PosRoute
 import com.sentral.org.ui.viewmodel.AddPrinterViewModel
 import com.sentral.org.ui.viewmodel.BluetoothDeviceUi
 import com.sentral.org.ui.viewmodel.PrinterTestResult
-import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
@@ -400,7 +399,7 @@ fun AddPrinterScreen(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun BluetoothTab(
-    devices: ImmutableList<BluetoothDeviceUi>,
+    devices: List<BluetoothDeviceUi>,
     isScanning: Boolean,
     scanProgress: Float,
     isBluetoothEnabled: Boolean,

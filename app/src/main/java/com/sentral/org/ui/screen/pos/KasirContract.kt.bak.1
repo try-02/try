@@ -2,8 +2,6 @@ package com.sentral.org.ui.screen.pos
 
 import com.sentral.org.data.entity.KeranjangEntity
 import com.sentral.org.data.entity.ProdukEntity
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
 
 /** Satu baris keranjang utk UI. Harga SELALU live dari master produk. */
 data class BarisKeranjangUi(
@@ -17,7 +15,7 @@ data class BarisKeranjangUi(
 
 data class KasirUiState(
     val produk: List<ProdukEntity> = emptyList(),
-    val keranjangTerbuka: ImmutableList<KeranjangEntity> = persistentListOf(),
+    val keranjangTerbuka: List<KeranjangEntity> = emptyList(),
     val keranjangAktifId: Long? = null,
     val baris: List<BarisKeranjangUi> = emptyList(),
     val subtotal: Long = 0,

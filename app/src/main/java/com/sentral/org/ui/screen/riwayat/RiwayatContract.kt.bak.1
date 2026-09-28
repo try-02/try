@@ -7,8 +7,6 @@ import com.sentral.org.data.model.MetodePembayaran
 import com.sentral.org.data.model.StatusTransaksi
 import com.sentral.org.data.model.TransaksiFilter
 import com.sentral.org.data.model.TujuanStokPengembalian
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
 
 /** Model kartu riwayat transaksi (LazyColumn item) */
 data class TransaksiItemUi(
@@ -96,7 +94,7 @@ data class RiwayatUiState(
     val alasanVoidInput: String = "",
     // Sheet Retur
     val dialogReturTerbuka: Boolean = false,
-    val daftarItemRetur: ImmutableList<ItemReturUi> = persistentListOf(),
+    val daftarItemRetur: List<ItemReturUi> = emptyList(),
     val metodeRefundRetur: MetodePembayaran = MetodePembayaran.CASH,
     val catatanReturInput: String = "",
 )

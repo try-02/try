@@ -24,9 +24,6 @@ import com.dantsu.escposprinter.exceptions.EscPosParserException
 import com.sentral.org.data.entity.PrinterEntity
 import com.sentral.org.data.repository.PrinterRepository
 import com.sentral.org.data.service.PrinterService
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -63,8 +60,8 @@ class AddPrinterViewModel(
     private val printerRepo: PrinterRepository,
     private val printerService: PrinterService, // ← TAMBAH
 ) : AndroidViewModel(application) {
-    private val _bluetoothDevices = MutableStateFlow<ImmutableList<BluetoothDeviceUi>>(persistentListOf())
-    val bluetoothDevices: StateFlow<ImmutableList<BluetoothDeviceUi>> = _bluetoothDevices.asStateFlow()
+    private val _bluetoothDevices = MutableStateFlow<List<BluetoothDeviceUi>>(emptyList())
+    val bluetoothDevices: StateFlow<List<BluetoothDeviceUi>> = _bluetoothDevices.asStateFlow()
 
     private val _isScanning = MutableStateFlow(false)
     val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
@@ -118,7 +115,7 @@ class AddPrinterViewModel(
                                     address = address,
                                     isPaired = isPaired,
                                 )
-                            _bluetoothDevices.value = foundDevices.values.toImmutableList()
+                            _bluetoothDevices.value = foundDevices.values.toList()
                         }
                     }
                 }
@@ -182,7 +179,7 @@ class AddPrinterViewModel(
             _isScanning.value = true
             _scanProgress.value = 0f
             foundDevices.clear()
-            _bluetoothDevices.value = persistentListOf()
+            _bluetoothDevices.value = emptyList()
 
             try {
                 // Muat langsung perangkat yang sudah di-pair di Android Settings dengan guard SecurityException
@@ -202,7 +199,7 @@ class AddPrinterViewModel(
                             isPaired = true,
                         )
                 }
-                _bluetoothDevices.value = foundDevices.values.toImmutableList()
+                _bluetoothDevices.value = foundDevices.values.toList()
             } catch (e: SecurityException) {
                 log.e(e) { "Izin BLUETOOTH_CONNECT tidak tersedia untuk mengakses bondedDevices" }
                 _scanMessage.emit("Izin koneksi Bluetooth belum diberikan.")
@@ -255,7 +252,7 @@ class AddPrinterViewModel(
                                         address = address,
                                         isPaired = isPaired,
                                     )
-                                _bluetoothDevices.value = foundDevices.values.toImmutableList()
+                                _bluetoothDevices.value = foundDevices.values.toList()
                             }
                         }
 

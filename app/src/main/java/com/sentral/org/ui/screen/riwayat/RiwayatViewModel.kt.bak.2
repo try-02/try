@@ -27,7 +27,6 @@ import com.sentral.org.data.service.VoidService
 import com.sentral.org.data.session.ActiveSesiKasirProvider
 import com.sentral.org.export.TransaksiExportUseCase
 import com.sentral.org.shared.currentTimeMillis
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.Channel
@@ -170,7 +169,7 @@ class RiwayatViewModel(
                 val alreadyReturned = returDao.getReturnedQuantity(item.id)
                 val remaining = (item.jumlah - alreadyReturned).coerceAtLeast(0L)
                 ItemReturUi(itemId = item.id, namaProduk = item.namaProduk, sisaQtyScaled = remaining, qtyPilihanScaled = 0L, tujuan = TujuanStokPengembalian.NORMAL)
-            }.toImmutableList()
+            }
             _uiState.update { it.copy(sedangMemprosesAksi = false, dialogReturTerbuka = true, daftarItemRetur = returRows, catatanReturInput = "") }
         }
     }
@@ -188,14 +187,14 @@ class RiwayatViewModel(
                     val newUnit = (currentUnit + deltaUnit).coerceIn(0L, maxUnit)
                     row.copy(qtyPilihanScaled = newUnit * QUANTITY_SCALE)
                 } else row
-            }.toImmutableList()
+            }
             state.copy(daftarItemRetur = updated)
         }
     }
 
     fun ubahTujuanRetur(itemId: Long, tujuan: TujuanStokPengembalian) {
         _uiState.update { state ->
-            val updated = state.daftarItemRetur.map { row -> if (row.itemId == itemId) row.copy(tujuan = tujuan) else row }.toImmutableList()
+            val updated = state.daftarItemRetur.map { row -> if (row.itemId == itemId) row.copy(tujuan = tujuan) else row }
             state.copy(daftarItemRetur = updated)
         }
     }

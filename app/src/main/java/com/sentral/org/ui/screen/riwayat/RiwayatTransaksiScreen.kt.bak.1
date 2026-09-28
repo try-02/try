@@ -80,7 +80,6 @@ import com.sentral.org.data.model.QUANTITY_SCALE
 import com.sentral.org.data.model.StatusTransaksi
 import com.sentral.org.data.model.TujuanStokPengembalian
 import com.sentral.org.ui.screen.pos.formatRupiah
-import kotlinx.collections.immutable.ImmutableList
 import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -726,7 +725,7 @@ private fun DialogKonfirmasiVoid(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SheetFormRetur(
-    items: ImmutableList<ItemReturUi>,
+    items: List<ItemReturUi>,
     metodeRefund: MetodePembayaran,
     catatan: String,
     sedangMemproses: Boolean,

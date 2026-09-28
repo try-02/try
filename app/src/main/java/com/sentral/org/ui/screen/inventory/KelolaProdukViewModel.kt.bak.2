@@ -12,13 +12,9 @@ import com.sentral.org.domain.model.RestockRequest
 import com.sentral.org.domain.model.StockOpnameRequest
 import com.sentral.org.domain.service.ProductManagementService
 import com.sentral.org.shared.currentTimeMillis
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -45,7 +41,7 @@ private data class ActiveSelections(
 private data class DialogState(
     val penyesuaian: ProdukItemAdminUi?,
     val kartuStokTarget: ProdukItemAdminUi?,
-    val kartuStokList: ImmutableList<KartuStokItemUi>,
+    val kartuStokList: List<KartuStokItemUi>,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -90,13 +86,13 @@ class KelolaProdukViewModel(
         }
 
     // Stream kartu stok reaktif ketika target produk dipilih
-    private val kartuStokLedgerFlow: Flow<ImmutableList<KartuStokItemUi>> =
+    private val kartuStokLedgerFlow =
         _kartuStokTarget.flatMapLatest { target ->
             if (target == null) {
-                flowOf(persistentListOf())
+                flowOf(emptyList())
             } else {
                 productService.observeKartuStok(KartuStokFilter(produkId = target.id)).map { list ->
-                    list.map { it.toUi(dateFormat) }.toImmutableList()
+                    list.map { it.toUi(dateFormat) }
                 }
             }
         }
