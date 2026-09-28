@@ -6,14 +6,11 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout RTK v0.50.0
+      - name: Checkout RTK
         uses: actions/checkout@v7
         with:
           repository: rtk-ai/rtk
-          ref: v0.50.0
-          fetch-depth: 1
 
       - name: Setup Rust & Target
         uses: dtolnay/rust-toolchain@stable
@@ -26,11 +23,8 @@ jobs:
       - name: Build for Android ARM64
         run: cargo ndk -t arm64-v8a build --release
 
-      - name: Verify version
-        run: ./target/aarch64-linux-android/release/rtk --version
-
       - name: Upload Binary Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: rtk-aarch64-termux-v0.50.0
+          name: rtk-aarch64-termux
           path: target/aarch64-linux-android/release/rtk
