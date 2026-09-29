@@ -70,7 +70,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -86,6 +85,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sentral.org.data.entity.PrinterEntity
 import com.sentral.org.ui.navigation.PosRoute
 import com.sentral.org.ui.viewmodel.AddPrinterViewModel
@@ -113,10 +113,10 @@ fun AddPrinterScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     // Collect states
-    val bluetoothDevices by viewModel.bluetoothDevices.collectAsState()
-    val isScanning by viewModel.isScanning.collectAsState()
-    val scanProgress by viewModel.scanProgress.collectAsState()
-    val isBluetoothEnabled by viewModel.isBluetoothEnabled.collectAsState()
+    val bluetoothDevices by viewModel.bluetoothDevices.collectAsStateWithLifecycle()
+    val isScanning by viewModel.isScanning.collectAsStateWithLifecycle()
+    val scanProgress by viewModel.scanProgress.collectAsStateWithLifecycle()
+    val isBluetoothEnabled by viewModel.isBluetoothEnabled.collectAsStateWithLifecycle()
 
     val requiredPermissions =
         remember {

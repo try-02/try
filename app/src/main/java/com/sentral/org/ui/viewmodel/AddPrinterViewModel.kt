@@ -11,6 +11,7 @@ import android.bluetooth.le.ScanResult
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import co.touchlab.kermit.Logger
@@ -39,6 +40,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
+/**
+ * Perangkat Bluetooth yang ditemukan saat scanning.
+ *
+ * `@Immutable` karena seluruh properinya `val` primitif. Jangan tambah `var`, `List`,
+ * `Map`, atau lambda di sini tanpa mencabut annotation ini dulu — kalau stabilitasnya
+ * jadi tidak benar, compiler akan men-skip recomposisi dan UI jadi basi.
+ */
+@Immutable
 data class BluetoothDeviceUi(
     val name: String,
     val address: String,

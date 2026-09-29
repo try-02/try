@@ -1,6 +1,7 @@
 package com.sentral.org.ui.screen.riwayat
 
 import android.net.Uri
+import androidx.compose.runtime.Immutable
 import com.sentral.org.data.entity.TransaksiDenganDetail
 import com.sentral.org.data.entity.TransaksiEntity
 import com.sentral.org.data.model.MetodePembayaran
@@ -74,7 +75,14 @@ fun TransaksiDenganDetail.toUiModel() =
             },
     )
 
-/** Model baris item untuk form input retur */
+/**
+ * Model baris item untuk form input retur.
+ *
+ * `@Immutable` karena seluruh properinya `val` primitif/enum. Jangan tambah `var`,
+ * `List`, `Map`, atau lambda di sini tanpa mencabut annotation ini dulu — kalau
+ * stabilitasnya jadi tidak benar, compiler akan men-skip recomposisi dan UI jadi basi.
+ */
+@Immutable
 data class ItemReturUi(
     val itemId: Long,
     val namaProduk: String,
