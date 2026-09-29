@@ -11,7 +11,14 @@ import com.sentral.org.data.model.TujuanStokPengembalian
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 
-/** Model kartu riwayat transaksi (LazyColumn item) */
+/**
+ * Model kartu riwayat transaksi (LazyColumn item).
+ *
+ * `@Immutable` karena seluruh properinya `val` primitif/enum. Jangan tambah `var`,
+ * `List`, `Map`, atau lambda di sini tanpa mencabut annotation ini dulu — kalau
+ * stabilitasnya jadi tidak benar, compiler akan men-skip recomposisi dan UI jadi basi.
+ */
+@Immutable
 data class TransaksiItemUi(
     val id: Long,
     val nomorTransaksi: String,

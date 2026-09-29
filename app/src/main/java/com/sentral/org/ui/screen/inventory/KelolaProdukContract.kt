@@ -25,6 +25,14 @@ enum class UrutanProduk(
     HARGA_TERMAHAL("Harga Termahal"),
 }
 
+/**
+ * Baris produk utk layar admin (Kelola Produk) & kartu stok.
+ *
+ * `@Immutable` karena seluruh properinya `val` primitif/String. Jangan tambah `var`,
+ * `List`, `Map`, atau lambda di sini tanpa mencabut annotation ini dulu — kalau
+ * stabilitasnya jadi tidak benar, compiler akan men-skip recomposisi dan UI jadi basi.
+ */
+@Immutable
 data class ProdukItemAdminUi(
     val id: Long,
     val nama: String,

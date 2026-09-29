@@ -1,6 +1,5 @@
 package com.sentral.org.ui.screen.settings
 
-import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sentral.org.data.entity.PrinterEntity
@@ -13,14 +12,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-/**
- * Printer utk kartu pada layar pengaturan printer.
- *
- * `@Immutable` karena seluruh properinya `val` primitif/String. Jangan tambah `var`,
- * `List`, `Map`, atau lambda di sini tanpa mencabut annotation ini dulu — kalau
- * stabilitasnya jadi tidak benar, compiler akan men-skip recomposisi dan UI jadi basi.
- */
-@Immutable
 data class PrinterItemUi(
     val id: Long,
     val nama: String,

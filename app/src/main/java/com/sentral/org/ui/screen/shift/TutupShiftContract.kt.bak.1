@@ -1,15 +1,5 @@
 package com.sentral.org.ui.screen.shift
 
-import androidx.compose.runtime.Immutable
-
-/**
- * Ringkasan hasil rekonsiliasi kas pada panel tutup shift.
- *
- * `@Immutable` karena seluruh properinya `val` primitif. Jangan tambah `var`,
- * `List`, `Map`, atau lambda di sini tanpa mencabut annotation ini dulu — kalau
- * stabilitasnya jadi tidak benar, compiler akan men-skip recomposisi dan UI jadi basi.
- */
-@Immutable
 data class ShiftSummaryUi(
     val kasAwal: Long,
     val totalPenjualanTunai: Long,

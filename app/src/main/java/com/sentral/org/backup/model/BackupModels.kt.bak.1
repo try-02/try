@@ -1,18 +1,7 @@
 package com.sentral.org.backup.model
 
-import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
 
-/**
- * Metadata header file backup.
- *
- * `@Serializable` (untuk format `.bak`) dan `@Immutable` (untuk komposisi Compose) —
- * dua hal terpisah, keduanya aman berdampingan karena seluruh properinya `val`
- * primitif/String. Jangan tambah `var`, `List`, `Map`, atau lambda di sini tanpa
- * mencabut `@Immutable` dulu — kalau stabilitasnya jadi tidak benar, compiler akan
- * men-skip recomposisi dan UI jadi basi.
- */
-@Immutable
 @Serializable
 data class BackupMetadata(
     val appVersion: String,

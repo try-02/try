@@ -6,7 +6,14 @@ import com.sentral.org.data.entity.ProdukEntity
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 
-/** Satu baris keranjang utk UI. Harga SELALU live dari master produk. */
+/**
+ * Satu baris keranjang utk UI. Harga SELALU live dari master produk.
+ *
+ * `@Immutable` karena seluruh properinya `val` primitif/String. Jangan tambah `var`,
+ * `List`, `Map`, atau lambda di sini tanpa mencabut annotation ini dulu — kalau
+ * stabilitasnya jadi tidak benar, compiler akan men-skip recomposisi dan UI jadi basi.
+ */
+@Immutable
 data class BarisKeranjangUi(
     val itemId: Long,
     val produkId: Long,
