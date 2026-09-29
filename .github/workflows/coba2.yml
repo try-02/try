@@ -74,13 +74,10 @@ jobs:
           path: |
             ${{ steps.sign_app.outputs.signedReleaseFile }}
             shared/schemas/**/*.json
-            app/build/reports/*.html
-            app/build/reports/**/*.html
-            app/build/reports/**/*.json
+            app/build/reports/
             app/build/stability/
-            app/biuld/compose_compiler/*.txt
-            app/biuld/compose_compiler/*.csv
-            app/biuld/compose_compiler/**/*.json
-            shared/build/
+            app/build/compose_compiler/
+            shared/build/reports/
+            shared/build/compose_compiler/
           retention-days: 1
           if-no-files-found: error

@@ -73,7 +73,7 @@ jobs:
           name: pos-offline-release-signed-apk
           path: |
             ${{ steps.sign_app.outputs.signedReleaseFile }}
-            **/*.json
+            shared/schemas/**/*.json
             app/build/reports/*.html
             app/build/reports/**/*.html
             app/build/reports/**/*.json
