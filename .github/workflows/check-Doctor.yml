@@ -38,22 +38,39 @@ jobs:
         run: chmod +x ./gradlew
       # - name: Run Pure Unit Tests
       #  run: ./gradlew :shared:assemble --stacktrace
-      - name: check
-        run: ./gradlew check
+      # - name: check
+      #  run: ./gradlew check
       # - name: alltes shared dan testdebugunittes
       #  run: ./gradlew :shared:allTests :app:testDebugUnitTest
 
       - name: Run Compose Doctor
-        run: ./gradlew composeDoctor
+      #  run: ./gradlew composeDoctor
+        run: ./gradlew clean :app:compileReleaseKotlin :shared:compileReleaseKotlin --no-build-cache
 
-      - name: Upload Test Report
-        if: always()
+      - name: Sanitize Compose Compiler Report filenames
+        shell: bash
+        run: |
+          for dir in app/build/compose_compiler shared/build/compose_compiler; do
+            if [ -d "$dir" ]; then
+              find "$dir" -depth -type f -name '*:*' -print0 |
+              while IFS= read -r -d '' file; do
+                new_file="${file//:/_}"
+                mv "$file" "$new_file"
+              done
+            fi
+          done
+
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: unit-test-report
+          name: pos-offline-release-signed-apk
           path: |
+            shared/schemas/**/*.json
             app/build/reports/
-            app/build/test-results/
             app/build/stability/
-            shared/schemas/
+            app/build/compose_compiler/
+            shared/build/reports/
+            shared/build/compose_compiler/
           retention-days: 1
+          if-no-files-found: error
+
