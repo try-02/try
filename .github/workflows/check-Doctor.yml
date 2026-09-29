@@ -45,7 +45,7 @@ jobs:
 
       - name: Run Compose Doctor
       #  run: ./gradlew composeDoctor
-        run: ./gradlew clean :app:compileReleaseKotlin :shared:compileReleaseKotlin --no-build-cache
+        run: ./gradlew :compileReleaseKotlin --no-build-cache
 
       - name: Sanitize Compose Compiler Report filenames
         shell: bash
