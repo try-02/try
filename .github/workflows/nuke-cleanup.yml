@@ -1,31 +1,52 @@
 name: 🧹 Nuke Caches & Artifacts
 
-# Mengizinkan workflow ini dijalankan secara manual (sekali klik)
-on: workflow_dispatch 
+on:
+  workflow_dispatch:
 
 jobs:
   cleanup:
     runs-on: ubuntu-latest
+
     permissions:
-      actions: write # Diperlukan izin untuk menghapus data action
-    
+      actions: write
+
     steps:
-      - name: 🗑️ Hapus Semua Cache
+      - name: 🗑️ Hapus Semua GitHub Actions Cache
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          echo "Menghapus semua cache (Gradle, Emulator, dll)..."
-          gh extension install actions/gh-actions-cache
-          gh actions-cache delete --all --confirm || true
-          echo "Cache berhasil dibersihkan!"
+          echo "=== CACHE CLEANUP ==="
+
+          gh cache list \
+            --repo "${{ github.repository }}" \
+            --limit 100 \
+            --json id,key,sizeInBytes
+
+          gh cache delete \
+            --repo "${{ github.repository }}" \
+            --all \
+            --succeed-on-no-caches
+
+          echo "✅ Semua GitHub Actions cache telah dihapus."
 
       - name: 🗑️ Hapus Semua Artifacts
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          echo "Mencari dan menghapus semua artifact yang pernah di-upload..."
-          # Mengambil semua ID artifact dan menghapusnya satu per satu
-          gh api repos/${{ github.repository }}/actions/artifacts \
-            --paginate -q '.artifacts[].id' | \
-          xargs -I{} gh api -X DELETE repos/${{ github.repository }}/actions/artifacts/{} || true
-          echo "Semua artifact berhasil dibersihkan!"
+          echo "=== ARTIFACT CLEANUP ==="
+
+          gh api \
+            --paginate \
+            "repos/${{ github.repository }}/actions/artifacts" \
+            --jq '.artifacts[].id' |
+          while read -r artifact_id; do
+            [ -z "$artifact_id" ] && continue
+
+            echo "Menghapus artifact ID: $artifact_id"
+
+            gh api \
+              --method DELETE \
+              "repos/${{ github.repository }}/actions/artifacts/$artifact_id"
+          done
+
+          echo "✅ Semua artifacts telah dihapus."
