@@ -12,16 +12,30 @@ class ProductSeeder(
         if (db.produkDao().count() > 0) return
 
         val waktu = currentTimeMillis()
-        val items = SeedProduct.getDefaultItems()
+        val items = SeedProduct.getDummyItems()
 
         write.run {
             if (db.produkDao().count() > 0) return@run
 
-            val ids = db.produkDao().insertAll(SeedProduct.toProdukEntities(items, waktu))
-            check(ids.all { it != -1L }) { "Seed produk gagal: ada SKU/barcode duplikat" }
+            // Insert produk per-chunk agar ukuran batch tetap terkendali,
+            // semua chunk tetap berjalan dalam SATU transaksi (atomik).
+            val chunks = items.chunked(INSERT_CHUNK)
+            val idsByChunk =
+                chunks.map { chunk ->
+                    val ids = db.produkDao().insertAll(SeedProduct.toProdukEntities(chunk, waktu))
+                    check(ids.all { it != -1L }) { "Seed produk gagal: ada SKU/barcode duplikat" }
+                    ids
+                }
 
-            db.persediaanDao().insertAll(SeedProduct.toPersediaanEntities(ids, items, waktu))
-            db.pergerakanPersediaanDao().insertAll(SeedProduct.toPergerakanEntities(ids, items, waktu))
+            chunks.forEachIndexed { i, chunk ->
+                val ids = idsByChunk[i]
+                db.persediaanDao().insertAll(SeedProduct.toPersediaanEntities(ids, chunk, waktu))
+                db.pergerakanPersediaanDao().insertAll(SeedProduct.toPergerakanEntities(ids, chunk, waktu))
+            }
         }
+    }
+
+    private companion object {
+        const val INSERT_CHUNK = 1_000
     }
 }
