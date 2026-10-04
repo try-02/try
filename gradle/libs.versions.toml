@@ -8,6 +8,7 @@ kotlinMultiplatform = "2.4.20"   # sama dgn kotlin; untuk plugin kmp
 akml = "9.4.1"
 composemulti = "1.13.0-alpha01"
 kotlinxCollectionsImmutable = "0.5.2"
+composeRuntimeTracing = "1.13.0-alpha03"
 
 # Database & Async
 room3 = "3.0.3"
@@ -75,6 +76,7 @@ androidx-navigation-compose = { group = "androidx.navigation", name = "navigatio
 androidx-paging-runtime = { group = "androidx.paging", name = "paging-runtime", version.ref = "paging" }
 androidx-paging-compose = { group = "androidx.paging", name = "paging-compose", version.ref = "paging" }
 compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "composemulti" }
+androidx-compose-runtime-tracing = { module = "androidx.compose.runtime:runtime-tracing", version.ref = "composeRuntimeTracing" }
 
 # Database (Room 3.0.1 + Bundled SQLite)
 room3-runtime = { group = "androidx.room3", name = "room3-runtime", version.ref = "room3" }
