@@ -445,27 +445,35 @@ fun PosUtamaScreen(
         Box(Modifier.fillMaxSize().padding(padding)) {
             when (tab) {
                 0 -> {
-                    PanelProduk(
-                        produk = produkTersaring,
-                        semuaKategori = semuaKategori,
-                        kataKunci = kataKunci.value,
-                        onUbahKataKunci = { kataKunci.value = it },
-                        kategoriTerpilih = kategoriTerpilih.value,
-                        onPilihKategori = {
-                            kategoriTerpilih.value =
-                                when {
-                                    it.isEmpty() -> null
-                                    kategoriTerpilih.value == it -> null
-                                    else -> it
-                                }
-                        },
-                        onProdukDipilih = {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            viewModel.tambahProduk(it)
-                        },
-                        onBukaScanner = { scannerTerbuka = true },
-                        modifier = Modifier.fillMaxSize(),
-                    )
+                    Column(Modifier.fillMaxSize()) {
+                        // Search bar dipisah dari PanelProduk: mengetik hanya menyisakan
+                        // TextField yang recompose, sehingga chip kategori + LazyColumn
+                        // bisa di-skip penuh pada tiap ketikan.
+                        BarisCariProduk(
+                            kataKunci = kataKunci.value,
+                            onUbahKataKunci = { kataKunci.value = it },
+                            onBukaScanner = { scannerTerbuka = true },
+                        )
+
+                        PanelProduk(
+                            produk = produkTersaring,
+                            semuaKategori = semuaKategori,
+                            kategoriTerpilih = kategoriTerpilih.value,
+                            onPilihKategori = {
+                                kategoriTerpilih.value =
+                                    when {
+                                        it.isEmpty() -> null
+                                        kategoriTerpilih.value == it -> null
+                                        else -> it
+                                    }
+                            },
+                            onProdukDipilih = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                viewModel.tambahProduk(it)
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
                 }
 
                 1 -> {
@@ -938,54 +946,67 @@ private fun PlaceholderTab(
     }
 }
 
+/**
+ * Baris cari produk + akses cepat scanner.
+ *
+ * Sengaja dipisah dari [PanelProduk] (dipanggil dari parent, bukan dari dalamnya):
+ * `kataKunci` berubah pada tiap ketikan, jadi kalau TextField ini jadi parameter
+ * [PanelProduk] maka seluruh panel — chip kategori + seluruh item [LazyColumn] —
+ * ikut recompose tiap huruf. Dipisah, hanya TextField ini yang recompose.
+ */
+@Composable
+private fun BarisCariProduk(
+    kataKunci: String,
+    onUbahKataKunci: (String) -> Unit,
+    onBukaScanner: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    // Search Bar yang lebih prominent dengan akses cepat scanner
+    OutlinedTextField(
+        value = kataKunci,
+        onValueChange = onUbahKataKunci,
+        placeholder = { Text("Cari nama, SKU, barcode...") },
+        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+        trailingIcon = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(end = 4.dp),
+            ) {
+                if (kataKunci.isNotEmpty()) {
+                    IconButton(onClick = { onUbahKataKunci("") }) {
+                        Icon(Icons.Filled.Close, contentDescription = "Hapus")
+                    }
+                }
+                IconButton(onClick = onBukaScanner) {
+                    Icon(
+                        Icons.Filled.QrCodeScanner,
+                        contentDescription = "Pindai Barcode",
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+        },
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+        singleLine = true,
+        textStyle = MaterialTheme.typography.bodyLarge,
+        shape = MaterialTheme.shapes.medium,
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PanelProduk(
     produk: ImmutableList<ProdukPanelUi>,
     semuaKategori: ImmutableList<String>,
-    kataKunci: String,
-    onUbahKataKunci: (String) -> Unit,
     kategoriTerpilih: String?,
     onPilihKategori: (String) -> Unit,
     onProdukDipilih: (Long) -> Unit,
-    onBukaScanner: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier) {
-        // Search Bar yang lebih prominent dengan akses cepat scanner
-        OutlinedTextField(
-            value = kataKunci,
-            onValueChange = onUbahKataKunci,
-            placeholder = { Text("Cari nama, SKU, barcode...") },
-            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-            trailingIcon = {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(end = 4.dp),
-                ) {
-                    if (kataKunci.isNotEmpty()) {
-                        IconButton(onClick = { onUbahKataKunci("") }) {
-                            Icon(Icons.Filled.Close, contentDescription = "Hapus")
-                        }
-                    }
-                    IconButton(onClick = onBukaScanner) {
-                        Icon(
-                            Icons.Filled.QrCodeScanner,
-                            contentDescription = "Pindai Barcode",
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                }
-            },
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-            singleLine = true,
-            textStyle = MaterialTheme.typography.bodyLarge,
-            shape = MaterialTheme.shapes.medium,
-        )
-
         // Filter chips dengan spacing lebih lega
         if (semuaKategori.isNotEmpty()) {
             Row(
