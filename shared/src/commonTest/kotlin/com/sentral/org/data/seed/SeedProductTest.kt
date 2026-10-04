@@ -45,7 +45,10 @@ class SeedProductTest {
 
         assertTrue(dummy.all { it.sku.startsWith("GEN-") }, "ada SKU dummy di luar namespace GEN-")
         assertTrue(dummy.none { it.sku in skuBawaan }, "SKU dummy menabrak SKU bawaan")
-        assertTrue(dummy.none { it.barcode in barcodeBawaan }, "barcode dummy menabrak barcode bawaan")
+
+        val barcodeDummy = dummy.mapNotNull { it.barcode }
+        assertEquals(dummy.size, barcodeDummy.size, "ada barcode dummy yang null")
+        assertTrue(barcodeDummy.none { it in barcodeBawaan }, "barcode dummy menabrak barcode bawaan")
         // 10 item pertama persis item bawaan
         assertEquals(bawaan, items.take(bawaan.size))
     }
@@ -55,12 +58,12 @@ class SeedProductTest {
     @Test
     fun dummyInvarianHargaDanStokWajar() {
         val dummy = SeedProduct.getDummyItems().drop(SeedProduct.getDefaultItems().size)
-        assertTrue(dummy.all { it.harga > 0 }, "ada harga <= 0")
+        assertTrue(dummy.all { it.harga > 0L }, "ada harga <= 0")
         assertTrue(
-            dummy.all { it.hargaModal in 1 until it.harga },
+            dummy.all { it.hargaModal >= 1L && it.hargaModal < it.harga },
             "hargaModal tidak berada di antara 1 dan harga-1",
         )
-        assertTrue(dummy.all { it.stokAwal >= 0 }, "ada stok negatif")
+        assertTrue(dummy.all { it.stokAwal >= 0L }, "ada stok negatif")
         assertTrue(
             dummy.all { it.rusakAwal >= 0 && it.rusakAwal <= it.stokAwal },
             "rusak melebihi stok atau negatif",

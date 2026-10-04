@@ -72,8 +72,8 @@ object SeedProduct {
                 harga = harga,
                 hargaModal = maxOf(hargaDasar - margin / 2, 100L),
                 kategori = kategori.nama,
-                stokAwal = 10 + (i % 190),
-                rusakAwal = if (i % 17 == 0) ((i / 17) % 5) + 1 else 0,
+                stokAwal = 10L + (i % 190),
+                rusakAwal = if (i % 17 == 0) ((i / 17) % 5 + 1).toLong() else 0L,
             )
         }
 
