@@ -165,6 +165,7 @@ dependencies {
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)
     implementation(libs.kermit.log)
+    implementation(libs.androidx.compose.runtime.tracing)
 
     // 6. Dependency Injection (Koin) — Android bindings
     implementation(libs.koin.androidx.compose)
@@ -197,5 +198,4 @@ dependencies {
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.kotlinx.coroutines.test)
-    debugImplementation(libs.androidx.compose.runtime.tracing)
 }
