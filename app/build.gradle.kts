@@ -31,8 +31,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            isMinifyEnabled = false
+            isShrinkResources = false
 
             // AGP 9.3+ Modern DSL: Mengaktifkan semua optimisasi R8 tingkat lanjut
             optimization {
