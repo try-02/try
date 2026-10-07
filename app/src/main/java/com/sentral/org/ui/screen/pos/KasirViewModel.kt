@@ -515,7 +515,7 @@ private fun eksekusiBayarInternal(
 
     log.d { "🛒 eksekusiBayar() called with ${payments.size} payments" }
 
-    viewModelScope.launch {
+    viewModelScope.launch(Dispatchers.IO) { // 👈 Pindahkan transaksi database dari Main Thread ke IO!
         sedangProses.value = true
         try {
             val s =

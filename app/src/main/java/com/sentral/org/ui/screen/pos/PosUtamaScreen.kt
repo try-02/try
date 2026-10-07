@@ -1032,26 +1032,15 @@ private fun KartuProdukSpotify(
     kategori: String,
     onTap: () -> Unit,
 ) {
-    val interaction = remember { MutableInteractionSource() }
-    val ditekan by interaction.collectIsPressedAsState()
-    val skala by animateFloatAsState(
-        targetValue = if (ditekan) 0.98f else 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
-        label = "skalaKartu",
-    )
-
     Surface(
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp,
-        modifier =
-            Modifier
-                .graphicsLayer {
-                    scaleX = skala
-                    scaleY = skala
-                }.fillMaxWidth()
-                .clickable(interactionSource = interaction, indication = null, onClick = onTap),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onTap), // 👈 Pakai klik standar, buang animateFloatAsState & graphicsLayer
     ) {
+        // ... isi Row dan Avatar gradient tetap sama ...
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(12.dp),

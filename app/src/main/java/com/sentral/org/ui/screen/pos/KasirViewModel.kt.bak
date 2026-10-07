@@ -42,6 +42,11 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.collections.immutable.persistentListOf
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @Suppress("TooManyFunctions") // ViewModel mengekspos 15 intent ke UI (keranjang, item, pembayaran), ini adalah pola MVVM standar untuk POS screen yang kompleks.
@@ -84,6 +89,66 @@ class KasirViewModel(
             .observeAll()
             .map { daftar -> daftar.associate { it.produkId to it.jumlah / QUANTITY_SCALE } }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    // State untuk pencarian dan kategori
+    val kataKunci = MutableStateFlow("")
+    val kategoriTerpilih = MutableStateFlow<String?>(null)
+
+    fun setKataKunci(query: String) {
+        kataKunci.value = query
+    }
+
+    fun setKategori(kategori: String?) {
+        kategoriTerpilih.value = kategori
+    }
+
+    /** Kategori diekstrak sekali di Background Thread */
+    val semuaKategori: StateFlow<ImmutableList<String>> =
+        produkRepo.observeAktif()
+            .map { list ->
+                list.map { it.kategori }
+                    .filter { it.isNotBlank() }
+                    .distinct()
+                    .sorted()
+                    .toImmutableList()
+            }
+            .flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentListOf())
+
+    /**
+     * Filter 5.000 produk dijalankan di BACKGROUND THREAD (Dispatchers.Default)
+     * dengan DEBOUNCE 200ms saat mengetik agar UI tetap 90 FPS mulus!
+     */
+    @OptIn(FlowPreview::class)
+    val produkTersaring: StateFlow<ImmutableList<ProdukPanelUi>> =
+        combine(
+            produkRepo.observeAktif(),
+            stokPerProduk,
+            kataKunci.debounce(200), // Tunda 200ms saat mengetik agar tidak freeze tiap huruf
+            kategoriTerpilih,
+        ) { daftar, stokMap, query, kat ->
+            val q = query.trim()
+            daftar
+                .filter { p ->
+                    (kat == null || p.kategori.equals(kat, ignoreCase = true)) &&
+                    (q.isBlank() ||
+                        p.nama.contains(q, ignoreCase = true) ||
+                        p.sku.contains(q, ignoreCase = true) ||
+                        p.barcode?.contains(q, ignoreCase = true) == true)
+                }
+                .map { p ->
+                    ProdukPanelUi(
+                        id = p.id,
+                        nama = p.nama,
+                        harga = p.harga,
+                        kategori = p.kategori,
+                        stok = stokMap[p.id],
+                    )
+                }
+                .toImmutableList()
+        }
+        .flowOn(Dispatchers.Default) // 👈 KUNCI: Pindah dari Main Thread ke CPU Background!
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), persistentListOf())
 
     /** Status printer untuk ditampilkan di TopAppBar. */
     val printerStatus: StateFlow<PrinterStatus> =

@@ -144,8 +144,13 @@ fun PosUtamaScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val profil by viewModel.profilToko.collectAsStateWithLifecycle()
-    val stokPerProduk by viewModel.stokPerProduk.collectAsStateWithLifecycle()
     val printerStatus by viewModel.printerStatus.collectAsStateWithLifecycle()
+
+    // 👈 Ambil data yang SUDAH BERES diproses dari ViewModel
+    val produkTersaring by viewModel.produkTersaring.collectAsStateWithLifecycle()
+    val semuaKategori by viewModel.semuaKategori.collectAsStateWithLifecycle()
+    val kataKunci by viewModel.kataKunci.collectAsStateWithLifecycle()
+    val kategoriTerpilih by viewModel.kategoriTerpilih.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val haptic = LocalHapticFeedback.current
 
@@ -157,9 +162,6 @@ fun PosUtamaScreen(
     var hasilCheckout by remember { mutableStateOf<KasirEvent.CheckoutBerhasil?>(null) }
     var sheetKeranjangTerbuka by rememberSaveable { mutableStateOf(false) }
     var barisUbahJumlah by remember { mutableStateOf<BarisKeranjangUi?>(null) }
-
-    val kataKunci = rememberSaveable { mutableStateOf("") }
-    val kategoriTerpilih = rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.event.collect { event ->
@@ -186,41 +188,6 @@ fun PosUtamaScreen(
             }
         }
     }
-
-    val semuaKategori =
-        remember(state.produk) {
-            state.produk
-                .map { it.kategori }
-                .filter { it.isNotBlank() }
-                .distinct()
-                .sorted()
-                .toImmutableList()
-        }
-    val produkTersaring =
-        remember(state.produk, stokPerProduk, kataKunci.value, kategoriTerpilih.value) {
-            state.produk
-                .filter { p ->
-                    (
-                        kategoriTerpilih.value == null ||
-                            p.kategori.equals(kategoriTerpilih.value, ignoreCase = true)
-                    ) &&
-                        (
-                            kataKunci.value.isBlank() ||
-                                p.nama.contains(kataKunci.value, ignoreCase = true) ||
-                                p.sku.contains(kataKunci.value, ignoreCase = true) ||
-                                p.barcode?.contains(kataKunci.value, ignoreCase = true) == true
-                        )
-                }.map { p ->
-                    // Stok di-join di sini, bukan diteruskan sebagai Map terpisah ke PanelProduk.
-                    ProdukPanelUi(
-                        id = p.id,
-                        nama = p.nama,
-                        harga = p.harga,
-                        kategori = p.kategori,
-                        stok = stokPerProduk[p.id],
-                    )
-                }.toImmutableList()
-        }
 
     val adaKeranjang = state.baris.isNotEmpty()
 
@@ -446,26 +413,19 @@ fun PosUtamaScreen(
             when (tab) {
                 0 -> {
                     Column(Modifier.fillMaxSize()) {
-                        // Search bar dipisah dari PanelProduk: mengetik hanya menyisakan
-                        // TextField yang recompose, sehingga chip kategori + LazyColumn
-                        // bisa di-skip penuh pada tiap ketikan.
                         BarisCariProduk(
-                            kataKunci = kataKunci.value,
-                            onUbahKataKunci = { kataKunci.value = it },
+                            kataKunci = kataKunci,
+                            onUbahKataKunci = viewModel::setKataKunci,
                             onBukaScanner = { scannerTerbuka = true },
                         )
 
                         PanelProduk(
                             produk = produkTersaring,
                             semuaKategori = semuaKategori,
-                            kategoriTerpilih = kategoriTerpilih.value,
-                            onPilihKategori = {
-                                kategoriTerpilih.value =
-                                    when {
-                                        it.isEmpty() -> null
-                                        kategoriTerpilih.value == it -> null
-                                        else -> it
-                                    }
+                            kategoriTerpilih = kategoriTerpilih,
+                            onPilihKategori = { kat ->
+                                val baru = if (kat.isEmpty() || kategoriTerpilih == kat) null else kat
+                                viewModel.setKategori(baru)
                             },
                             onProdukDipilih = {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
