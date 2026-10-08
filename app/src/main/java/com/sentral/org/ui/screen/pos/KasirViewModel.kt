@@ -136,11 +136,14 @@ class KasirViewModel(
                         p.sku.contains(q, ignoreCase = true) ||
                         p.barcode?.contains(q, ignoreCase = true) == true)
                 }
+                .take(100) // 👈 KUNCI EMAS: Cukup render 100 item pertama!
                 .map { p ->
                     ProdukPanelUi(
                         id = p.id,
                         nama = p.nama,
                         harga = p.harga,
+                        hargaFormatted = formatRupiah(p.harga), // 👈 Dihitung sekali di Background
+                        inisial = p.nama.trim().take(1).uppercase().ifBlank { "?" }, // 👈 Dihitung sekali di Background
                         kategori = p.kategori,
                         stok = stokMap[p.id],
                     )
@@ -156,12 +159,19 @@ class KasirViewModel(
             .stateIn(viewModelScope, SharingStarted.Eagerly, SIAP)
 
     private data class DetilKeranjang(
-        val produk: List<com.sentral.org.data.entity.ProdukEntity>,
+/**        val produk: List<com.sentral.org.data.entity.ProdukEntity>, Ubah DetilKeranjang menjadi hanya mengurus keranjang */
         val carts: ImmutableList<com.sentral.org.data.entity.KeranjangEntity>,
         val manual: Long?,
     )
-
     private val dataKeranjangFlow =
+        combine(
+            cartRepo.observeOpen(),
+            pilihanManual,
+        ) { carts, manual -> DetilKeranjang(carts.toImmutableList(), manual) }
+            .flatMapLatest { d ->
+                val efektif = d.manual?.takeIf { id -> d.carts.any { it.id == id } }
+                    ?: d.carts.firstOrNull()?.id
+/*    private val dataKeranjangFlow =
         combine(
             produkRepo.observeAktif(),
             cartRepo.observeOpen(),
@@ -170,7 +180,7 @@ class KasirViewModel(
             .flatMapLatest { d ->
                 val efektif =
                     d.manual?.takeIf { id -> d.carts.any { it.id == id } }
-                        ?: d.carts.firstOrNull()?.id
+                        ?: d.carts.firstOrNull()?.id */
                 val itemsFlow =
                     if (efektif == null) {
                         flowOf(emptyList())
@@ -199,7 +209,7 @@ class KasirViewModel(
             sedangProses,
         ) { (d, efektif, baris), proses ->
             KasirUiState(
-                produk = d.produk,
+/**                produk = d.produk, */
                 keranjangTerbuka = d.carts,
                 keranjangAktifId = efektif,
                 baris = baris,

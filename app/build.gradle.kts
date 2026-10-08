@@ -35,14 +35,14 @@ android {
             isShrinkResources = false
 
             // AGP 9.3+ Modern DSL: Mengaktifkan semua optimisasi R8 tingkat lanjut
-            optimization {
-                enable = true
-            }
+            // optimization {
+            //    enable = true
+            // }
 
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro",
-            )
+            // proguardFiles(
+            //    getDefaultProguardFile("proguard-android-optimize.txt"),
+            //    "proguard-rules.pro",
+            // )
         }
     }
 

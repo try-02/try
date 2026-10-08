@@ -35,8 +35,6 @@ data class ProdukPanelUi(
     val id: Long,
     val nama: String,
     val harga: Long,
-    val hargaFormatted: String,
-    val inisial: String,
     val kategori: String,
     val stok: Long?,
 )

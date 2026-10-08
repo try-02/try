@@ -1013,7 +1013,8 @@ private fun PanelProduk(
                 items(produk, key = { it.id }) { p ->
                     KartuProdukSpotify(
                         nama = p.nama,
-                        harga = p.harga,
+                        hargaFormatted = p.hargaFormatted, // 👈 Oper teks jadi
+                        inisial = p.inisial,               // 👈 Oper inisial jadi
                         stok = p.stok,
                         kategori = p.kategori,
                         onTap = { onProdukDipilih(p.id) },
@@ -1027,7 +1028,8 @@ private fun PanelProduk(
 @Composable
 private fun KartuProdukSpotify(
     nama: String,
-    harga: Long,
+    hargaFormatted: String, // 👈 Ganti parameter harga jadi hargaFormatted
+    inisial: String,        // 👈 Tambahkan parameter inisial
     stok: Long?,
     kategori: String,
     onTap: () -> Unit,
@@ -1051,24 +1053,24 @@ private fun KartuProdukSpotify(
                     Modifier
                         .size(64.dp)
                         .background(
-                            brush =
+                            val gradientColors = listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary)
+                            val avatarBrush = remember(gradientColors) {
+                                Brush.linearGradient(colors = gradientColors)
+                            },
+/**                            brush =
                                 Brush.linearGradient(
                                     colors =
                                         listOf(
                                             MaterialTheme.colorScheme.primary,
                                             MaterialTheme.colorScheme.tertiary,
                                         ),
-                                ),
+                                ), */
                             shape = RoundedCornerShape(12.dp),
                         ),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    nama
-                        .trim()
-                        .take(1)
-                        .uppercase()
-                        .ifBlank { "?" },
+                    inisial, // 👈 Langsung pakai, tanpa trim/take/uppercase lagi!
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Black,
                     color = Color.White,
@@ -1093,7 +1095,7 @@ private fun KartuProdukSpotify(
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    formatRupiah(harga),
+                    hargaFormatted, // 👈 Langsung pakai, tanpa formatRupiah lagi!
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
@@ -1269,7 +1271,7 @@ private fun PanelKeranjang(
         // Footer dengan CTA yang bold
         Surface(
             color = MaterialTheme.colorScheme.surface,
-            shadowElevation = 8.dp,
+            shadowElevation = 2.dp,
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         ) {
             Column(Modifier.fillMaxWidth().padding(16.dp)) {
