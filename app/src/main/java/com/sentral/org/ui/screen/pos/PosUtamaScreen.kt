@@ -1028,49 +1028,43 @@ private fun PanelProduk(
 @Composable
 private fun KartuProdukSpotify(
     nama: String,
-    hargaFormatted: String, // 👈 Ganti parameter harga jadi hargaFormatted
-    inisial: String,        // 👈 Tambahkan parameter inisial
+    hargaFormatted: String,
+    inisial: String,
     stok: Long?,
     kategori: String,
     onTap: () -> Unit,
 ) {
+    // 👈 1. Buat Brush di awal fungsi composable
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val tertiaryColor = MaterialTheme.colorScheme.tertiary
+    val avatarBrush = remember(primaryColor, tertiaryColor) {
+        Brush.linearGradient(colors = listOf(primaryColor, tertiaryColor))
+    }
+
     Surface(
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onTap), // 👈 Pakai klik standar, buang animateFloatAsState & graphicsLayer
+            .clickable(onClick = onTap),
     ) {
-        // ... isi Row dan Avatar gradient tetap sama ...
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(12.dp),
         ) {
             // Avatar dengan gradient (Spotify-style)
             Box(
-                modifier =
-                    Modifier
-                        .size(64.dp)
-                        .background(
-                            val gradientColors = listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary)
-                            val avatarBrush = remember(gradientColors) {
-                                Brush.linearGradient(colors = gradientColors)
-                            },
-/**                            brush =
-                                Brush.linearGradient(
-                                    colors =
-                                        listOf(
-                                            MaterialTheme.colorScheme.primary,
-                                            MaterialTheme.colorScheme.tertiary,
-                                        ),
-                                ), */
-                            shape = RoundedCornerShape(12.dp),
-                        ),
+                modifier = Modifier
+                    .size(64.dp)
+                    .background(
+                        brush = avatarBrush, // 👈 2. Cukup panggil avatarBrush di sini!
+                        shape = RoundedCornerShape(12.dp),
+                    ),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    inisial, // 👈 Langsung pakai, tanpa trim/take/uppercase lagi!
+                    inisial,
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Black,
                     color = Color.White,
@@ -1095,7 +1089,7 @@ private fun KartuProdukSpotify(
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    hargaFormatted, // 👈 Langsung pakai, tanpa formatRupiah lagi!
+                    hargaFormatted,
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
