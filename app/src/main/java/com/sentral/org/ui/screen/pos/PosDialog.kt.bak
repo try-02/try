@@ -337,47 +337,46 @@ fun DialogPembayaran(
             }
         },
         confirmButton = {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                // Tombol Ganti Metode (Tunai / QRIS)
-                Button(
-                    onClick = { metode = if (metode == 1) 0 else 1 },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    ),
-                    shape = MaterialTheme.shapes.medium,
-                    modifier = Modifier.height(44.dp),
-                ) {
-                    Icon(
-                        imageVector = if (metode == 1) Icons.Filled.QrCode2 else Icons.Filled.PointOfSale,
-                        contentDescription = "Ganti metode pembayaran",
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-
-                // Tombol Selesaikan Transaksi
-                Button(
-                    enabled = !sedangProses && totalValid && (metode == 1 || cukup),
-                    onClick = {
-                        if (metode == 1) onKonfirmasiQris() else onKonfirmasiTunai(diterima)
-                    },
-                    shape = MaterialTheme.shapes.medium,
-                    modifier = Modifier.height(44.dp),
-                ) {
-                    if (sedangProses) {
-                        ContainedLoadingIndicator(modifier = Modifier.size(20.dp))
-                    } else {
-                        Text(
-                            "Selesaikan",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
+            SplitButtonLayout(
+                leadingButton = {
+                    SplitButtonDefaults.LeadingButton(
+                        enabled = !sedangProses && totalValid && (metode == 1 || cukup),
+                        onClick = {
+                            if (metode == 1) onKonfirmasiQris() else onKonfirmasiTunai(diterima)
+                        },
+                    ) {
+                        if (sedangProses) {
+                            ContainedLoadingIndicator(
+                                modifier = Modifier.size(SplitButtonDefaults.LeadingIconSize),
+                            )
+                        } else {
+                            Icon(
+                                imageVector = if (metode == 1) Icons.Filled.QrCode2 else Icons.Filled.PointOfSale,
+                                modifier = Modifier.size(SplitButtonDefaults.LeadingIconSize),
+                                contentDescription = null,
+                            )
+                            Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                            Text(
+                                "Selesaikan",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                    }
+                },
+                trailingButton = {
+                    SplitButtonDefaults.TrailingButton(
+                        checked = metode == 1,
+                        onCheckedChange = { metode = if (it) 1 else 0 },
+                    ) {
+                        Icon(
+                            imageVector = if (metode == 1) Icons.Filled.QrCode2 else Icons.Filled.PointOfSale,
+                            modifier = Modifier.size(SplitButtonDefaults.TrailingIconSize),
+                            contentDescription = "Ganti metode pembayaran",
                         )
                     }
-                }
-            }
+                },
+            )
         },
         dismissButton = {
             TextButton(onClick = onTutup) {
@@ -423,44 +422,53 @@ private fun ChipNominal(
 
 @Composable
 private fun Numpad(onTekan: (String) -> Unit) {
-    val tombol = remember {
+    val tombol =
         listOf(
             listOf("7", "8", "9"),
             listOf("4", "5", "6"),
             listOf("1", "2", "3"),
             listOf("C", "0", "⌫"),
         )
-    }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         tombol.forEach { barisTombol ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 barisTombol.forEach { t ->
                     val aksiHapus = t == "C" || t == "⌫"
-                    val bgWarna = if (aksiHapus) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceVariant
-                    val teksWarna = if (aksiHapus) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurface
-
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(52.dp)
-                            .background(bgWarna, shape = MaterialTheme.shapes.medium)
-                            .clickable(onClick = { onTekan(t) }),
+                    Surface(
+                        shape = MaterialTheme.shapes.medium,
+                        color =
+                            if (aksiHapus) {
+                                MaterialTheme.colorScheme.errorContainer
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant
+                            },
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .height(52.dp)
+                                .clickable(onClick = { onTekan(t) }),
                     ) {
-                        if (t == "⌫") {
-                            Icon(
-                                Icons.AutoMirrored.Filled.Backspace,
-                                contentDescription = "Hapus satu angka",
-                                tint = teksWarna,
-                                modifier = Modifier.size(24.dp),
-                            )
-                        } else {
-                            Text(
-                                t,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = teksWarna,
-                            )
+                        Box(contentAlignment = Alignment.Center) {
+                            if (t == "⌫") {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.Backspace,
+                                    contentDescription = "Hapus satu angka",
+                                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                                    modifier = Modifier.size(24.dp),
+                                )
+                            } else {
+                                Text(
+                                    t,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color =
+                                        if (aksiHapus) {
+                                            MaterialTheme.colorScheme.onErrorContainer
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurface
+                                        },
+                                )
+                            }
                         }
                     }
                 }
@@ -480,19 +488,29 @@ fun DialogCheckoutBerhasil(
         onDismissRequest = onTutup,
         shape = MaterialTheme.shapes.extraLarge,
         icon = {
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.primaryContainer,
-                modifier = Modifier.size(72.dp),
+            Box(
+                modifier =
+                    Modifier
+                        .size(72.dp)
+                        .background(
+                            brush =
+                                Brush.linearGradient(
+                                    colors =
+                                        listOf(
+                                            MaterialTheme.colorScheme.secondary,
+                                            MaterialTheme.colorScheme.primary,
+                                        ),
+                                ),
+                            shape = CircleShape,
+                        ),
+                contentAlignment = Alignment.Center,
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        Icons.Filled.CheckCircle,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(40.dp),
-                    )
-                }
+                Icon(
+                    Icons.Filled.CheckCircle,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(36.dp),
+                )
             }
         },
         title = {
@@ -576,8 +594,6 @@ fun DialogUbahJumlah(
             if (parsedScaled > 0) MoneyMath.lineTotal(hargaSatuan, parsedScaled) else 0L
         }
 
-    val regexAngka = remember { Regex("^\\d*([.,]\\d{0,3})?$") }
-
     AlertDialog(
         onDismissRequest = onTutup,
         shape = MaterialTheme.shapes.extraLarge,
@@ -601,7 +617,8 @@ fun DialogUbahJumlah(
                 OutlinedTextField(
                     value = inputTeks,
                     onValueChange = { baru: String ->
-                        if (baru.isEmpty() || baru.matches(regexAngka)) {
+                        // Hanya izinkan angka, maksimal 1 tanda koma/titik, dan maks 3 digit pecahan
+                        if (baru.isEmpty() || baru.matches(Regex("^\\d*([.,]\\d{0,3})?$"))) {
                             inputTeks = baru
                         }
                     },
